@@ -1068,16 +1068,16 @@ to run
   ppm install DBI
   ppm install DBD::mysql
 
+If you need an HTTP proxy, you might need to set the environment
+variable http_proxy, for example like this:
 
-The same applied to Perl 5.005. I am told that DBD::mysql is not
-yet in the PPM3 repository. Thus you should use PPM2, whenever
-possible. If you have PPM3 only, try
+  set http_proxy=http://myproxy.com:8080/
 
-  ppm
-  rep add PPM2 http://ppm.activestate.com/PPMPackages/5.6plus/
-  rep 2
-  install DBI
-  install DBD-mysql
+As of this writing, DBD::mysql is missing in the ActivePerl 5.8.0
+repository. However, Randy Kobes has kindly donated an own
+distribution and the following might succeed:
+
+  ppm install http://theoryx5.uwinnipeg.ca/ppms/DBD-mysql.ppd
 
 Otherwise you definitely *need* a C compiler. And it *must* be the same
 compiler that was being used for compiling Perl itself. If you don't

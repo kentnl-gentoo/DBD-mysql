@@ -10,8 +10,23 @@ In short: If you are using
 
   ActivePerl/Windows:
 
-    ppm install DBI
-    ppm install DBD::mysql
+    1.) If you need to use an HTTP Proxy, set the environment
+        variable http_proxy, for example like this:
+
+          set http_proxy=http://myproxy.com:8080/
+
+    2.) The actual installation is as simple as
+
+	  ppm install DBI
+          ppm install DBD::mysql
+
+        As of this writing, the above procedure won't work with
+        ActivePerl 5.8.0, because so far a PPM for DBD::mysql is
+        not available from the ActiveState server. I don't know
+        why. However, Randy Kobes has kindly donated a PPM package
+        to his own repository. You can use this as follows:
+
+          ppm install http://theoryx5.uwinnipeg.ca/ppms/DBD-mysql.ppd
 
   Red Hat Linux 7.1 (you may prefer gnorpm)
 
