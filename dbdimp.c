@@ -17,7 +17,7 @@
  *           Fax: +49 7123 / 14892
  *
  *
- *  $Id: dbdimp.c,v 1.9 2003/06/24 05:37:25 rlippan Exp $
+ *  $Id: dbdimp.c,v 1.10 2003/08/28 20:22:52 rlippan Exp $
  */
 
 
@@ -292,7 +292,6 @@ int BindParam(imp_sth_ph_t* ph, SV* value, IV sql_type) {
         (void) SvREFCNT_dec(ph->value);
     }
     ph->value = newSVsv(value);
-    (void) SvREFCNT_inc(value);
     if (sql_type) {
         ph->type = sql_type;
     }

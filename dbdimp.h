@@ -21,7 +21,7 @@
  *           Fax: +49 7123 / 14892
  *
  *
- *  $Id: dbdimp.h,v 1.3 2003/06/24 05:50:01 rlippan Exp $
+ *  $Id: dbdimp.h,v 1.4 2003/08/28 20:25:06 rlippan Exp $
  */
 
 /*
@@ -179,7 +179,6 @@ struct imp_sth_st {
 #define dbd_db_commit		mysql_db_commit
 #define dbd_db_rollback		mysql_db_rollback
 #define dbd_db_disconnect	mysql_db_disconnect
-#define dbd_discon_all		mysql_db_discon_all
 #define dbd_db_destroy		mysql_db_destroy
 #define dbd_db_STORE_attrib	mysql_db_STORE_attrib
 #define dbd_db_FETCH_attrib	mysql_db_FETCH_attrib

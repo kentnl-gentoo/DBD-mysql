@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 50commit.t,v 1.1 2003/03/18 02:53:28 rlippan Exp $
+#   $Id: 50commit.t,v 1.2 2003/08/28 20:31:13 rlippan Exp $
 #
 #   This is testing the transaction support.
 #
@@ -161,7 +161,7 @@ while (Testing()) {
 	    or ErrMsg("Expected fatal error for AutoCommit => 0\n");
 
 	for (my $i = 0;  $i < 14;  $i++) {
-	    Skip("No transactions");
+	    Skip("Unable to detect a transactional table type; Skipping transaction tests");
 	}
     }
 

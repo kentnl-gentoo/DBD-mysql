@@ -1,6 +1,6 @@
 #   Hej, Emacs, give us -*- perl mode here!
 #
-#   $Id: lib.pl,v 1.2 2003/03/31 01:16:53 rlippan Exp $
+#   $Id: lib.pl,v 1.3 2003/08/28 20:34:33 rlippan Exp $
 #
 #   lib.pl is the file where database specific things should live,
 #   whereever possible. For example, you define certain constants
@@ -25,9 +25,6 @@ $dbdriver = $mdriver; # $dbdriver is usually just the same as $mdriver.
 #
 #   DSN being used; do not edit this, edit "$dbdriver.dbtest" instead
 #
-$test_dsn      = $ENV{'DBI_DSN'}   ||  'DBI:mysql:database=test';
-$test_user     = $ENV{'DBI_USER'}  ||  '';
-$test_password = $ENV{'DBI_PASS'}  ||  '';
 
 
 $::COL_NULLABLE = 1;
@@ -45,6 +42,9 @@ if (-f ($file = "t/$dbdriver.dbtest")  ||
 	print "1..0\n";
 	exit 0;
     }
+    $::test_dsn      = $::test_dsn || $ENV{'DBI_DSN'} || 'DBI:mysql:database=test';
+    $::test_user     = $::test_user|| $ENV{'DBI_USER'}  ||  '';
+    $::test_password = $::test_passowrd || $ENV{'DBI_PASS'}  ||  '';
 }
 if (-f ($file = "t/$mdriver.mtest")  ||
     -f ($file = "$mdriver.mtest")    ||
