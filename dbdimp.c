@@ -587,6 +587,7 @@ MYSQL* mysql_dr_connect(MYSQL* sock, char* unixSocket, char* host,
 			char* port, char* user, char* password,
 			char* dbname, imp_dbh_t *imp_dbh) {
   int portNr;
+  MYSQL* result;
 
   if (host && !*host) host = NULL;
   if (port && *port) {
@@ -680,8 +681,11 @@ MYSQL* mysql_dr_connect(MYSQL* sock, char* unixSocket, char* host,
     if (dbis->debug >= 2)
       PerlIO_printf(DBILOGFP, "imp_dbh->mysql_dr_connect: client_flags = %d\n",
 		    client_flag);
-    return mysql_real_connect(sock, host, user, password, dbname,
-			      portNr, unixSocket, client_flag);
+    result = mysql_real_connect(sock, host, user, password, dbname,
+				portNr, unixSocket, client_flag);
+    if (dbis->debug >= 2)
+      PerlIO_printf(DBILOGFP, "imp_dbh->mysql_dr_connect: <-");
+    return result;
   }
 }
 

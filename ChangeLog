@@ -1,3 +1,10 @@
+2001-12-28  Jochen Wiedmann  <joe@ispsoft.de> (2.1010)
+
+	* Bumped version number in Mysql/Statement.pm to
+	  1.24, so that it is always higher than that 
+	  from the Msql-Mysql-modules.
+	
+
 2001-12-28  Jochen Wiedmann  <joe@ispsoft.de> (2.1008)
 
 	* lib/DBD/mysql.pod: Fixed minor bug in an example.
