@@ -149,6 +149,15 @@ and the port number <CODE>8000</CODE> with your local values.</P>
 <P>If the above procedure doesn't work, please upgrade to the latest
 version of ActivePerl. Versions before build 623 are known to
 have problems.</P>
+<P>PPM 3 is said to miss DBD::mysql in the repository. Thus use of
+PPM 3 is discouraged, in favour of PPM 2. If you need to use
+PPM 3, try</P>
+<PRE>
+  ppm
+  rep add PPM2 <A HREF="http://ppm.activestate.com/PPMPackages/5.6plus/">http://ppm.activestate.com/PPMPackages/5.6plus/</A>
+  rep 2
+  install DBI
+  install DBD-mysql</PRE>
 <P>
 <H2><A NAME="red hat linux">Red Hat Linux</A></H2>
 <P>As of version 7.1, Red Hat Linux comes with MySQL and DBD::mysql.

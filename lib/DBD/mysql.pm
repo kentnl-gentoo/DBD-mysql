@@ -9,7 +9,7 @@ use DynaLoader();
 use Carp ();
 @ISA = qw(DynaLoader);
 
-$VERSION = '2.1018';
+$VERSION = '2.1019';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -33,6 +33,10 @@ sub driver{
 				 });
 
     $drh;
+}
+
+sub CLONE {
+  undef $drh;
 }
 
 sub _OdbcParse($$$) {

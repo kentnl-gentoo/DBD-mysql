@@ -124,6 +124,17 @@ If the above procedure doesn't work, please upgrade to the latest
 version of ActivePerl. Versions before build 623 are known to
 have problems.
 
+PPM 3 is said to miss DBD::mysql in the repository. Thus use of
+PPM 3 is discouraged, in favour of PPM 2. If you need to use
+PPM 3, try
+
+  ppm
+  rep add PPM2 http://ppm.activestate.com/PPMPackages/5.6plus/
+  rep 2
+  install DBI
+  install DBD-mysql
+
+
 
 =head2 Red Hat Linux
 

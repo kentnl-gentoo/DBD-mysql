@@ -1059,7 +1059,15 @@ to run
   ppm install DBD::mysql
 
 
-The same applied to Perl 5.005.
+The same applied to Perl 5.005. I am told that DBD::mysql is not
+yet in the PPM3 repository. Thus you should use PPM2, whenever
+possible. If you have PPM3 only, try
+
+  ppm
+  rep add PPM2 http://ppm.activestate.com/PPMPackages/5.6plus/
+  rep 2
+  install DBI
+  install DBD-mysql
 
 Otherwise you definitely *need* a C compiler. And it *must* be the same
 compiler that was being used for compiling Perl itself. If you don't
