@@ -77,7 +77,6 @@ my $cflags = "-I\$(DBI_INSTARCH_DIR) $opt->{'cflags'}";
 $cflags .= " -DDBD_MYSQL_WITH_SSL" if $opt->{'ssl'};
 my %o = ( 'NAME' => 'DBD::mysql',
 	  'INC' => $cflags,
-	  'EXE_FILES' => 'dbimon pmysql',
 	  'dist'         => { 'SUFFIX'       => ".gz",
 			      'DIST_DEFAULT' => 'all installhtml tardist',
 			      'COMPRESS'     => "gzip -9f" },
