@@ -214,11 +214,14 @@ The option mysql_read_default_group can be used to specify the default
 group in the config file: Usually this is the I<client> group, but
 see the following example:
 
+    [client]
+    host=localhost
+
     [perl]
     host=perlhost
 
-    [client]
-    host=localhost
+(Note the order of the entries! The example won't work, if you reverse
+the [client] and [perl] sections!)
 
 If you read this config file, then you'll be typically connected to
 I<localhost>. However, by using
@@ -229,7 +232,7 @@ I<localhost>. However, by using
 
 you'll be connected to I<perlhost>. Note that if you specify a
 default group and do not specify a file, then the default config
-files will all be read.  See the (missing :-) documentation of
+files will all be read.  See the documentation of
 the C function mysql_options() for details.
 
 =item mysql_socket
@@ -453,6 +456,12 @@ respective column contains numeric values.
 
 Reference to an array of boolean values; TRUE indicates, that the
 respective column is a primary key.
+
+=item mysql_is_auto_increment
+
+Reference to an array of boolean values; TRUE indicates that the
+respective column is an AUTO_INCREMENT column.  This is only valid
+for MySQL.
 
 =item mysql_length
 
@@ -743,7 +752,7 @@ C<$dbh-E<gt>table_info()>. Portable applications will prefer
 
 because, depending on the engine, the string "user.table" will be
 returned, user being the table owner. The method will be removed
-in DBD::mysql version 3.11.
+in DBD::mysql version 2.11xy.
 
 =back
 

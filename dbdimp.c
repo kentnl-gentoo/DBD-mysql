@@ -1644,6 +1644,10 @@ int dbd_st_STORE_attrib(SV* sth, imp_sth_t* imp_sth, SV* keysv, SV* valuesv) {
 #define IS_KEY(A) (((A) & (PRI_KEY_FLAG | UNIQUE_KEY_FLAG | MULTIPLE_KEY_FLAG)) != 0)
 #endif
 
+#if !defined(IS_AUTO_INCREMENT) && defined(AUTO_INCREMENT_FLAG)
+#define IS_AUTO_INCREMENT(A) (((A) & AUTO_INCREMENT_FLAG) != 0)
+#endif
+
 SV* dbd_st_FETCH_internal(SV* sth, int what, MYSQL_RES* res, int cacheit) {
   D_imp_sth(sth);
   AV *av = Nullav;
@@ -1711,6 +1715,13 @@ SV* dbd_st_FETCH_internal(SV* sth, int what, MYSQL_RES* res, int cacheit) {
         case AV_ATTRIB_MAX_LENGTH:
 	  sv = newSViv((int) curField->max_length);
 	  break;
+        case AV_ATTRIB_IS_AUTO_INCREMENT:
+#if defined(AV_ATTRIB_IS_AUTO_INCREMENT)
+	  sv = boolSV(IS_AUTO_INCREMENT(curField->flags));
+	  break;
+#else
+	  croak("AUTO_INCREMENT_FLAG is not supported on this machine");
+#endif
         case AV_ATTRIB_IS_KEY:
 	  sv = boolSV(IS_KEY(curField->flags));
 	  break;
@@ -1852,7 +1863,13 @@ SV* dbd_st_FETCH_attrib(SV* sth, imp_sth_t* imp_sth, SV* keysv) {
 	    } else if (strEQ(key, "mysql_use_result")) {
 	        retsv = boolSV(imp_sth->use_mysql_use_result);
 	    }
-	    break;	}
+	    break;
+	  case 23:  
+	    if (strEQ(key, "mysql_is_auto_increment")) {
+	        retsv = ST_FETCH_AV(AV_ATTRIB_IS_AUTO_INCREMENT);
+	    }
+	    break;
+	}
 	break;
     }
 

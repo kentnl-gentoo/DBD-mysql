@@ -1,3 +1,9 @@
+2002-04-12  Jochen Wiedmann  <joe@ispsoft.de> (2.1012)
+
+	* Some fixes in the docs. Paul Dubois <paul@kitebird.com>
+	* Added mysql_is_auto_increment. (Someone else, but forgot
+	  his email, sorry!)
+
 2002-02-12  Jochen Wiedmann  <joe@ispsoft.de> (2.1011)
 
         * Makefile.PL: DBI::DBD is no longer loaded by

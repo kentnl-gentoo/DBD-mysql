@@ -80,6 +80,7 @@ enum av_attribs {
     AV_ATTRIB_MAX_LENGTH,
     AV_ATTRIB_IS_KEY,
     AV_ATTRIB_IS_BLOB,
+    AV_ATTRIB_IS_AUTO_INCREMENT,
     AV_ATTRIB_LAST         /*  Dummy attribute, never used, for allocation  */
 };                         /*  purposes only                                */
 
