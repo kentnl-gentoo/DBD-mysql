@@ -100,9 +100,35 @@ _admin_internal(drh,dbh,command,dbname=NULL,host=NULL,port=NULL,user=NULL,passwo
        } else if (strEQ(command, "reload")) {
 	   result = mysql_reload(sock);
        } else if (strEQ(command, "createdb")) {
+#if MYSQL_VERSION_ID < 40000
 	   result = mysql_create_db(sock, dbname);
+#else
+	   char* buffer = malloc(strlen(dbname)+50);
+	   if (buffer == null) {
+	     do_error(drh, JW_ERR_MEM, "Out of memory");
+	     XSRETURN_NO;
+	   } else {
+	     strcpy(buffer, "CREATE DATABASE ");
+	     strcat(buffer, dbname);
+	     result = mysql_query(buffer);
+	     free(buffer);
+	   }
+#endif
        } else if (strEQ(command, "dropdb")) {
+#if MYSQL_VERSION_ID < 40000
           result = mysql_drop_db(sock, dbname);
+#else
+	   char* buffer = malloc(strlen(dbname)+50);
+	   if (buffer == null) {
+	     do_error(drh, JW_ERR_MEM, "Out of memory");
+	     XSRETURN_NO;
+	   } else {
+	     strcpy(buffer, "DROP DATABASE ");
+	     strcat(buffer, dbname);
+	     result = mysql_query(buffer);
+	     free(buffer);
+	   }
+#endif
        } else {
 	  croak("Unknown command: %s", command);
        }
