@@ -1,27 +1,17 @@
 /*
  *  DBD::mSQL - DBI driver for the mysql database
  *
- *  Copyright (c) 1997  Jochen Wiedmann
+ *  Copyright (c) 2003       Rudolf Lippan
+ *  Copyright (c) 1997-2003  Jochen Wiedmann
  *
  *  Based on DBD::Oracle; DBD::Oracle is
  *
  *  Copyright (c) 1994,1995  Tim Bunce
  *
  *  You may distribute this under the terms of either the GNU General Public
- *  License or the Artistic License, as specified in the Perl README file,
- *  with the exception that it cannot be placed on a CD-ROM or similar media
- *  for commercial distribution without the prior approval of the author.
+ *  License or the Artistic License, as specified in the Perl README file.
  *
- *  Author:  Jochen Wiedmann
- *           Am Eisteich 9
- *           72555 Metzingen
- *           Germany
- *
- *           Email: joe@ispsoft.de
- *           Fax: +49 7123 / 14892
- *
- *
- *  $Id: dbdimp.h,v 1.4 2003/08/28 20:25:06 rlippan Exp $
+ *  $Id: dbdimp.h,v 1.5 2003/10/17 17:20:50 rlippan Exp $
  */
 
 /*

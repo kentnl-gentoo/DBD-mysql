@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 40listfields.t,v 1.1 2003/03/18 02:53:28 rlippan Exp $
+#   $Id: 40listfields.t,v 1.2 2003/10/22 18:29:35 rlippan Exp $
 #
 #   This is a test for statement attributes being present appropriately.
 #
@@ -70,6 +70,8 @@ while (Testing()) {
 		    $dbh->do($def)))
 	   or DbiError($dbh->err, $dbh->errstr);
 
+    Test($state or $dbh->table_info(undef,undef,$table));
+    Test($state or $dbh->column_info(undef,undef,$table,'%'));
 
     Test($state or $cursor = $dbh->prepare("SELECT * FROM $table"))
 	   or DbiError($dbh->err, $dbh->errstr);

@@ -1,13 +1,12 @@
 /* Hej, Emacs, this is -*- C -*- mode!
 
-   $Id: mysql.xs,v 1.2 2003/04/01 01:17:27 rlippan Exp $
+   $Id: mysql.xs,v 1.3 2003/10/17 17:20:50 rlippan Exp $
 
-   Copyright (c) 1997, 1998 Jochen Wiedmann
+   Copyright (c) 2003      Rudolf Lippan
+   Copyright (c) 1997-2003 Jochen Wiedmann
 
    You may distribute under the terms of either the GNU General Public
-   License or the Artistic License, as specified in the Perl README file,
-   with the exception that it cannot be placed on a CD-ROM or similar media
-   for commercial distribution without the prior approval of the author.
+   License or the Artistic License, as specified in the Perl README file.
 
 */
 
