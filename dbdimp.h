@@ -11,7 +11,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h,v 1.14 2005/03/29 02:27:21 capttofu Exp $
+ *  $Id: dbdimp.h,v 1.15 2005/04/02 06:50:05 rlippan Exp $
  */
 
 /*
@@ -191,7 +191,12 @@ struct imp_sth_st {
 #define do_error		mysql_dr_error
 #define dbd_db_type_info_all    mysql_db_type_info_all
 #define dbd_db_quote            mysql_db_quote
+
+#ifdef DBD_MYSQL_INSERT_ID_IS_GOOD /* prototype was broken in 
+				      some versions of dbi */
 #define dbd_db_last_insert_id   mysql_db_last_insert_id
+
+#endif
 
 #include <dbd_xsh.h>
 void	 do_error (SV* h, int rc, const char *what);
@@ -208,6 +213,5 @@ extern MYSQL* mysql_dr_connect(MYSQL*, char*, char*, char*, char*, char*,
 
 extern int mysql_db_reconnect(SV*);
 
-SV *mysql_db_last_insert_id(SV* dbh, imp_dbh_t *imp_dbh,
-        SV *catalog, SV *schema, SV *table, SV *field,SV *attr);
-
+/* SV *mysql_db_last_insert_id(SV* dbh, imp_dbh_t *imp_dbh,
+        SV *catalog, SV *schema, SV *table, SV *field,SV *attr); */

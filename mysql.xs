@@ -1,6 +1,6 @@
 /* Hej, Emacs, this is -*- C -*- mode!
 
-   $Id: mysql.xs,v 1.8 2005/03/16 23:05:55 capttofu Exp $
+   $Id: mysql.xs,v 1.9 2005/04/02 02:55:49 capttofu Exp $
 
    Copyright (c) 2003      Rudolf Lippan
    Copyright (c) 1997-2003 Jochen Wiedmann
@@ -297,13 +297,13 @@ rows(sth)
     D_imp_sth(sth);
     char buf[64];
 
-    /* fix to make rows able to handle errors and handle max value from 
-      affected rows
-    */
-    if (imp_sth->row_num == (my_ulonglong) -1)
-      sprintf(buf, "%lli", -1);
-    else
-      sprintf(buf, "%llu", imp_sth->row_num);
+  /* fix to make rows able to handle errors and handle max value from 
+     affected rows
+  */
+  if ((long long)imp_sth->row_num ==  -1)
+    sprintf(buf, "%d", -1);
+  else
+    sprintf(buf, "%llu", imp_sth->row_num);
 
     ST(0) = sv_2mortal(newSVpvn(buf, strlen(buf)));
 

@@ -7,7 +7,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.c,v 1.23 2005/03/29 02:27:21 capttofu Exp $
+ *  $Id: dbdimp.c,v 1.27 2005/04/02 06:50:05 rlippan Exp $
  */
 
 
@@ -881,10 +881,6 @@ MYSQL* mysql_dr_connect(MYSQL* sock, char* unixSocket, char* host,
     
     if (imp_dbh) {
       SV* sv = DBIc_IMP_DATA(imp_dbh);
-      imp_dbh->bind_type_guessing = FALSE;
-      imp_dbh->has_transactions = TRUE;
-      imp_dbh->auto_reconnect = FALSE; /* Safer we flip this to TRUE perl side 
-                                         if we detect a mod_perl env. */
 
       DBIc_set(imp_dbh, DBIcf_AutoCommit, &sv_yes);
       if (sv  &&  SvROK(sv)) {
@@ -1118,6 +1114,11 @@ int dbd_db_login(SV* dbh, imp_dbh_t* imp_dbh, char* dbname, char* user,
 
   imp_dbh->stats.auto_reconnects_ok = 0;
   imp_dbh->stats.auto_reconnects_failed = 0;
+
+  imp_dbh->bind_type_guessing = FALSE;
+  imp_dbh->has_transactions = TRUE;
+  imp_dbh->auto_reconnect = FALSE; /* Safer we flip this to TRUE perl side 
+                                     if we detect a mod_perl env. */
 
   if (!_MyLogin(imp_dbh)) {
     do_error(dbh, mysql_errno(&imp_dbh->mysql),
@@ -1629,12 +1630,16 @@ my_ulonglong mysql_st_internal_execute(SV* h, SV* statement, SV* attribs,
     D_imp_sth(h);
     D_imp_dbh_from_sth;
     STRLEN slen;
+    my_ulonglong rows;
 
     char* sbuf = SvPV(statement, slen);
 
     char* salloc = ParseParam(
         svsock, sbuf, &slen, params, numParams, imp_dbh->bind_type_guessing
     );
+
+    if (dbis->debug >= 2) 
+	    PerlIO_printf(DBILOGFP, "      -> mysql_st_interal_execute\n");
 
     if (salloc) {
         sbuf = salloc;
@@ -1705,11 +1710,23 @@ my_ulonglong mysql_st_internal_execute(SV* h, SV* statement, SV* attribs,
     if (mysql_errno(svsock)) {
       do_error(h, mysql_errno(svsock), mysql_error(svsock));
     }
-    if (!*cdaPtr) {
-      return mysql_affected_rows(svsock);
-    } else {
-      return mysql_num_rows(*cdaPtr);
+
+    if (!*cdaPtr)
+       rows= mysql_affected_rows(svsock);
+    else
+      rows= mysql_num_rows(*cdaPtr);
+
+    if ((long long)rows == -1)
+    {      
+      if (dbis->debug >= 2) 
+	    PerlIO_printf(DBILOGFP,
+                         "      <- mysql_st_internal_execute ERROR: returning -1\n");
+         return(-1);
     }
+    if (dbis->debug >= 2) 
+      PerlIO_printf(DBILOGFP,
+              "      <- mysql_st_internal_execute ERROR: returning -1\n");
+    return(rows);
 }
 
 
@@ -1750,10 +1767,6 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth) {
      */
     for (i = 0;  i < AV_ATTRIB_LAST;  i++) {
 	if (imp_sth->av_attr[i]) {
-#ifdef DEBUGGING_MEMORY_LEAK
-	    PerlIO_printf("Execute: Decrementing refcnt: old = %d\n",
-			  SvREFCNT(imp_sth->av_attr[i]));
-#endif
 	    SvREFCNT_dec(imp_sth->av_attr[i]);
 	}
 	imp_sth->av_attr[i] = Nullav;
@@ -1783,7 +1796,10 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth) {
 		      imp_sth->row_num);
     }
 
-    return (int) imp_sth->row_num;
+    if ((long long) imp_sth->row_num == -1)
+      return -1;
+    else
+      return (int) imp_sth->row_num;
 }
 
 
@@ -2528,10 +2544,11 @@ SV* dbd_db_quote(SV* dbh, SV* str, SV* type) {
     return result;
 }
 
+#ifdef DBD_MYSQL_INSERT_ID_IS_GOOD
 SV *mysql_db_last_insert_id(SV* dbh, imp_dbh_t *imp_dbh,
         SV *catalog, SV *schema, SV *table, SV *field,SV *attr)
 {
         return sv_2mortal(my_ulonglong2str(mysql_insert_id(&((imp_dbh_t*)imp_dbh)->mysql)));
 }
-
+#endif
 

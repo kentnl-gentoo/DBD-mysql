@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: ak-dbd.t,v 1.1 2003/03/18 02:53:28 rlippan Exp $
+#   $Id: ak-dbd.t,v 1.2 2005/03/31 03:20:54 capttofu Exp $
 #
 #   This is a skeleton test. For writing new tests, take this file
 #   and modify/extend it.
@@ -359,6 +359,8 @@ while (Testing()) {
 				  $test_user, $test_password)))
 	    or ErrMsgF("connect failed: %s.\n", $DBI::errstr);
 	Test($state or ($table = FindNewTable($dbh)));
+	Test($state or $dbh->do("DROP TABLE IF EXISTS $table"))
+	    or printf("Error while dropping table: %s\n", $dbh->errstr());
 	Test($state or $dbh->do("CREATE TABLE $table ("
 				. " object_id integer,"
 				. " object_title VARCHAR(64))"))
