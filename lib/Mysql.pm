@@ -17,7 +17,7 @@ use vars qw($QUIET @ISA @EXPORT @EXPORT_OK $VERSION $db_errstr);
 $db_errstr = '';
 $QUIET  = 0;
 @ISA    = qw(DBI); # Inherits Exporter and DynaLoader via DBI
-$VERSION = '1.2212';
+$VERSION = '1.2216';
 
 # @EXPORT is a relict from old times...
 @EXPORT = qw(
@@ -26,15 +26,8 @@ $VERSION = '1.2212';
 	     REAL_TYPE
 	    );
 @EXPORT_OK = qw(
-		IDENT_TYPE
-		NULL_TYPE
-		TEXT_TYPE
 		DATE_TYPE
-		UINT_TYPE
-		MONEY_TYPE
 		TIME_TYPE
-		IDX_TYPE
-		SYSVAR_TYPE
 	       );
 
 my $FETCH_map = {
@@ -125,7 +118,7 @@ sub listdbs ($) {
 
 sub listtables ($) {
     my($self) = shift;
-    $self->{'dbh'}->func('_ListTables');
+    map { $_ =~ s/^(.*)\.//; $_ } $self->{'dbh'}->tables();
 }
 
 sub quote ($$) {
@@ -268,6 +261,13 @@ sub getserverstats ($) { shift->{'dbh'}->{'stats'} }
 
 
 Mysql->init_rootclass();
+
+sub CHAR_TYPE { DBD::mysql::FIELD_TYPE_STRING() }
+sub INT_TYPE { DBD::mysql::FIELD_TYPE_LONG() }
+sub REAL_TYPE { DBD::mysql::FIELD_TYPE_DOUBLE() }
+sub DATE_TYPE { DBD::mysql::FIELD_TYPE_DATE() }
+sub TIME_TYPE { DBD::mysql::FIELD_TYPE_TIME() }
+
 
 package Mysql::dr;
 @Mysql::dr::ISA = qw(DBI::dr);
