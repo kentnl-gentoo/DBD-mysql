@@ -1745,7 +1745,7 @@ SV* dbd_st_FETCH_internal(SV* sth, int what, MYSQL_RES* res, int cacheit) {
 	  sv = newSViv((int) curField->max_length);
 	  break;
         case AV_ATTRIB_IS_AUTO_INCREMENT:
-#if defined(AV_ATTRIB_IS_AUTO_INCREMENT)
+#if defined(AUTO_INCREMENT_FLAG)
 	  sv = boolSV(IS_AUTO_INCREMENT(curField->flags));
 	  break;
 #else

@@ -1,3 +1,9 @@
+2002-04-17  Jochen Wiedmann  <joe@ispsoft.de> (2.1014)
+
+	* dbdimp.c: Fixed mysql_is_auto_increment.
+	  Paul Walmsley <shag-dbdmysql@booyaka.com> and
+	  Paul Dubois <paul@kitebird.org>
+
 2002-04-12  Jochen Wiedmann  <joe@ispsoft.de> (2.1013)
 
 	* dbdimp.c: Added use of mysql_ssl_set.
