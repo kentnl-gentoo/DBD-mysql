@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 60leaks.t,v 1.1.1.1 1999/07/13 08:14:45 joe Exp $
+#   $Id: 60leaks.t,v 1.1 2003/03/18 02:53:28 rlippan Exp $
 #
 #   This is a skeleton test. For writing new tests, take this file
 #   and modify/extend it.

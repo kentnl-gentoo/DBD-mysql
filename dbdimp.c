@@ -17,7 +17,7 @@
  *           Fax: +49 7123 / 14892
  *
  *
- *  $Id: dbdimp.c,v 1.5 1999/09/21 08:51:08 joe Exp $
+ *  $Id: dbdimp.c,v 1.9 2003/06/24 05:37:25 rlippan Exp $
  */
 
 
@@ -55,6 +55,9 @@ typedef struct sql_type_info_s {
     int minimum_scale;
     int maximum_scale;
     int num_prec_radix;
+    int sql_datatype;
+    int sql_datetime_sub;
+    int interval_precision;
     int native_type;
     int is_num;
 } sql_type_info_t;
@@ -155,7 +158,7 @@ static char* ParseParam(MYSQL* sock, char* statement, STRLEN *slenPtr,
 	    alen += 3;  /* Erase '?', insert 'NULL' */
 	} else {
 	    if (!ph->type) {
-	        ph->type = SvNIOK(ph->value) ? SQL_INTEGER : SQL_VARCHAR;
+		    ph->type= SQL_VARCHAR;
 	    }
 	    valbuf = SvPV(ph->value, vallen);
 	    alen += 2*vallen+1; /* Erase '?', insert (possibly quoted)
@@ -243,7 +246,7 @@ static char* ParseParam(MYSQL* sock, char* statement, STRLEN *slenPtr,
 		      case SQL_LONGVARBINARY:
 			isNum = FALSE;
 			break;
-		      default:
+		      Default:
 			isNum = FALSE;
 			break;
 		    }
@@ -288,7 +291,7 @@ int BindParam(imp_sth_ph_t* ph, SV* value, IV sql_type) {
     if (ph->value) {
         (void) SvREFCNT_dec(ph->value);
     }
-    ph->value = value;
+    ph->value = newSVsv(value);
     (void) SvREFCNT_inc(value);
     if (sql_type) {
         ph->type = sql_type;
@@ -303,122 +306,175 @@ int BindParam(imp_sth_ph_t* ph, SV* value, IV sql_type) {
  */
 static const sql_type_info_t SQL_GET_TYPE_INFO_values[] = {
   { "varchar",    SQL_VARCHAR,                    255, "'",  "'",  "max length",
-    1, 0, 1, 0, 0, 0, "variable length string",
-    0, 0, 0, FIELD_TYPE_VAR_STRING,  0
+    1, 0, 3, 0, 0, 0, "variable length string",
+    0, 0, 0, 
+    SQL_VARCHAR, 0, 0, 
+    FIELD_TYPE_VAR_STRING,  0,
     /* 0 */
   },
   { "decimal",   SQL_DECIMAL,                      15, NULL, NULL, "precision,scale",
-    1, 0, 1, 0, 0, 0, "double",
-    0, 6, 2, FIELD_TYPE_DECIMAL,     1
+    1, 0, 3, 0, 0, 0, "double",
+    0, 6, 2, 
+    SQL_DECIMAL, 0, 0,
+    FIELD_TYPE_DECIMAL,     1
     /* 1 */
   },
   { "tinyint",   SQL_TINYINT,                       3, NULL, NULL, NULL,
-    1, 0, 1, 0, 0, 0, "Tiny integer",
-    0, 0, 10, FIELD_TYPE_TINY,        1
+    1, 0, 3, 0, 0, 0, "Tiny integer",
+    0, 0, 10, 
+    SQL_TINYINT, 0, 0,
+    FIELD_TYPE_TINY,        1
     /* 2 */
   },
   { "smallint",  SQL_SMALLINT,                      5, NULL, NULL, NULL,
-    1, 0, 1, 0, 0, 0, "Short integer",
-    0, 0, 10, FIELD_TYPE_SHORT,       1
+    1, 0, 3, 0, 0, 0, "Short integer",
+    0, 0, 10, 
+    SQL_SMALLINT, 0, 0,
+    FIELD_TYPE_SHORT,       1
     /* 3 */
   },
   { "integer",   SQL_INTEGER,                      10, NULL, NULL, NULL,
-    1, 0, 1, 0, 0, 0, "integer",
-    0, 0, 10, FIELD_TYPE_LONG,        1
+    1, 0, 3, 0, 0, 0, "integer",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_LONG,        1
     /* 4 */
   },
   { "float",     SQL_REAL,                          7,  NULL, NULL, NULL,
     1, 0, 0, 0, 0, 0, "float",
-    0, 2, 2, FIELD_TYPE_FLOAT,       1
+    0, 2, 10, 
+    SQL_FLOAT, 0, 0,
+    FIELD_TYPE_FLOAT,       1
     /* 5 */
   },
+  { "double",    SQL_FLOAT,                       15,  NULL, NULL, NULL,
+    1, 0, 3, 0, 0, 0, "double",
+    0, 4, 2, 
+    SQL_FLOAT, 0, 0,
+    FIELD_TYPE_DOUBLE,      1
+    /* 6 */
+  },
   { "double",    SQL_DOUBLE,                       15,  NULL, NULL, NULL,
-    1, 0, 1, 0, 0, 0, "double",
-    0, 4, 2, FIELD_TYPE_DOUBLE,      1
+    1, 0, 3, 0, 0, 0, "double",
+    0, 4, 10, 
+    SQL_DOUBLE, 0, 0,
+    FIELD_TYPE_DOUBLE,      1
     /* 6 */
   },
   /*
     FIELD_TYPE_NULL ?
   */
   { "timestamp", SQL_TIMESTAMP,                    14, "'", "'", NULL,
-    0, 0, 1, 0, 0, 0, "timestamp",
-    0, 0, 0, FIELD_TYPE_TIMESTAMP,   0
+    0, 0, 3, 0, 0, 0, "timestamp",
+    0, 0, 0,
+    SQL_TIMESTAMP, 0, 0,
+    FIELD_TYPE_TIMESTAMP,   0
     /* 7 */
   },
-  { "bigint",    SQL_BIGINT,                       20, NULL, NULL, NULL,
-    1, 0, 1, 0, 0, 0, "Longlong integer",
-    0, 0, 10, FIELD_TYPE_LONGLONG,    1
+  { "bigint",    SQL_BIGINT,                       19, NULL, NULL, NULL,
+    1, 0, 3, 0, 0, 0, "Longlong integer",
+    0, 0, 10, 
+    SQL_BIGINT, 0, 0,
+    FIELD_TYPE_LONGLONG,    1
     /* 8 */
   },
   { "middleint", SQL_INTEGER,                       8, NULL, NULL, NULL,
-    1, 0, 1, 0, 0, 0, "Medium integer",
-    0, 0, 10, FIELD_TYPE_INT24,       1
+    1, 0, 3, 0, 0, 0, "Medium integer",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_INT24,       1
     /* 9 */
   },
   { "date",      SQL_DATE,                         10, "'",  "'",  NULL,
-    1, 0, 1, 0, 0, 0, "date",
-    0, 0, 0, FIELD_TYPE_DATE,        0
+    1, 0, 3, 0, 0, 0, "date",
+    0, 0, 0, 
+    SQL_DATE, 0, 0,
+    FIELD_TYPE_DATE,        0
     /* 10 */
   },
   { "time",      SQL_TIME,                          6, "'",  "'",  NULL,
-    1, 0, 1, 0, 0, 0, "time",
-    0, 0, 0, FIELD_TYPE_TIME,        0
+    1, 0, 3, 0, 0, 0, "time",
+    0, 0, 0, 
+    SQL_TIME, 0, 0,
+    FIELD_TYPE_TIME,        0
     /* 11 */
   },
   { "datetime",  SQL_TIMESTAMP,                    21, "'",  "'",  NULL,
-    1, 0, 1, 0, 0, 0, "datetime",
-    0, 0, 0, FIELD_TYPE_DATETIME,    0
+    1, 0, 3, 0, 0, 0, "datetime",
+    0, 0, 0, 
+    SQL_TIMESTAMP, 0, 0,
+    FIELD_TYPE_DATETIME,    0
     /* 12 */
   },
   { "year",      SQL_SMALLINT,                      4, NULL, NULL, NULL,
-    1, 0, 1, 0, 0, 0, "year",
-    0, 0, 0, FIELD_TYPE_YEAR,        0
+    1, 0, 3, 0, 0, 0, "year",
+    0, 0, 10, 
+    SQL_SMALLINT, 0, 0,
+    FIELD_TYPE_YEAR,        0
     /* 13 */
   },
   { "date",      SQL_DATE,                         10, "'",  "'",  NULL,
-    1, 0, 1, 0, 0, 0, "date",
-    0, 0, 0, FIELD_TYPE_NEWDATE,     0
+    1, 0, 3, 0, 0, 0, "date",
+    0, 0, 0, 
+    SQL_DATE, 0, 0,
+    FIELD_TYPE_NEWDATE,     0
     /* 14 */
   },
   { "enum",      SQL_VARCHAR,                     255, "'",  "'",  NULL,
     1, 0, 1, 0, 0, 0, "enum(value1,value2,value3...)",
-    0, 0, 0, FIELD_TYPE_ENUM,        0
+    0, 0, 0, 
+    0, 0, 0,
+    FIELD_TYPE_ENUM,        0
     /* 15 */
   },
   { "set",       SQL_VARCHAR,                     255, "'",  "'",  NULL,
     1, 0, 1, 0, 0, 0, "set(value1,value2,value3...)",
-    0, 0, 0, FIELD_TYPE_SET,         0
+    0, 0, 0, 
+    0, 0, 0,
+    FIELD_TYPE_SET,         0
     /* 16 */
   },
-  { "blob",       SQL_LONGVARCHAR,              65535, "'",  "'",  NULL,
-    1, 0, 1, 0, 0, 0, "binary large object (0-65535)",
-    0, 0, 0, FIELD_TYPE_BLOB,        0
+  { "blob",       SQL_LONGVARBINARY,              65535, "'",  "'",  NULL,
+    1, 0, 3, 0, 0, 0, "binary large object (0-65535)",
+    0, 0, 0, 
+    SQL_LONGVARBINARY, 0, 0,
+    FIELD_TYPE_BLOB,        0
     /* 17 */
   },
-  { "tinyblob",  SQL_LONGVARCHAR,                 255, "'",  "'",  NULL,
-    1, 0, 1, 0, 0, 0, "binary large object (0-255) ",
-    0, 0, 0, FIELD_TYPE_TINY_BLOB,   0
+  { "tinyblob",  SQL_VARBINARY,                 255, "'",  "'",  NULL,
+    1, 0, 3, 0, 0, 0, "binary large object (0-255) ",
+    0, 0, 0, 
+    SQL_VARBINARY, 0, 0,
+    FIELD_TYPE_TINY_BLOB,   0
     /* 18 */
   },
-  { "mediumblob", SQL_LONGVARCHAR,           16777215, "'",  "'",  NULL,
-    1, 0, 1, 0, 0, 0, "binary large object",
-    0, 0, 0, FIELD_TYPE_MEDIUM_BLOB, 0
+  { "mediumblob", SQL_LONGVARBINARY,           16777215, "'",  "'",  NULL,
+    1, 0, 3, 0, 0, 0, "binary large object",
+    0, 0, 0, 
+    SQL_LONGVARBINARY, 0, 0,
+    FIELD_TYPE_MEDIUM_BLOB, 0
     /* 19 */
   },
-  { "longblob",   SQL_LONGVARCHAR,         2147483647, "'",  "'",  NULL,
-    1, 0, 1, 0, 0, 0, "binary large object, use mediumblob instead",
-    0, 0, 0, FIELD_TYPE_LONG_BLOB,   0
+  { "longblob",   SQL_LONGVARBINARY,         2147483647, "'",  "'",  NULL,
+    1, 0, 3, 0, 0, 0, "binary large object, use mediumblob instead",
+    0, 0, 0, 
+    SQL_LONGVARBINARY, 0, 0,
+    FIELD_TYPE_LONG_BLOB,   0
     /* 20 */
   },
   { "char",       SQL_CHAR,                       255, "'",  "'",  "max length",
-    1, 0, 1, 0, 0, 0, "string",
-    0, 0, 0, FIELD_TYPE_STRING,      0
+    1, 0, 3, 0, 0, 0, "string",
+    0, 0, 0, 
+    SQL_CHAR, 0, 0,
+    FIELD_TYPE_STRING,      0
     /* 21 */
   },
 
   { "decimal",            SQL_NUMERIC,            15,  NULL, NULL, "precision,scale",
-    1, 0, 1, 0, 0, 0, "double",
-    0, 6, 2, FIELD_TYPE_DECIMAL,     1
+    1, 0, 3, 0, 0, 0, "double",
+    0, 6, 2, 
+    SQL_NUMERIC, 0, 0,
+    FIELD_TYPE_DECIMAL,     1
   },
   /*
   { "tinyint",            SQL_BIT,                  3, NULL, NULL, NULL,
@@ -427,41 +483,219 @@ static const sql_type_info_t SQL_GET_TYPE_INFO_values[] = {
   },
   */
   { "tinyint unsigned",   SQL_TINYINT,              3, NULL, NULL, NULL,
-    1, 0, 1, 1, 0, 0, "Tiny integer unsigned",
-    0, 0, 10, FIELD_TYPE_TINY,        1
+    1, 0, 3, 1, 0, 0, "Tiny integer unsigned",
+    0, 0, 10, 
+    SQL_TINYINT, 0, 0,
+    FIELD_TYPE_TINY,        1
   },
   { "smallint unsigned",  SQL_SMALLINT,             5, NULL, NULL, NULL,
-    1, 0, 1, 1, 0, 0, "Short integer unsigned",
-    0, 0, 10, FIELD_TYPE_SHORT,       1
+    1, 0, 3, 1, 0, 0, "Short integer unsigned",
+    0, 0, 10, 
+    SQL_SMALLINT, 0, 0,
+    FIELD_TYPE_SHORT,       1
   },
   { "middleint unsigned", SQL_INTEGER,              8, NULL, NULL, NULL,
-    1, 0, 1, 1, 0, 0, "Medium integer unsigned",
-    0, 0, 10, FIELD_TYPE_INT24,       1
+    1, 0, 3, 1, 0, 0, "Medium integer unsigned",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_INT24,       1
   },
   { "int unsigned",       SQL_INTEGER,             10, NULL, NULL, NULL,
-    1, 0, 1, 1, 0, 0, "integer unsigned",
-    0, 0, 10, FIELD_TYPE_LONG,        1
+    1, 0, 3, 1, 0, 0, "integer unsigned",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_LONG,        1
   },
   { "int",                SQL_INTEGER,             10, NULL, NULL, NULL,
-    1, 0, 1, 0, 0, 0, "integer",
-    0, 0, 10, FIELD_TYPE_LONG,        1
+    1, 0, 3, 0, 0, 0, "integer",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_LONG,        1
   },
   { "integer unsigned",   SQL_INTEGER,             10, NULL, NULL, NULL,
-    1, 0, 1, 1, 0, 0, "integer",
-    0, 0, 10, FIELD_TYPE_LONG,        1
+    1, 0, 3, 1, 0, 0, "integer",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_LONG,        1
   },
   { "bigint unsigned",    SQL_BIGINT,              20, NULL, NULL, NULL,
-    1, 0, 1, 1, 0, 0, "Longlong integer unsigned",
-    0, 0, 10, FIELD_TYPE_LONGLONG,    1
+    1, 0, 3, 1, 0, 0, "Longlong integer unsigned",
+    0, 0, 10, 
+    SQL_BIGINT, 0, 0,
+    FIELD_TYPE_LONGLONG,    1
   },
   { "text",               SQL_LONGVARCHAR,      65535, "'",  "'",  NULL,
-    1, 0, 1, 0, 0, 0, "large text object (0-65535)",
-    0, 0, 0, FIELD_TYPE_BLOB,        0
+    1, 0, 3, 0, 0, 0, "large text object (0-65535)",
+    0, 0, 0, 
+    SQL_LONGVARCHAR, 0, 0,
+    FIELD_TYPE_BLOB,        0
   },
   { "mediumtext",         SQL_LONGVARCHAR,   16777215, "'",  "'",  NULL,
-    1, 0, 1, 0, 0, 0, "large text object",
-    0, 0, 0, FIELD_TYPE_MEDIUM_BLOB, 0
+    1, 0, 3, 0, 0, 0, "large text object",
+    0, 0, 0, 
+    SQL_LONGVARCHAR, 0, 0,
+    FIELD_TYPE_MEDIUM_BLOB, 0
   }
+
+ /* BEGIN MORE STUFF */
+,
+
+
+  { "mediumint unsigned auto_increment",   SQL_INTEGER,    8, NULL, NULL, NULL,
+    0, 0, 3, 1, 0, 1, "Medium integer unsigned auto_increment",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_INT24,        1,
+  },
+
+  { "tinyint unsigned auto_increment",   SQL_TINYINT,       3, NULL, NULL, NULL,
+    0, 0, 3, 1, 0, 1, "tinyint unsigned auto_increment",
+    0, 0, 10, 
+    SQL_TINYINT, 0, 0,
+    FIELD_TYPE_TINY,        1,
+  },
+
+  { "smallint auto_increment",   SQL_SMALLINT,             5, NULL, NULL, NULL,
+    0, 0, 3, 0, 0, 1, "smallint auto_increment",
+    0, 0, 10, 
+    SQL_SMALLINT, 0, 0,
+    FIELD_TYPE_SHORT,        1,
+  },
+
+  { "int unsigned auto_increment",   SQL_INTEGER,          10, NULL, NULL, NULL,
+    0, 0, 3, 1, 0, 1, "integer unsigned auto_increment",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_LONG,        1,
+  },
+
+  { "mediumint",   SQL_INTEGER,                      7, NULL, NULL, NULL,
+    1, 0, 3, 0, 0, 0, "Medium integer",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_INT24,        1,
+  },
+
+  { "bit",   SQL_BIT,                      1, NULL, NULL, NULL,
+    1, 0, 3, 0, 0, 0, "char(1)",
+    0, 0, 0, 
+    SQL_BIT, 0, 0,
+    FIELD_TYPE_TINY,        0,
+  },
+
+  { "numeric",   SQL_NUMERIC,               19, NULL, NULL, "precision,scale",
+    1, 0, 3, 0, 0, 0, "numeric",
+    0, 19, 10, 
+    SQL_NUMERIC, 0, 0,
+    FIELD_TYPE_DECIMAL,        1,
+  },
+
+  { "integer unsigned auto_increment",   SQL_INTEGER,     10, NULL, NULL, NULL,
+    0, 0, 3, 1, 0, 1, "integer unsigned auto_increment",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_LONG,        1,
+  },
+
+  { "mediumint unsigned",   SQL_INTEGER,             8, NULL, NULL, NULL,
+    1, 0, 3, 1, 0, 0, "Medium integer unsigned",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_INT24,        1,
+  },
+
+  { "smallint unsigned auto_increment",   SQL_SMALLINT,                      5, NULL, NULL, NULL,
+    0, 0, 3, 1, 0, 1, "smallint unsigned auto_increment",
+    0, 0, 10, 
+    SQL_SMALLINT, 0, 0,
+    FIELD_TYPE_SHORT,        1,
+  },
+
+  { "int auto_increment",   SQL_INTEGER,            10, NULL, NULL, NULL,
+    0, 0, 3, 0, 0, 1, "integer auto_increment",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_LONG,        1,
+  },
+
+  { "long varbinary",   SQL_LONGVARBINARY,          16777215, "0x", NULL, NULL,
+    1, 0, 3, 0, 0, 0, "mediumblob",
+    0, 0, 0, 
+    SQL_LONGVARBINARY, 0, 0,
+    FIELD_TYPE_LONG_BLOB,        0,
+  },
+
+  { "double auto_increment",   SQL_FLOAT,                15, NULL, NULL, NULL,
+    0, 0, 3, 0, 0, 1, "double auto_increment",
+    0, 4, 2, 
+    SQL_FLOAT, 0, 0,
+    FIELD_TYPE_DOUBLE,        1,
+  },
+
+  { "double auto_increment",   SQL_DOUBLE,              15, NULL, NULL, NULL,
+    0, 0, 3, 0, 0, 1, "double auto_increment",
+    0, 4, 10, 
+    SQL_DOUBLE, 0, 0,
+    FIELD_TYPE_DOUBLE,        1,
+  },
+
+  { "integer auto_increment",   SQL_INTEGER,           10, NULL, NULL, NULL,
+    0, 0, 3, 0, 0, 1, "integer auto_increment",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_LONG,        1,
+  },
+
+  { "bigint auto_increment",   SQL_BIGINT,              19, NULL, NULL, NULL,
+    0, 0, 3, 0, 0, 1, "bigint auto_increment",
+    0, 0, 10, 
+    SQL_BIGINT, 0, 0,
+    FIELD_TYPE_LONGLONG,        1,
+  },
+
+  { "bit auto_increment",   SQL_BIT,                     1, NULL, NULL, NULL,
+    0, 0, 3, 0, 0, 1, "char(1) auto_increment",
+    0, 0, 0, 
+    SQL_BIT, 0, 0,
+    FIELD_TYPE_TINY,        1,
+  },
+
+  { "mediumint auto_increment",   SQL_INTEGER,           7, NULL, NULL, NULL,
+    0, 0, 3, 0, 0, 1, "Medium integer auto_increment",
+    0, 0, 10, 
+    SQL_INTEGER, 0, 0,
+    FIELD_TYPE_INT24,        1,
+  },
+
+  { "float auto_increment",   SQL_REAL,                  7, NULL, NULL, NULL,
+    0, 0, 0, 0, 0, 1, "float auto_increment",
+    0, 2, 10, 
+    SQL_FLOAT, 0, 0,
+    FIELD_TYPE_FLOAT,        1,
+  },
+
+  { "long varchar",   SQL_LONGVARCHAR,           16777215, "'", "'", NULL,
+    1, 0, 3, 0, 0, 0, "mediumtext",
+    0, 0, 0, 
+    SQL_LONGVARCHAR, 0, 0,
+    FIELD_TYPE_MEDIUM_BLOB,        1,
+  },
+
+  { "tinyint auto_increment",   SQL_TINYINT,         3, NULL, NULL, NULL,
+    0, 0, 3, 0, 0, 1, "tinyint auto_increment",
+    0, 0, 10, 
+    SQL_TINYINT, 0, 0,
+    FIELD_TYPE_TINY,        1,
+  },
+
+  { "bigint unsigned auto_increment",   SQL_BIGINT,                      20, NULL, NULL, NULL,
+    0, 0, 3, 1, 0, 1, "bigint unsigned auto_increment",
+    0, 0, 10, 
+    SQL_BIGINT, 0, 0,
+    FIELD_TYPE_LONGLONG,        1,
+  },
+
+/* END MORE STUFF */
 };
 
 
@@ -473,22 +707,24 @@ static const sql_type_info_t* native2sql (int t) {
       case FIELD_TYPE_SHORT:       return &SQL_GET_TYPE_INFO_values[3];
       case FIELD_TYPE_LONG:        return &SQL_GET_TYPE_INFO_values[4];
       case FIELD_TYPE_FLOAT:       return &SQL_GET_TYPE_INFO_values[5];
-      case FIELD_TYPE_DOUBLE:      return &SQL_GET_TYPE_INFO_values[6];
-      case FIELD_TYPE_TIMESTAMP:   return &SQL_GET_TYPE_INFO_values[7];
-      case FIELD_TYPE_LONGLONG:    return &SQL_GET_TYPE_INFO_values[8];
-      case FIELD_TYPE_INT24:       return &SQL_GET_TYPE_INFO_values[9];
-      case FIELD_TYPE_DATE:        return &SQL_GET_TYPE_INFO_values[10];
-      case FIELD_TYPE_TIME:        return &SQL_GET_TYPE_INFO_values[11];
-      case FIELD_TYPE_DATETIME:    return &SQL_GET_TYPE_INFO_values[12];
-      case FIELD_TYPE_YEAR:        return &SQL_GET_TYPE_INFO_values[13];
-      case FIELD_TYPE_NEWDATE:     return &SQL_GET_TYPE_INFO_values[14];
-      case FIELD_TYPE_ENUM:        return &SQL_GET_TYPE_INFO_values[15];
-      case FIELD_TYPE_SET:         return &SQL_GET_TYPE_INFO_values[16];
-      case FIELD_TYPE_BLOB:        return &SQL_GET_TYPE_INFO_values[17];
-      case FIELD_TYPE_TINY_BLOB:   return &SQL_GET_TYPE_INFO_values[18];
-      case FIELD_TYPE_MEDIUM_BLOB: return &SQL_GET_TYPE_INFO_values[19];
-      case FIELD_TYPE_LONG_BLOB:   return &SQL_GET_TYPE_INFO_values[20];
-      case FIELD_TYPE_STRING:      return &SQL_GET_TYPE_INFO_values[21];
+
+ 	/* 6  */
+      case FIELD_TYPE_DOUBLE:      return &SQL_GET_TYPE_INFO_values[7];
+      case FIELD_TYPE_TIMESTAMP:   return &SQL_GET_TYPE_INFO_values[8];
+      case FIELD_TYPE_LONGLONG:    return &SQL_GET_TYPE_INFO_values[9];
+      case FIELD_TYPE_INT24:       return &SQL_GET_TYPE_INFO_values[10];
+      case FIELD_TYPE_DATE:        return &SQL_GET_TYPE_INFO_values[11];
+      case FIELD_TYPE_TIME:        return &SQL_GET_TYPE_INFO_values[12];
+      case FIELD_TYPE_DATETIME:    return &SQL_GET_TYPE_INFO_values[13];
+      case FIELD_TYPE_YEAR:        return &SQL_GET_TYPE_INFO_values[14];
+      case FIELD_TYPE_NEWDATE:     return &SQL_GET_TYPE_INFO_values[15];
+      case FIELD_TYPE_ENUM:        return &SQL_GET_TYPE_INFO_values[16];
+      case FIELD_TYPE_SET:         return &SQL_GET_TYPE_INFO_values[17];
+      case FIELD_TYPE_BLOB:        return &SQL_GET_TYPE_INFO_values[18];
+      case FIELD_TYPE_TINY_BLOB:   return &SQL_GET_TYPE_INFO_values[19];
+      case FIELD_TYPE_MEDIUM_BLOB: return &SQL_GET_TYPE_INFO_values[20];
+      case FIELD_TYPE_LONG_BLOB:   return &SQL_GET_TYPE_INFO_values[21];
+      case FIELD_TYPE_STRING:      return &SQL_GET_TYPE_INFO_values[22];
       default:                     return &SQL_GET_TYPE_INFO_values[0];
     }
 }
@@ -611,16 +847,19 @@ MYSQL* mysql_dr_connect(MYSQL* sock, char* unixSocket, char* host,
 		  password ? password : "NULL");
   
   {
-#ifdef MYSQL_USE_CLIENT_FOUND_ROWS
-    unsigned int client_flag = CLIENT_FOUND_ROWS;
-#else
+#ifdef MYSQL_NO_CLIENT_FOUND_ROWS
     unsigned int client_flag = 0;
+#else
+    unsigned int client_flag = CLIENT_FOUND_ROWS;
 #endif
     mysql_init(sock);
     
     if (imp_dbh) {
       SV* sv = DBIc_IMP_DATA(imp_dbh);
       imp_dbh->has_transactions = TRUE;
+      imp_dbh->auto_reconnect = FALSE; /* Safer we flip this to TRUE perl side 
+                                         if we detect a mod_perl env. */
+
       DBIc_set(imp_dbh, DBIcf_AutoCommit, &sv_yes);
       if (sv  &&  SvROK(sv)) {
 	HV* hv = (HV*) SvRV(sv);
@@ -733,6 +972,11 @@ MYSQL* mysql_dr_connect(MYSQL* sock, char* unixSocket, char* host,
 				portNr, unixSocket, client_flag);
     if (dbis->debug >= 2)
       PerlIO_printf(DBILOGFP, "imp_dbh->mysql_dr_connect: <-");
+
+    /* we turn off Mysql's auto reconnect and handle re-connecting ourselves
+     * so that we can keep track of when this happens.
+     */
+    sock->reconnect=0;
     return result;
   }
 }
@@ -845,6 +1089,9 @@ int dbd_db_login(SV* dbh, imp_dbh_t* imp_dbh, char* dbname, char* user,
 		  dbname ? dbname : "NULL",
 		  user ? user : "NULL",
 		  password ? password : "NULL");
+
+  imp_dbh->stats.auto_reconnects_ok = 0;
+  imp_dbh->stats.auto_reconnects_failed = 0;
 
   if (!_MyLogin(imp_dbh)) {
     do_error(dbh, mysql_errno(&imp_dbh->mysql),
@@ -1047,14 +1294,14 @@ int dbd_db_STORE_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv, SV* valuesv) {
     char *key = SvPV(keysv, kl);
     SV *cachesv = Nullsv;
     int cacheit = FALSE;
+    bool bool_value = SvTRUE(valuesv);
 
     if (kl==10 && strEQ(key, "AutoCommit")){
       if (imp_dbh->has_transactions) {
         int oldval = DBIc_has(imp_dbh,DBIcf_AutoCommit);
-	int newval = SvTRUE(valuesv);
 
  	/* if setting AutoCommit on ... */
-	if (newval) {
+	if (bool_value) {
 	    if (!oldval) {
 	        /*  Need to issue a commit before entering AutoCommit  */
 	        if (mysql_real_query(&imp_dbh->mysql,"COMMIT",6) != 0) {
@@ -1067,7 +1314,7 @@ int dbd_db_STORE_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv, SV* valuesv) {
 			   "Turning on AutoCommit failed");
 		  return FALSE;
 		}
-		DBIc_set(imp_dbh, DBIcf_AutoCommit, newval);
+		DBIc_set(imp_dbh, DBIcf_AutoCommit, bool_value);
 	    }
 	} else {
 	    if (oldval) {
@@ -1077,7 +1324,7 @@ int dbd_db_STORE_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv, SV* valuesv) {
 			   "Turning off AutoCommit failed");
 		  return FALSE;
 		}
-		DBIc_set(imp_dbh, DBIcf_AutoCommit, newval);
+		DBIc_set(imp_dbh, DBIcf_AutoCommit, bool_value);
 	    }
 	}
       } else {
@@ -1091,6 +1338,12 @@ int dbd_db_STORE_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv, SV* valuesv) {
 	    croak("Transactions not supported by database");
 	}
       }
+    } else if (strlen("mysql_auto_reconnect") 
+		    == kl && strEQ(key,"mysql_auto_reconnect") ) 
+    {
+        /*XXX: Does DBI handle the magic ? */
+	imp_dbh->auto_reconnect = bool_value;
+	/* imp_dbh->mysql.reconnect=0; */
     } else {
         return FALSE;
     }
@@ -1157,6 +1410,10 @@ SV* dbd_db_FETCH_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv) {
   }
 
   switch(*key) {
+   case 'a':
+      if (kl == strlen("auto_reconnect") && strEQ(key, "auto_reconnect"))
+		result = sv_2mortal(newSViv(imp_dbh->auto_reconnect));
+      break;
     case 'e':
       if (strEQ(key, "errno")) {
 	result = sv_2mortal(newSViv((IV)mysql_errno(&imp_dbh->mysql)));
@@ -1169,6 +1426,16 @@ SV* dbd_db_FETCH_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv) {
 	result = sv_2mortal(newSVpv(msg, strlen(msg)));
       }
       break;
+    case 'd':
+      if (strEQ(key, "dbd_stats")) {
+          HV* hv = newHV();
+          hv_store(hv, "auto_reconnects_ok", strlen("auto_reconnects_ok"), 
+			  newSViv(imp_dbh->stats.auto_reconnects_ok),0);
+          hv_store(hv,"auto_reconnects_failed",strlen("auto_reconnects_failed"),
+			  newSViv(imp_dbh->stats.auto_reconnects_failed),0);
+
+          result = (newRV_noinc((SV*)hv));
+      }
     case 'h':
       if (strEQ(key, "hostinfo")) {
 	const char* hostinfo = mysql_get_host_info(&imp_dbh->mysql);
@@ -2012,6 +2279,7 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
 int mysql_db_reconnect(SV* h) {
   D_imp_xxh(h);
   imp_dbh_t* imp_dbh;
+  MYSQL save_socket;
 
   if (DBIc_TYPE(imp_xxh) == DBIt_ST) {
     imp_dbh = (imp_dbh_t*) DBIc_PARENT_COM(imp_xxh);
@@ -2025,7 +2293,7 @@ int mysql_db_reconnect(SV* h) {
     return FALSE;
   }
 
-  if (!DBIc_has(imp_dbh, DBIcf_AutoCommit)) {
+  if (!DBIc_has(imp_dbh, DBIcf_AutoCommit) || !imp_dbh->auto_reconnect) {
     /* We never reconnect if AutoCommit is turned off.
      * Otherwise we might get an inconsistent transaction
      * state.
@@ -2033,9 +2301,22 @@ int mysql_db_reconnect(SV* h) {
     return FALSE;
   }
 
+  /* _MyLogin will blow away imp_dbh->mysql so we save a copy of
+   * imp_dbh->mysql and put it back where it belongs if the reconnect
+   * fail.  Think server is down & reconnect fails but the application eval{}s
+   * the execute, so next time $dbh->quote() gets called, instant SIGSEGV!
+   */
+  save_socket = imp_dbh->mysql;
+  memcpy (&save_socket, &imp_dbh->mysql,sizeof(save_socket));
+  memset (&imp_dbh->mysql,0,sizeof(imp_dbh->mysql));
+
   if (!_MyLogin(imp_dbh)) {
     do_error(h, mysql_errno(&imp_dbh->mysql), mysql_error(&imp_dbh->mysql));
+    memcpy (&imp_dbh->mysql, &save_socket, sizeof(save_socket));
+    ++imp_dbh->stats.auto_reconnects_failed;
     return FALSE;
+  } else {
+    ++imp_dbh->stats.auto_reconnects_ok;
   }
   return TRUE;
 }
@@ -2088,6 +2369,9 @@ AV* dbd_db_type_info_all(SV* dbh, imp_dbh_t* imp_dbh) {
 	"MINIMUM_SCALE",
 	"MAXIMUM_SCALE",
 	"NUM_PREC_RADIX",
+	"SQL_DATATYPE",
+	"SQL_DATETIME_SUB",
+	"INTERVAL_PRECISION",
 	"mysql_native_type",
 	"mysql_is_num"
     };
@@ -2125,6 +2409,9 @@ AV* dbd_db_type_info_all(SV* dbh, imp_dbh_t* imp_dbh) {
 	} else {
 	    av_push(row, &sv_undef);
 	}
+	IV_PUSH(t->sql_datatype); /* SQL_DATATYPE*/
+	IV_PUSH(t->sql_datetime_sub); /* SQL_DATETIME_SUB*/
+	IV_PUSH(t->interval_precision); /* INTERVAL_PERCISION */
 	IV_PUSH(t->native_type);
 	IV_PUSH(t->is_num);
     }

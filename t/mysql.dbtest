@@ -1,6 +1,6 @@
 # Hej, Emacs, give us -*- perl -*- mode here!
 #
-#   $Id: mysql.dbtest,v 1.1.1.1 1999/07/13 08:14:45 joe Exp $
+#   $Id: mysql.dbtest,v 1.1 2003/03/18 02:53:28 rlippan Exp $
 #
 # database specific definitions for a 'mysql' database
 
@@ -142,7 +142,7 @@ sub HaveTransactions () {
 		$have_transactions = "bdb";
 		last;
 	    }
-	    if ($row->{'Variable_name'} =~ /^have_inno(base|db)$/  &&
+	    if ($row->{'Variable_name'} eq 'have_innobase'  &&
 		$row->{'Value'} eq 'YES') {
 		$have_transactions = "innobase";
 		last;

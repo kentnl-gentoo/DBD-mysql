@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <TITLE>INSTALL - How to install and configure DBD::mysql</TITLE>
-<LINK REV="made" HREF="mailto:feedback@suse.de">
+<LINK REV="made" HREF="mailto:rlippan@localhost.localdomain">
 </HEAD>
 
 <BODY>
@@ -655,6 +655,12 @@ library, for example</P>
 <PRE>
   /usr/lib/mysql/libmysqlclient.a</PRE>
 <P>in the list of linker flags. <A HREF="#configuration">Configuration</A>. <A HREF="#linker flags">Linker flags</A>.</P>
+<P></P>
+<LI><STRONG>)</STRONG><BR>
+
+Red Hat 8 &amp; 9 set the Default locale to UTF which causes problems with 
+MakeMaker.  To build DBD::mysql on these systems, do a 'unset LANG' 
+before runing 'perl Makefile.PL'
 <P></P></OL>
 <P>
 <HR>

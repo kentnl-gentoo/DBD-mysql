@@ -21,7 +21,7 @@
  *           Fax: +49 7123 / 14892
  *
  *
- *  $Id: dbdimp.h,v 1.1.1.1 1999/07/13 08:14:45 joe Exp $
+ *  $Id: dbdimp.h,v 1.3 2003/06/24 05:50:01 rlippan Exp $
  */
 
 /*
@@ -119,6 +119,11 @@ struct imp_dbh_st {
 			     *  TRUE for MySQL and always FALSE
 			     *  for mSQL.
 			     */
+    bool auto_reconnect;
+    struct {
+	    unsigned int auto_reconnects_ok;
+	    unsigned int auto_reconnects_failed;
+    } stats;
 };
 
 

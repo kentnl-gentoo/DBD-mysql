@@ -1,6 +1,6 @@
 #   Hej, Emacs, give us -*- perl mode here!
 #
-#   $Id: lib.pl,v 1.1.1.1 1999/07/13 08:14:45 joe Exp $
+#   $Id: lib.pl,v 1.2 2003/03/31 01:16:53 rlippan Exp $
 #
 #   lib.pl is the file where database specific things should live,
 #   whereever possible. For example, you define certain constants
@@ -213,7 +213,7 @@ sub DbiError ($$) {
 	}
 
 	if (!$listed) {
-	    @tables = map{ $_ =~ s/^.*\.//; $_ } $dbh->tables();
+	    @tables = grep {s/(?:^.*\.)|`//g} $dbh->tables();
 	    $listed = 1;
 	}
 

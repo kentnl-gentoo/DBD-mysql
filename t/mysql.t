@@ -320,7 +320,7 @@ $dbh2->query("drop table $secondtable") and print("ok 22\n") or print("not ok 22
 
     # Does ListTables now find our $firsttable?
     @array = $dbh2->listtables;
-    grep( /^$firsttable$/i, @array )  and print("ok 24\n") or print("not ok 24\n");
+    grep( /^`$firsttable`$/i, @array )  and print("ok 24\n") or print("not ok 24\n");
 }
 
 # The third connection within a single script. I promise, this will do...
@@ -499,8 +499,7 @@ foreach (qw/table name type is_not_null is_pri_key length/) {
 	for (0..$sth_query->numfields -1) {
 	    # whatever we do to the one statementhandle, the other one has
 	    # to behave exactly the same way
-	    if (lc($sth_query->$method()->[$_]) eq
-		lc($sth_listf->$method()->[$_])) {
+	    if ($sth_query->$method()->[$_] eq $sth_listf->$method()->[$_]) {
 		print "ok $i\n" ;
 	    } else {
 		print "not ok $i\n";
