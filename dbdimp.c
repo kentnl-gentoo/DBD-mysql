@@ -705,6 +705,21 @@ MYSQL* mysql_dr_connect(MYSQL* sock, char* unixSocket, char* host,
 	  }
 	}
 #endif
+#if (MYSQL_VERSION_ID >= 32349)
+	/*
+	 * MySQL 3.23.49 disables LOAD DATA LOCAL by default. Use
+	 * mysql_local_infile=1 in the DSN to enable it.
+	 */
+	if ((svp = hv_fetch(hv, "mysql_local_infile", 18,
+			    FALSE))  &&  *svp) {
+	  unsigned int flag = SvTRUE(*svp);
+	  if (dbis->debug >= 2)
+	    PerlIO_printf(DBILOGFP,
+			  "imp_dbh->mysql_dr_connect: Using" \
+			  " local infile %u.\n", flag);
+	  mysql_options(sock, MYSQL_OPT_LOCAL_INFILE, (const char *) &flag);
+	}
+#endif
       }
     }
     if (dbis->debug >= 2)

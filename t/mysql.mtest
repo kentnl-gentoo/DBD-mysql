@@ -1,12 +1,12 @@
 { local $opt = {
+         'testpassword' => '',
+         'testhost' => '',
          'ssl' => 0,
-         'cflags' => '-I\'/usr/include/mysql\'',
-         'testdb' => 'test',
          'testuser' => '',
          'nocatchstderr' => 0,
-         'testpassword' => '',
          'libs' => '-L/usr/lib/mysql -lmysqlclient -lz -lcrypt -lnsl -lm',
-         'testhost' => ''
+         'cflags' => '-I\'/usr/include/mysql\'',
+         'testdb' => 'test'
        };
 $::test_host = $opt->{'testhost'};
 $::test_port = $opt->{'testport'};

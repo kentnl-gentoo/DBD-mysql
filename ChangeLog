@@ -1,3 +1,8 @@
+2002-09-23  Jochen Wiedmann  <joe@ispsoft.de> (0.2020)
+
+	* Added mysql_local_infile option. (Paul DuBois,
+	  paul@snake.net)
+
 2002-09-16  Jochen Wiedmann  <joe@ispsoft.de> (0.2019)
 
 	* Added hints to installing DBD::mysql with PPM 3.
