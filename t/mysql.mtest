@@ -1,8 +1,8 @@
 { local $opt = {
-         'testpassword' => '',
-         'testhost' => '',
+         'testhost' => '127.0.0.1',
+         'testpassword' => 'jwi',
          'ssl' => 0,
-         'testuser' => '',
+         'testuser' => 'jwi',
          'nocatchstderr' => 0,
          'libs' => '-L/usr/lib/mysql -lmysqlclient -lz -lcrypt -lnsl -lm',
          'cflags' => '-I\'/usr/include/mysql\'',

@@ -114,9 +114,11 @@ sub listdbs ($) {
     my $host = $self->{'host'};
     my @dbs;
     if ($host) {
-	@dbs = $drh->func($host, "", "_ListDBs");
+	@dbs = $drh->func($host, "", $self->{'user'},
+			  $self->{'password'}, "_ListDBs");
     } else {
-	@dbs = $drh->func("", "", "_ListDBs");
+	@dbs = $drh->func("", "", $self->{'user'},
+			  $self->{'password'}, "_ListDBs");
     }
     $db_errstr = $drh->errstr();
     @dbs;

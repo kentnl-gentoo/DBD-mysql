@@ -1,3 +1,10 @@
+2003-03-03  Jochen Wiedmann  <joe@ispsoft.de> (2.1026)
+
+	* Fixed the handling of case insensitive file
+	  names. Jan Dubois, <jand@ActiveState.com>
+	* lib/Mysql.pm (listdbs): Added support for user
+	  name and password.
+
 2003-01-21  Jochen Wiedmann <joe@ispsoft.de> (2.1025)
 
         * lib/DBD/mysql.pm: added support for optional

@@ -133,10 +133,10 @@ while (Testing()) {
 			     . $drh->errstr);
 
 	Test($state or $accessDenied
-	     or InDsnList($testdsn, DBI->data_sources($mdriver)))
+	     or InDsnList($testdsn, DBI->data_sources($mdriver))
 	     or InDsnList($testdsn, DBI->data_sources($mdriver,
 						      {"host" => $test_host,
-						       "port" => $test_port}))
+						       "port" => $test_port})))
 	    or print STDERR ("New DB not in DSN list\n");
 
 	Test($state or $accessDenied
@@ -146,11 +146,11 @@ while (Testing()) {
 			     . $drh->errstr);
 
 	Test($state or $accessDenied
-	     or !InDsnList($testdsn, DBI->data_sources($mdriver)))
-	     or !InDsnList($testdsn,
-			   DBI->data_sources($mdriver,
-					     { "host" => $test_host,
-					       "port" => $test_port}))
+	     or (!InDsnList($testdsn, DBI->data_sources($mdriver)) and
+		 !InDsnList($testdsn,
+			    DBI->data_sources($mdriver,
+					      {"host" => $test_host,
+					       "port" => $test_port}))))
 	    or print STDERR ("New DB not removed from DSN list\n");
 
 	my($mayShutdown) = $ENV{'DB_SHUTDOWN_ALLOWED'};
@@ -161,11 +161,11 @@ while (Testing()) {
 	    or printf STDERR ("\$drh->admin('createdb') failed: %s\n",
 			      $drh->errstr);
 	Test($state or $accessDenied
-	     or InDsnList($testdsn1, DBI->data_sources($mdriver)))
-	    or InDsnList($testdsn1,
-			 DBI->data_sources($mdriver,
-					   {"host" => $test_host,
-					    "port" => $test_port}))
+	     or InDsnList($testdsn1, DBI->data_sources($mdriver))
+	     or InDsnList($testdsn1,
+			  DBI->data_sources($mdriver,
+					    {"host" => $test_host,
+					     "port" => $test_port})))
 	    or printf STDERR ("DSN $testdsn1 not in DSN list.\n");
 	Test($state or $accessDenied
 	     or $drh->func('dropdb', $testdsn1, $test_host,
@@ -173,11 +173,11 @@ while (Testing()) {
 	    or printf STDERR ("\$drh->admin('dropdb') failed: %s\n",
 			      $drh->errstr);
 	Test($state or $accessDenied
-	     or !InDsnList($testdsn1, DBI->data_sources($mdriver)))
-	    or !InDsnList($testdsn1,
-			  DBI->data_sources($mdriver,
-					    {"host" => $test_host,
-					     "port" => $test_port}))
+	     or (!InDsnList($testdsn1, DBI->data_sources($mdriver)) and
+		 !InDsnList($testdsn1,
+			    DBI->data_sources($mdriver,
+					      {"host" => $test_host,
+					       "port" => $test_port}))))
 	    or printf STDERR ("DSN $testdsn1 not removed from DSN list.\n");
 	Test($state or $accessDenied
 	     or $drh->func('createdb', $testdsn2, $test_host,
@@ -185,11 +185,11 @@ while (Testing()) {
 	    or printf STDERR ("\$drh->admin('createdb') failed: %s\n",
 			      $drh->errstr);
 	Test($state or $accessDenied
-	     or InDsnList($testdsn2, DBI->data_sources($mdriver)))
-	    or InDsnList($testdsn2,
-			 DBI->data_sources($mdriver,
-					   {"host" => $test_host,
-					    "port" => $test_port}))
+	     or InDsnList($testdsn2, DBI->data_sources($mdriver))
+	     or InDsnList($testdsn2,
+			  DBI->data_sources($mdriver,
+					    {"host" => $test_host,
+					     "port" => $test_port})))
 	    or printf STDERR ("DSN $testdsn2 not in DSN list.\n");
 	Test($state or $accessDenied
 	     or $drh->func('dropdb', $testdsn2, $test_host,
@@ -197,11 +197,11 @@ while (Testing()) {
 	    or printf STDERR ("\$drh->admin('dropdb') failed: %s\n",
 			      $drh->errstr);
 	Test($state or $accessDenied
-	     or !InDsnList($testdsn2, DBI->data_sources($mdriver)))
-	    or !InDsnList($testdsn2,
-			  DBI->data_sources($mdriver,
-					    {"host" => $test_host,
-					     "port" => $test_port})),
+	     or (!InDsnList($testdsn2, DBI->data_sources($mdriver)) and
+		 !InDsnList($testdsn2,
+			    DBI->data_sources($mdriver,
+					      {"host" => $test_host,
+					       "port" => $test_port}))))
 	    or printf STDERR ("DSN $testdsn2 not removed from DSN list.\n");
 
 	if ($mdriver eq 'mysql') {

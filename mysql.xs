@@ -38,14 +38,16 @@ constant(name, arg)
 MODULE = DBD::mysql	PACKAGE = DBD::mysql::dr
 
 void
-_ListDBs(drh, host, port=NULL)
+_ListDBs(drh, host, port=NULL, user=NULL, password=NULL)
     SV *        drh
     char *	host
     char *      port
+    char *      user
+    char *      password
   PPCODE:
 {
     MYSQL mysql;
-    MYSQL* sock = mysql_dr_connect(&mysql, NULL, host, port, NULL, NULL,
+    MYSQL* sock = mysql_dr_connect(&mysql, NULL, host, port, user, password,
 				   NULL, NULL);
     if (sock != NULL) {
       MYSQL_ROW cur;
