@@ -405,12 +405,12 @@ header of table names together with all rows:
   my $names = $sth->{'NAME'};
   my $numFields = $sth->{'NUM_OF_FIELDS'};
   for (my $i = 0;  $i < $numFields;  $i++) {
-      printf("%s%s", $$names[$i], $i ? "," : "");
+      printf("%s%s", $i ? "," : "", $$names[$i]);
   }
   print "\n";
   while (my $ref = $sth->fetchrow_arrayref) {
       for (my $i = 0;  $i < $numFields;  $i++) {
-	  printf("%s%s", $$ref[$i], $i ? "," : "");
+	  printf("%s%s", $i ? "," : "", $$ref[$i]);
       }
       print "\n";
   }

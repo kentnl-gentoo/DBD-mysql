@@ -1,3 +1,7 @@
+2001-12-28  Jochen Wiedmann  <joe@ispsoft.de> (2.1008)
+
+	* lib/DBD/mysql.pod: Fixed minor bug in an example.
+
 2001-12-27  Jochen Wiedmann  <joe@ispsoft.de> (2.1007)
 
 	* Bumped version number in Mysql.pm to 1.24, so that
