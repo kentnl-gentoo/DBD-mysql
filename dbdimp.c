@@ -846,6 +846,7 @@ SV* dbd_db_FETCH_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv) {
   if (strncmp(key, "mysql_", 6) == 0) {
     fine_key = key;
     key = key+6;
+    kl = kl-6;
   }
 
   switch(*key) {

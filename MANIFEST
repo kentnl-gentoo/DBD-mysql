@@ -23,6 +23,7 @@ t/60leaks.t
 t/mysql2.t
 t/mysql.t
 t/akmisc.t
+t/insertid.t
 t/mysql.dbtest
 t/mysql.mtest
 dbdimp.h

@@ -1,4 +1,8 @@
-2001-04-01  Jochen Wiedmann  <joe@ispsoft.de> (1.2216)
+2001-05-25  Jochen Wiedmann  <joe@ispsoft.de> (2.0901)
+
+	* dbdimp.c: Fixed $dbh->{mysql_insertid}; added t/insertid.t
+
+2001-04-01  Jochen Wiedmann  <joe@ispsoft.de> (2.0900)
 
 	* Added transaction support for MySQL.
 	  (Bob Lyons <lyons@nextrials.com>)
