@@ -1350,12 +1350,16 @@ int mysql_st_internal_execute(SV* h, SV* statement, SV* attribs,
     Safefree(salloc);
 
     /** Store the result from the Query */
-    if (!(*cdaPtr = (use_mysql_use_result ?
-		     mysql_use_result(svsock) : mysql_store_result(svsock)))) {
-        return mysql_affected_rows(svsock);
+    *cdaPtr = use_mysql_use_result ?
+      mysql_use_result(svsock) : mysql_store_result(svsock);
+    if (mysql_errno(svsock)) {
+      do_error(h, mysql_errno(svsock), mysql_error(svsock));
     }
-
-    return mysql_num_rows((*cdaPtr));
+    if (!*cdaPtr) {
+      return mysql_affected_rows(svsock);
+    } else {
+      return mysql_num_rows(*cdaPtr);
+    }
 }
 
 

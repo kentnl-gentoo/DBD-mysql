@@ -1,3 +1,8 @@
+2002-05-02  Jochen Wiedmann  <joe@ispsoft.de> (0.2017)
+
+	* dbdimp.c: Added a required check for mysql_errno.
+	  Steve Hay <Steve.Hay@uk.radan.com>
+
 2002-05-01  Jochen Wiedmann  <joe@ispsoft.de> (0.2016)
 
 	* dbdimp.c: Removed use of mysql_eof. Jay
