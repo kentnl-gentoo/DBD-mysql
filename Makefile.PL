@@ -121,7 +121,6 @@ sleep 5;
 eval { require File::Spec };
 my $fileName = $@ ?
   "t/mysql.mtest" : File::Spec->catfile("t", "mysql.mtest");
-die "Failed to determine location of $fileName" unless -f $fileName;
 (open(FILE, ">$fileName") &&
  (print FILE ("{ local " . Data::Dumper->Dump([$opt], ["opt"]) .
 	      "\$::test_host = \$opt->{'testhost'};\n" .
@@ -160,7 +159,7 @@ if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
   $o{'AUTHOR'} = 'Rudy Lippan <rlippan@remotelinux.com>';
   $o{'ABSTRACT'} =
     'A MySQL driver for the Perl5 Database Interface (DBI)';
-  $o{'PREREQ_PM'} = { 'DBI' => 1.08,
+  $o{'PREREQ_PM'} = { 'DBI' => 1.43,
 		      'Data::Dumper' => 0 };
 }
 ExtUtils::MakeMaker::WriteMakefile(%o);

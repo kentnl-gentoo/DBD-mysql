@@ -1,4 +1,7 @@
-2004-10-20  Rudolf Lippan <rlippan@remotelinux.com> (2.9005_1)
+2004-10-27  Rudolf Lippan <rlippan@remotelinux.com> (2.9005_3)
+	* Removed requirement that mysql.mtest be included in the distribution.
+	* DBI 1.43 is required -- It is needed for support of 
+	  $dbh->last_insert_id().
 	* Added $dbh->{mysql_unsafe_bind_type_guessing} = 2 which will look at
 	  each bind_param and make guess based on whether it looks like a 
 	  number, and if the parameter looks like a number, it will not be 
@@ -781,7 +784,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog,v 1.21 2004/10/20 17:14:31 rlippan Exp $
+$Id: ChangeLog,v 1.23 2004/10/28 00:34:15 rlippan Exp $
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 
