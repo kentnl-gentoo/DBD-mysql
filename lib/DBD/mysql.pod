@@ -577,6 +577,16 @@ mode is unpredictable. Alternatively you may verify the transaction
 mode by checking the value of the server variable autocommit.
 However, such behaviour isn't portable.
 
+=item *
+
+DBD::mysql has a "reconnect" feature that handles the so-called
+MySQL "morning bug": If the server has disconnected, most probably
+due to a timeout, then by default the driver will reconnect and
+attempt to execute the same SQL statement again. However, this
+behaviour is disabled when AutoCommit is off: Otherwise the
+transaction state would be completely unpredictable after a
+reconnect.  
+
 =back
 
 

@@ -1951,6 +1951,15 @@ int mysql_db_reconnect(SV* h) {
     /* Other error */
     return FALSE;
   }
+
+  if (DBIc_has(imp_dbh, DBIcf_AutoCommit)) {
+    /* We never reconnect if AutoCommit is turned off.
+     * Otherwise we might get an inconsistent transaction
+     * state.
+     */
+    return FALSE;
+  }
+
   if (!_MyLogin(imp_dbh)) {
     do_error(h, mysql_errno(&imp_dbh->mysql), mysql_error(&imp_dbh->mysql));
     return FALSE;
