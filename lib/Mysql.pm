@@ -141,7 +141,9 @@ sub errmsg ($) {
 
 sub errno ($) {
     my $self = shift;
-    if ($self->{'dbh'}) {
+    if (!ref($self)) {
+	$DBI::err;
+    } elsif ($self->{'dbh'}) {
 	$self->{'dbh'}->err();
     } else {
 	$self->{'drh'}->err();
