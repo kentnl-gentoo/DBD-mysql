@@ -2056,6 +2056,10 @@ SV* dbd_db_quote(SV* dbh, SV* str, SV* type) {
     char* sptr;
     STRLEN len;
 
+
+    if (SvGMAGICAL(str))
+        mg_get(str);
+
     if (!SvOK(str)) {
         result = newSVpv("NULL", 4);
     } else {

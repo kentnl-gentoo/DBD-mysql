@@ -1,11 +1,11 @@
 { local $opt = {
+         'cflags' => '-I\'/usr/local/mysql-3.23.43/include/mysql\'',
          'testpassword' => '',
+         'nocatchstderr' => '0',
+         'testdb' => 'test',
+         'libs' => '-L/usr/local/mysql-3.23.43/lib/mysql -lmysqlclient -lz -lcrypt -lnsl -lm',
          'testhost' => '',
-         'testuser' => '',
-         'nocatchstderr' => 0,
-         'libs' => '-L/usr/lib/mysql -lmysqlclient -lz -lcrypt -lnsl -lm',
-         'cflags' => '-I\'/usr/include/mysql\'',
-         'testdb' => 'test'
+         'testuser' => ''
        };
 $::test_host = $opt->{'testhost'};
 $::test_port = $opt->{'testport'};

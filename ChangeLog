@@ -1,3 +1,8 @@
+2001-12-13  Jochen Wiedmann  <joe@ispsoft.de> (2.1005)
+
+	* dbdimp.c: Added use of SvMAGICAL to dbd_db_quote.
+	  Rudy Lippan <almighty@randomc.com>
+
 2001-11-13  Jochen Wiedmann  <joe@ispsoft.de> (2.1004)
 
 	* Makefile.PL: Fixed handling of --testdb, --testuser, ...
