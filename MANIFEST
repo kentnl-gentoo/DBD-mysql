@@ -29,7 +29,6 @@ t/mysql.dbtest
 t/mysql.mtest
 dbdimp.h
 constants.h
-bindparam.h
 lib/Mysql.pm
 lib/Mysql/Statement.pm
 lib/DBD/mysql.pm

@@ -35,8 +35,6 @@ typedef short WORD;
 #endif
 
 
-#include "bindparam.h"
-
 
 DBISTATE_DECLARE;
 
@@ -60,6 +58,240 @@ typedef struct sql_type_info_s {
     int native_type;
     int is_num;
 } sql_type_info_t;
+
+
+static int CountParam(char* statement) {
+    char* ptr = statement;
+    int numParam = 0;
+    char c;
+
+    while (c = *ptr++) {
+        switch (c) {
+	  case '"':
+	  case '\'':
+	    /*
+	     *  Skip string
+	     */
+	    {
+		char end_token = c;
+                while ((c = *ptr)  &&  c != end_token) {
+                    if (c == '\\') {
+		        ++ptr;
+                        if (*ptr) {
+		            ++ptr;
+		        }
+		    } else {
+                        ++ptr;
+                    }
+	        }
+	        if (c) {
+	            ++ptr;
+	        }
+	        break;
+            }
+	  case '?':
+	    ++numParam;
+	    break;
+	  default:
+	    break;
+	}
+    }
+    return numParam;
+}
+
+static imp_sth_ph_t* AllocParam(int numParam) {
+    imp_sth_ph_t * params;
+
+    if (numParam) {
+        Newz(908, params, numParam, imp_sth_ph_t);
+    } else {
+        params = NULL;
+    }
+    return params;
+}
+
+static void FreeParam(imp_sth_ph_t* params, int numParam) {
+    if (params) {
+        int i;
+	for (i = 0;  i < numParam;  i++) {
+	  imp_sth_ph_t* ph = params+i;
+	    if (ph->value) {
+	        (void) SvREFCNT_dec(ph->value);
+		ph->value = NULL;
+	    }
+	}
+	Safefree(params);
+    }
+}
+
+
+static char* ParseParam(MYSQL* sock, char* statement, STRLEN *slenPtr,
+			imp_sth_ph_t* params, int numParams) {
+    char* salloc;
+    int i, j;
+    char* valbuf;
+    STRLEN vallen;
+    int alen;
+    char* ptr;
+    imp_sth_ph_t* ph;
+    int slen = *slenPtr;
+
+    if (numParams == 0) {
+        return NULL;
+    }
+
+    while (isspace(*statement)) {
+	++statement;
+	--slen;
+    }
+
+
+    /*
+     *  Calculate the number of bytes being allocated for the statement
+     */
+    alen = slen;
+    for (i = 0, ph = params;  i < numParams;  i++, ph++) {
+        if (!ph->value  ||  !SvOK(ph->value)) {
+	    alen += 3;  /* Erase '?', insert 'NULL' */
+	} else {
+	    if (!ph->type) {
+	        ph->type = SvNIOK(ph->value) ? SQL_INTEGER : SQL_VARCHAR;
+	    }
+	    valbuf = SvPV(ph->value, vallen);
+	    alen += 2*vallen+1; /* Erase '?', insert (possibly quoted)
+				 * string.
+				 */
+	}
+    }
+
+    /*
+     *  Allocate memory
+     */
+    New(908, salloc, alen+1, char);
+    ptr = salloc;
+
+    /*
+     *  Now create the statement string; compare CountParam above
+     */
+    i = 0;
+    j = 0;
+    while (j < slen) {
+        switch(statement[j]) {
+	  case '\'':
+	    /*
+	     * Skip string
+	     */
+	    *ptr++ = statement[j++];
+	    while (j < slen  &&  statement[j] != '\'') {
+	        if (statement[j] == '\\') {
+		    *ptr++ = statement[j++];
+		    if (j < slen) {
+		        *ptr++ = statement[j++];
+		    }
+		} else {
+		    *ptr++ = statement[j++];
+		}
+	    }
+	    if (j < slen) {
+	        *ptr++ = statement[j++];
+	    }
+	    break;
+	  case '?':
+	    /*
+	     * Insert parameter
+	     */
+	    j++;
+	    if (i >= numParams) {
+	        break;
+	    }
+	    ph = params+i++;
+	    if (!ph->value  ||  !SvOK(ph->value)) {
+	        *ptr++ = 'N';
+		*ptr++ = 'U';
+		*ptr++ = 'L';
+		*ptr++ = 'L';
+	    } else {
+	        int isNum = FALSE;
+		int c;
+
+		valbuf = SvPV(ph->value, vallen);		    
+		if (valbuf) {
+		    switch (ph->type) {
+		      case SQL_NUMERIC:
+		      case SQL_DECIMAL:
+		      case SQL_INTEGER:
+		      case SQL_SMALLINT:
+		      case SQL_FLOAT:
+		      case SQL_REAL:
+		      case SQL_DOUBLE:
+		      case SQL_BIGINT:
+		      case SQL_TINYINT:
+			isNum = TRUE;
+			break;
+		      case SQL_CHAR:
+		      case SQL_VARCHAR:
+		      case SQL_DATE:
+		      case SQL_TIME:
+		      case SQL_TIMESTAMP:
+		      case SQL_LONGVARCHAR:
+		      case SQL_BINARY:
+		      case SQL_VARBINARY:
+		      case SQL_LONGVARBINARY:
+			isNum = FALSE;
+			break;
+		      default:
+			isNum = FALSE;
+			break;
+		    }
+		    if (!isNum) {
+		        *ptr++ = '\'';
+			ptr += mysql_real_escape_string(sock, ptr, valbuf,
+							vallen);
+		        *ptr++ = '\'';
+		    } else {
+		      while (vallen--) {
+			switch ((c = *valbuf++)) {
+		          case '\0':
+			    *ptr++ = '\\';
+			    *ptr++ = '0';
+			    break;
+		          case '\'':
+		          case '\\':
+			    *ptr++ = '\\';
+			    /* No break! */
+		          default:
+			    *ptr++ = c;
+			    break;
+		        }
+		      }
+		    }
+		}
+	    }
+	    break;
+	  default:
+	    *ptr++ = statement[j++];
+	    break;
+	}
+    }
+    *slenPtr = ptr - salloc;
+    *ptr++ = '\0';
+
+    return salloc;
+}
+
+
+int BindParam(imp_sth_ph_t* ph, SV* value, IV sql_type) {
+    if (ph->value) {
+        (void) SvREFCNT_dec(ph->value);
+    }
+    ph->value = value;
+    (void) SvREFCNT_inc(value);
+    if (sql_type) {
+        ph->type = sql_type;
+    }
+    return TRUE;
+}
+
 
 /*
  *  The order of the following is important: The first column of a given
@@ -1019,7 +1251,7 @@ int mysql_st_internal_execute(SV* h, SV* statement, SV* attribs,
 			      int use_mysql_use_result) {
     STRLEN slen;
     char* sbuf = SvPV(statement, slen);
-    char* salloc = ParseParam(sbuf, &slen, params, numParams);
+    char* salloc = ParseParam(svsock, sbuf, &slen, params, numParams);
 
     if (salloc) {
         sbuf = salloc;

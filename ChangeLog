@@ -1,3 +1,8 @@
+2001-11-05  Jochen Wiedmann  <joe@ispsoft.de> (2.1003)
+
+	* bind_param now using mysql_real_escape_string
+	  as well. Dave Rolsky <autarch@urth.org>
+
 2001-11-04  Jochen Wiedmann  <joe@ispsoft.de> (2.1002)
 
 	* Added mysql_ssl flag to DBI->connect.
