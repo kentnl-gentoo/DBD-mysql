@@ -242,6 +242,14 @@ used for connecting to the server. This is done, for example, with
 Usually there's no need for this option, unless you are using another
 location for the socket than that built into the client.
 
+=item mysql_ssl
+
+A true value turns on the CLIENT_SSL flag when connecting to the MySQL
+database:
+
+  mysql_ssl=1
+
+This means that your communication with the server will be encrypted.
 
 =back
 

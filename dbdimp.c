@@ -436,6 +436,13 @@ MYSQL* mysql_dr_connect(MYSQL* sock, char* unixSocket, char* host,
 	    client_flag &= ~CLIENT_FOUND_ROWS;
 	  }
 	}
+#if defined(CLIENT_SSL) || (MYSQL_VERSION_ID >= 40000)
+	if ((svp = hv_fetch(hv, "mysql_ssl", 9, FALSE))  &&  *svp) {
+	  if (SvTRUE(*svp)) {
+	    client_flag |= CLIENT_SSL;
+	  }
+	}
+#endif
       }
     }
     if (dbis->debug >= 2)
