@@ -9,11 +9,6 @@
 # are configured wrong in this respect. But you're welcome to test it
 # out.
 
-my $host = shift @ARGV || $ENV{'DBI_HOST'} || "";
-my $user = shift @ARGV || $ENV{'DBI_USER'} || "";
-my $password = shift @ARGV || $ENV{'DBI_PASS'} || "";
-my $dbname = shift @ARGV || $ENV{'DBI_DB'} || "test";
-
 # That's the standard perl way tostart a testscript. It announces that
 # that many tests are to follow. And it does so before anything can go
 # wrong;
@@ -23,6 +18,18 @@ BEGIN {
     if ($mdriver ne "mysql") { print "1..0\n"; exit 0; }
     print "1..68\n";
 }
+
+my $host = shift @ARGV || $ENV{'DBI_HOST'}
+  || $::test_host || $::test_host;  # Make -w happy
+my $port = shift @ARGV || $ENV{'DBI_PORT'}
+  || $::test_port || $::test_port;  # Make -w happy
+$host .= ":$port" if $port;
+my $user = shift @ARGV || $ENV{'DBI_USER'}
+  || $::test_user || $::test_user;  # Make -w happy
+my $password = shift @ARGV || $ENV{'DBI_PASS'}
+  || $::test_password || $::test_password;  # Make -w happy
+my $dbname = shift @ARGV || $ENV{'DBI_DB'}
+  || $::test_db || $::test_db;  # Make -w happy
 
 use Mysql;
 

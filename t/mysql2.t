@@ -8,16 +8,22 @@ use vars qw($loaded $mdriver);
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-my($host, $user, $password, $dbname);
-
-$host = shift @ARGV || $ENV{'DBI_HOST'} || "";
-$user = shift @ARGV || $ENV{'DBI_USER'} || "";
-$password = shift @ARGV || $ENV{'DBI_PASS'} || "";
-$dbname = shift @ARGV || $ENV{'DBI_DB'} || "test";
-
 $| = 1;
 do ((-f "lib.pl") ? "lib.pl" :
     (-f "t/lib.pl" ? "t/lib.pl" : "Mysql/t/lib.pl"));
+
+my $host = shift @ARGV || $ENV{'DBI_HOST'}
+  || $::test_host || $::test_host;  # Make -w happy
+my $port = shift @ARGV || $ENV{'DBI_PORT'}
+  || $::test_port || $::test_port;  # Make -w happy
+$host .= ":$port" if $port;
+my $user = shift @ARGV || $ENV{'DBI_USER'}
+  || $::test_user || $::test_user;  # Make -w happy
+my $password = shift @ARGV || $ENV{'DBI_PASS'}
+  || $::test_password || $::test_password;  # Make -w happy
+my $dbname = shift @ARGV || $ENV{'DBI_DB'}
+  || $::test_db || $::test_db;  # Make -w happy
+
 if ($mdriver ne "mysql") { print "1..0\n"; exit 0; }
 eval { require Mysql };
 my $db = Mysql->connect($host, $dbname, $user, $password);

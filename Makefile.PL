@@ -1,10 +1,13 @@
 # -*- cperl -*-
 
+
 use strict;
+BEGIN { $^W = 1; }
 use Config ();
 use DBI::DBD ();
 use Getopt::Long();
 use ExtUtils::MakeMaker();
+use Data::Dumper ();
 
 my $TESTDB = "test";
 
@@ -38,7 +41,7 @@ my $slen = 0;
 foreach my $val (values %$source) {
   $slen = length($val) if length($val) > $slen;
 }
-foreach my $key (sort { $a <=> $b} keys %$opt) {
+foreach my $key (sort { $a cmp $b} keys %$opt) {
   printf("  %-" . $keylen . "s (%-" . $slen . "s) = %s\n",
 	 $key, $source->{$key}, $opt->{$key})
 }
@@ -51,6 +54,24 @@ To change these settings, see 'perl Makefile.PL --help' and
 MSG
 
 sleep 5;
+
+eval { require File::Spec };
+my $fileName = $@ ?
+  "t/mysql.mtest" : File::Spec->catfile("t", "mysql.mtest");
+die "Failed to determine location of $fileName" unless -f $fileName;
+(open(FILE, ">$fileName") &&
+ (print FILE ("{ local " . Data::Dumper->Dump([$opt], ["opt"]) .
+	      "\$::test_host = \$opt->{'testhost'};\n" .
+	      "\$::test_port = \$opt->{'testport'};\n" .
+	      "\$::test_user = \$opt->{'testuser'};\n" .
+	      "\$::test_password = \$opt->{'testpassword'};\n" .
+	      "\$::test_db = \$opt->{'testdb'};\n" .
+	      "\$::test_dsn = \"DBI:mysql:\$::test_db\";\n" .
+	      "\$::test_dsn .= \":\$::test_host\" if \$::test_host;\n" .
+	      "\$::test_dsn .= \":\$::test_port\" if \$::test_port;\n" .
+	      "} 1;\n"))  &&
+  close(FILE))  ||  die "Failed to create $fileName: $!";
+
 
 my %o = ( 'NAME' => 'DBD::mysql',
 	  'INC' => "-I\$(DBI_INSTARCH_DIR) $opt->{'cflags'}",

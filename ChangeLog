@@ -1,3 +1,7 @@
+2001-11-13  Jochen Wiedmann  <joe@ispsoft.de> (2.1004)
+
+	* Makefile.PL: Fixed handling of --testdb, --testuser, ...
+
 2001-11-05  Jochen Wiedmann  <joe@ispsoft.de> (2.1003)
 
 	* bind_param now using mysql_real_escape_string

@@ -49,10 +49,17 @@ $::listTablesHook = $::listTablesHook = sub ($) {
 # are configured wrong in this respect. But you're welcome to test it
 # out.
 
-my $host = shift @ARGV || $ENV{'DBI_HOST'} || "";
-my $user = shift @ARGV || $ENV{'DBI_USER'} || "";
-my $password = shift @ARGV || $ENV{'DBI_PASS'} || "";
-my $dbname = shift @ARGV || $ENV{'DBI_DB'} || "test";
+my $host = shift @ARGV || $ENV{'DBI_HOST'}
+  || $::test_host || $::test_host;  # Make -w happy
+my $port = shift @ARGV || $ENV{'DBI_PORT'}
+  || $::test_port || $::test_port;  # Make -w happy
+$host .= ":$port" if $port;
+my $user = shift @ARGV || $ENV{'DBI_USER'}
+  || $::test_user || $::test_user;   # Make -w happy
+my $password = shift @ARGV || $ENV{'DBI_PASS'}
+  || $::test_password || $::test_password;     # Make -w happy
+my $dbname = shift @ARGV || $ENV{'DBI_DB'}
+  || $::test_db || $::test_db;
 
 use vars qw($mdriver $state $COL_NULLABLE $COL_KEY $testNum);
 if ($mdriver eq 'mysql') {
