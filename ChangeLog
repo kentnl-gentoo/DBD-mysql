@@ -1,3 +1,8 @@
+2002-04-12  Jochen Wiedmann  <joe@ispsoft.de> (2.1013)
+
+	* dbdimp.c: Added use of mysql_ssl_set.
+	  Chris Hanes <chanes@i-c.net>
+
 2002-04-12  Jochen Wiedmann  <joe@ispsoft.de> (2.1012)
 
 	* Some fixes in the docs. Paul Dubois <paul@kitebird.com>

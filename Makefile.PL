@@ -18,11 +18,12 @@ Getopt::Long::GetOptions($opt, "help", "testdb=s", "testhost=s",
 			 "testport=s",
 			 "testuser=s", "testpassword=s",
 			 "cflags=s", "libs=s", "verbose",
-			 "nocatchstderr");
+			 "nocatchstderr",
+			 "ssl");
 my $source = {};
 
 foreach my $key (qw/testdb testhost testuser testpassword cflags libs
-                    nocatchstderr/) {
+                    nocatchstderr ssl/) {
   Configure($opt, $source, $key);
 }
 
@@ -72,8 +73,10 @@ die "Failed to determine location of $fileName" unless -f $fileName;
   close(FILE))  ||  die "Failed to create $fileName: $!";
 
 
+my $cflags = "-I\$(DBI_INSTARCH_DIR) $opt->{'cflags'}";
+$cflags .= " -DDBD_MYSQL_WITH_SSL" if $opt->{'ssl'};
 my %o = ( 'NAME' => 'DBD::mysql',
-	  'INC' => "-I\$(DBI_INSTARCH_DIR) $opt->{'cflags'}",
+	  'INC' => $cflags,
 	  'EXE_FILES' => 'dbimon pmysql',
 	  'dist'         => { 'SUFFIX'       => ".gz",
 			      'DIST_DEFAULT' => 'all installhtml tardist',
@@ -231,6 +234,9 @@ section "Linker flags" or type
 
   perl Makefile.PL --help
 MSG
+  } elsif ($param eq "ssl") {
+    $opt->{$param} = ($opt->{"libs"} =~ /ssl/) ? 1 : 0;
+    $source->{$param} = "guessed";
   } else {
     die "Unknown configuration parameter: $param";
   }

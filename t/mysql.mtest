@@ -1,6 +1,7 @@
 { local $opt = {
          'testpassword' => '',
          'testhost' => '',
+         'ssl' => 0,
          'testuser' => '',
          'nocatchstderr' => 0,
          'libs' => '-L/usr/lib/mysql -lmysqlclient -lz -lcrypt -lnsl -lm',

@@ -669,9 +669,38 @@ MYSQL* mysql_dr_connect(MYSQL* sock, char* unixSocket, char* host,
 	    client_flag &= ~CLIENT_FOUND_ROWS;
 	  }
 	}
-#if defined(CLIENT_SSL) || (MYSQL_VERSION_ID >= 40000)
+#if defined(DBD_MYSQL_WITH_SSL)  &&  \
+    (defined(CLIENT_SSL) || (MYSQL_VERSION_ID >= 40000))
 	if ((svp = hv_fetch(hv, "mysql_ssl", 9, FALSE))  &&  *svp) {
 	  if (SvTRUE(*svp)) {
+	    char* client_key = NULL;
+	    char* client_cert = NULL;
+	    char* ca_file = NULL;
+	    char* ca_path = NULL;
+	    char* cipher = NULL;
+	    STRLEN lna;
+	    if ((svp = hv_fetch(hv, "mysql_ssl_client_key", 20, FALSE))  &&
+		*svp) {
+	      client_key = SvPV(*svp, lna);
+	    }
+	    if ((svp = hv_fetch(hv, "mysql_ssl_client_cert", 21, FALSE))  &&
+		*svp) {
+	      client_cert = SvPV(*svp, lna);
+	    }
+	    if ((svp = hv_fetch(hv, "mysql_ssl_ca_file", 17, FALSE))  &&
+		 *svp) {
+	      ca_file = SvPV(*svp, lna);
+	    }
+	    if ((svp = hv_fetch(hv, "mysql_ssl_ca_path", 17, FALSE))  &&
+		*svp) {
+	      ca_path = SvPV(*svp, lna);
+	    }
+	    if ((svp = hv_fetch(hv, "mysql_ssl_cipher", 16, FALSE))  &&
+		*svp) {
+	      cipher = SvPV(*svp, lna);
+	    }
+	    mysql_ssl_set(sock, client_key, client_cert, ca_file,
+			  ca_path, cipher);
 	    client_flag |= CLIENT_SSL;
 	  }
 	}

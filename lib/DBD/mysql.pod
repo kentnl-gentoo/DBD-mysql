@@ -254,6 +254,22 @@ database:
 
 This means that your communication with the server will be encrypted.
 
+If you turn mysql_ssl on, you might also wish to use the following
+flags:
+
+=item mysql_ssl_client_key
+
+=item mysql_ssl_client_cert
+
+=item mysql_ssl_ca_file
+
+=item mysql_ssl_ca_path
+
+=item mysql_ssl_cipher
+
+These are used to specify the respective parameters of a call
+to mysql_ssl_set, if mysql_ssl is turned on.  
+
 =back
 
 =back
