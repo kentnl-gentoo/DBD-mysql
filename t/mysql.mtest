@@ -1,5 +1,5 @@
 { local $opt = {
-         'testhost' => '127.0.0.1',
+         'testhost' => '',
          'testpassword' => 'jwi',
          'ssl' => 0,
          'testuser' => 'jwi',
