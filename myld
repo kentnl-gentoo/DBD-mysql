@@ -7,7 +7,7 @@
 open(OLDSTDERR, ">&STDERR") || die "Failed to backup STDERR: $!";
 open(FILE, ">myld.stderr") || die "Failed to create myld.stderr: $!";
 open(STDERR, ">&FILE") || die "Failed to redirect STDERR: $!";
-system @ARGV;
+$retval = system @ARGV;
 open(STDERR, ">&OLDSTDERR");
 close(FILE) || die "Failed to close myld.stderr: $!";
 if (-f "myld.stderr"  &&  !-z _) {
@@ -37,6 +37,11 @@ For further hints, see INSTALL.html, section Linker flags.
 MSG
     exit 1;
   }
+}
+
+if ($retval) {
+  print STDERR $contents;
+  exit 1;
 }
 
 END { unlink "myld.stderr"; }

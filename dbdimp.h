@@ -197,7 +197,7 @@ struct imp_sth_st {
 #define dbd_db_quote            mysql_db_quote
 
 #include <dbd_xsh.h>
-void	 do_error (SV* h, int rc, char *what);
+void	 do_error (SV* h, int rc, const char *what);
 SV	*dbd_db_fieldlist (MYSQL_RES* res);
 
 void    dbd_preparse (imp_sth_t *imp_sth, SV *statement);

@@ -526,7 +526,7 @@ void dbd_init(dbistate_t* dbistate) {
  *
  **************************************************************************/
 
-void do_error(SV* h, int rc, char* what) {
+void do_error(SV* h, int rc, const char* what) {
     D_imp_xxh(h);
     STRLEN lna;
 
@@ -1157,24 +1157,24 @@ SV* dbd_db_FETCH_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv) {
       if (strEQ(key, "errno")) {
 	result = sv_2mortal(newSViv((IV)mysql_errno(&imp_dbh->mysql)));
       } else if (strEQ(key, "error")) {
-	char* msg = mysql_error(&imp_dbh->mysql);
+	const char* msg = mysql_error(&imp_dbh->mysql);
 	result = sv_2mortal(newSVpv(msg, strlen(msg)));
       } else if (strEQ(key, "errmsg")) {
 	/* Obsolete, as of 2.09! */
-	char* msg = mysql_error(&imp_dbh->mysql);
+	const char* msg = mysql_error(&imp_dbh->mysql);
 	result = sv_2mortal(newSVpv(msg, strlen(msg)));
       }
       break;
     case 'h':
       if (strEQ(key, "hostinfo")) {
-	char* hostinfo = mysql_get_host_info(&imp_dbh->mysql);
+	const char* hostinfo = mysql_get_host_info(&imp_dbh->mysql);
 	result = hostinfo ?
 	  sv_2mortal(newSVpv(hostinfo, strlen(hostinfo))) : &sv_undef;
       }
       break;
     case 'i':
       if (strEQ(key, "info")) {
-	char* info = mysql_info(&imp_dbh->mysql);
+	const char* info = mysql_info(&imp_dbh->mysql);
 	result = info ? sv_2mortal(newSVpv(info, strlen(info))) : &sv_undef;
       } else if (kl == 8  &&  strEQ(key, "insertid")) {
 	/* We cannot return an IV, because the insertid is a long.
@@ -1189,7 +1189,7 @@ SV* dbd_db_FETCH_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv) {
       break;
     case 's':
       if (kl == 10  &&  strEQ(key, "serverinfo")) {
-	char* serverinfo = mysql_get_server_info(&imp_dbh->mysql);
+	const char* serverinfo = mysql_get_server_info(&imp_dbh->mysql);
 	result = serverinfo ?
 	  sv_2mortal(newSVpv(serverinfo, strlen(serverinfo))) : &sv_undef;
       } else if (strEQ(key, "sock")) {
@@ -1197,12 +1197,12 @@ SV* dbd_db_FETCH_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv) {
       } else if (strEQ(key, "sockfd")) {
 	result = sv_2mortal(newSViv((IV) imp_dbh->mysql.net.fd));
       } else if (strEQ(key, "stat")) {
-	char* stats = mysql_stat(&imp_dbh->mysql);
+	const char* stats = mysql_stat(&imp_dbh->mysql);
 	result = stats ?
 	  sv_2mortal(newSVpv(stats, strlen(stats))) : &sv_undef;
       } else if (strEQ(key, "stats")) {
 	/* Obsolete, as of 2.09 */
-	char* stats = mysql_stat(&imp_dbh->mysql);
+	const char* stats = mysql_stat(&imp_dbh->mysql);
 	result = stats ?
 	  sv_2mortal(newSVpv(stats, strlen(stats))) : &sv_undef;
       }
@@ -1355,9 +1355,9 @@ int mysql_st_internal_execute(SV* h, SV* statement, SV* attribs,
 	}
     }
 
-    if ((mysql_real_query(svsock, sbuf, slen) == -1)  &&
+    if ((mysql_real_query(svsock, sbuf, slen))  &&
 	(!mysql_db_reconnect(h)  ||
-	 (mysql_real_query(svsock, sbuf, slen) == -1))) {
+	 (mysql_real_query(svsock, sbuf, slen)))) {
       Safefree(salloc);
       do_error(h, mysql_errno(svsock), mysql_error(svsock));
       return -2;

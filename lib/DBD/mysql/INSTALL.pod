@@ -233,6 +233,9 @@ For example you might choose a different database, the C
 compiler or the linker might need some flags. L</Configuration>.
 L</C Compiler flags>. L</Linker flags>.
 
+For Windows/CygWin there is a special section below.
+L<Windows/CygWin>.
+ 
 
 =head2 Configuration
 
@@ -434,6 +437,211 @@ to the list of linker flags. If this seems to be causing problem
 you may also try to link without gzip libraries.
 
 =back
+
+
+=head1 SPECIAL SYSTEMS
+
+Below you find information on particular systems:
+
+
+=head2 Windows/CygWin
+
+If you are a user of Cygwin (the Redhat distribution) you already
+know, it contains a nicely running perl 5.6.1, installation of
+additional modules usually works as a charme via the standard
+procedure of
+
+    perl makefile.PL
+    make
+    make test
+    make install
+
+The Windows binary distribution of MySQL runs smoothly under Cygwin.
+You can start/stop the server and use all Windows clients without problem.
+But to install DBD::mysql you have to take a little special action.
+
+Don't attempt to build DBD::mysql against either the MySQL Windows or
+Linux/Unix BINARY distributions: neither will work!
+
+You MUST compile the MySQL clients yourself under Cygwin, to get a
+'libmysqlclient.a' compiled under Cygwin. Really! You'll only need
+that library and the header files, you don't need any other client parts.
+Continue to use the Windows binaries. And don't attempt (currently) to
+build the MySQL Server part, it is unneccessary, as MySQL AB does an
+excellent job to deliver optimized binaries for the mainstream
+operating systems, and it is told, that the server compiled under Cygwin is
+unstable.
+
+Install MySQL (if you havn't already)
+
+=over
+
+=item -
+
+download the MySQL Windows Binaries from
+http://www.mysql.com/downloads/index.html
+
+=item -
+
+unzip mysql-<version>-win.zip into some temporary location
+
+=item -
+
+start the setup.exe there and follow the instructions
+
+=item -
+
+start the server
+
+=item -
+
+alternatively download, install and start the server on a remote
+server, on what supported OS ever
+
+=back
+
+
+Build MySQL clients under Cygwin:
+
+=over
+
+=item -
+
+download the MySQL LINUX source from
+http://www.mysql.com/downloads/index.html
+
+=item -
+
+unpack mysql-<version>.tar.gz into some tmp location
+
+=item -
+
+cd into the unpacked dir mysql-<version>
+
+  ./configure --prefix=/usr/local/mysql --without-server
+
+This prepares the Makefile with the installed Cygwin features. It
+takes some time, but should finish without error. The 'prefix', as
+given, installs the whole Cygwin/MySQL thingy into a location not
+normally in your PATH, so that you continue to use already installed
+Windows binaries. The --without-server parameter tells configure to
+only build the clients.
+
+=item -
+
+  make
+
+This builds all MySQL client parts ... be patient. It should finish
+finally without any error.
+
+=item -
+
+  make install
+
+This installs the compiled client files under /usr/local/mysql/.
+Remember, you don't need anything except the library under
+/usr/local/mysql/lib and the headers under /usr/local/mysql/include!
+
+Essentially you are now done with this part. If you want, you may try
+your compiled binaries shortly; for that, do:
+
+=item -
+
+  cd /usr/local/mysql/bin
+  ./mysql -h 127.0.0.1
+
+The host (-h) parameter 127.0.0.1 targets the local host, but forces
+the mysql client to use a TCP/IP connection. The default would be a
+pipe/socket connection (even if you say '-h localhost') and this
+doesn't work between Cygwin and Windows (as far as I know).
+
+If you have your MySQL server running on some other box, then please
+substitute '127.0.0.1' with the name or IP-number of that box.
+
+=back
+
+Please note, in my environment the 'mysql' client did not accept a
+simple RETURN, I had to use CTRL-RETURN to send commands
+... strange,
+but I didn't attempt to fix that, as we are only interested in the
+built lib and headers.
+
+At the 'mysql>' prompt do a quick check:
+
+  mysql> use mysql
+  mysql> show tables;
+  mysql> select * from db;
+  mysql> exit
+
+You are now ready to build DBD::mysql!
+
+
+Build DBD::mysql:
+
+=over
+
+=item -
+
+download DBD-mysql-<version>.tar.gz from CPAN
+
+=item -
+
+unpack DBD-mysql-<version>.tar.gz
+
+=item -
+
+cd into unpacked dir DBD-mysql-<version>
+you probably did that already, if you are reading this!
+
+=item -
+
+  cp /usr/local/mysql/bin/mysql_config .
+
+This copies the executable script mentioned in the DBD::mysql docs
+from your just built Cywin/MySQL client directory; it knows about
+your Cygwin installation, especially about the right libraries to link
+with.
+
+=item -
+
+  perl Makefile.PL --testhost=127.0.0.1
+
+The --testhost=127.0.0.1 parameter again forces a TCP/IP connection
+to the MySQL server on the local host instead of a pipe/socket
+connection for the 'make test' phase.
+
+=item -
+
+  make
+
+This should run without error
+
+=item -
+
+  make test
+
+with DBD-mysql-2.1022 or earlier you will see several errors in
+dbdadmin.t, mysql.t and mysql2.t; with later versions you should not
+get errors (except possibly one, indicating, that some tables could
+not be dropped. I'm hunting for a solution to that problem, but have
+none yet).
+
+=item -
+
+  make install
+
+This installs DBD::mysql into the Perl hierarchy.
+
+=back
+
+Notes:
+
+This was tested with MySQL version 3.23.54a and DBD::mysql version
+2.1022. I patched the above mentioned test scripts and sent the
+patches
+to the author of DBD::mysql Jochen Wiedman.
+
+Georg Rehfeld          15. Jan. 2003
 
 
 =head1 KNOWN PROBLEMS

@@ -14,7 +14,7 @@ my $haveStorable;
 
 eval { require Proc::ProcessTable; };
 if ($@  ||  !$ENV{SLOW_TESTS}) {
-    print "1..0\n";
+    print "1..0 # \$ENV{SLOW_TESTS} is not set\n";
     exit 0;
 }
 eval { require Storable };

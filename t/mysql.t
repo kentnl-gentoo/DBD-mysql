@@ -320,7 +320,7 @@ $dbh2->query("drop table $secondtable") and print("ok 22\n") or print("not ok 22
 
     # Does ListTables now find our $firsttable?
     @array = $dbh2->listtables;
-    grep( /^$firsttable$/, @array )  and print("ok 24\n") or print("not ok 24\n");
+    grep( /^$firsttable$/i, @array )  and print("ok 24\n") or print("not ok 24\n");
 }
 
 # The third connection within a single script. I promise, this will do...
@@ -559,17 +559,18 @@ if (Mysql::int___type() == INT_TYPE) {
 
 # For mysql, changed character to charactr and char(1) to blob
 
-$query = "create table $firsttable (ascii int, charactr blob)";
+$query = "create table $secondtable (ascii int, charactr blob)";
 $dbh->query($query) or test_error;
 my $nchar;
+my $not_ok;
 for $nchar (1..255) {
     my $chr = $dbh->quote(chr($nchar));
     $query = qq{
-insert into $firsttable values ($nchar, $chr)
+insert into $secondtable values ($nchar, $chr)
     };
     unless ($dbh->query($query)) {
 	$query = unctrl($query);
-	print "not ok 66 (q[$query] err[$Mysql::db_errstr])\n"; # well, could happen more thn once, but ...
+	$not_ok .= "\t(q[$query] err[$Mysql::db_errstr])\n";
     }
 }
 
@@ -579,18 +580,18 @@ sub unctrl {
     return $str;
 }
 
-$sth = $dbh->query("select * from $firsttable") or test_error;
+$sth = $dbh->query("select * from $secondtable") or test_error;
 if ($sth->numrows() == 255){
     print "ok 66\n";
 } else {
-    print "not ok 66\n";
+    print "not ok 66 #" . $not_ok;
 }
 while (%hash = $sth->fetchhash) {
     $hash{charactr} eq chr($hash{ascii}) or print "not ok 67 [char no $hash{ascii}]\n";
 }
 print "ok 67\n";
 
-$dbh->query("drop table $firsttable") or test_error;
+$dbh->query("drop table $secondtable") or test_error;
 
 # mSQL up to 1.0.16 had this annoying lost table bug, so I try to
 # force our users to upgrade to 1.0.17
