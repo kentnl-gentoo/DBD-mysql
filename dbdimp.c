@@ -1491,8 +1491,8 @@ AV* dbd_st_fetch(SV* sth, imp_sth_t* imp_sth) {
 
     imp_sth->currow++;
     if (!(cols = mysql_fetch_row(imp_sth->cda))) {
-      if (!mysql_eof(imp_sth->cda)) {
-	D_imp_dbh_from_sth;
+      D_imp_dbh_from_sth;
+      if (mysql_errno(&imp_dbh->mysql)) {
 	do_error(sth, mysql_errno(&imp_dbh->mysql),
 		 mysql_error(&imp_dbh->mysql));
       }
