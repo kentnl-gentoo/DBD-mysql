@@ -90,7 +90,7 @@ _admin_internal(drh,dbh,command,dbname=NULL,host=NULL,port=NULL,user=NULL,passwo
 	  sock = mysql_dr_connect(&mysql, NULL, host, port, user,
 				  password, NULL, NULL);
 	  if (sock == NULL) {
-	    do_error(drh, mysql_errno(sock), mysql_error(sock));
+	    do_error(drh, mysql_errno(&mysql), mysql_error(&mysql));
 	    XSRETURN_NO;
 	  }
        }

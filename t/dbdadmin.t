@@ -7,7 +7,7 @@
 #
 #   Make -w happy
 #
-$test_dsn = $test_user = $test_password = $verbose = '';
+$test_dsn = $test_host = $test_user = $test_password = $verbose = '';
 $| = 1;
 
 
@@ -117,8 +117,9 @@ while (Testing()) {
 	    while (InDsnList($testdsn2, @dsn)) {
 		++$testdsn2;
 	    }
-
-	    if (!($result = $drh->func('createdb', $testdsn, 'admin'))
+ 
+	    if (!($result = $drh->func('createdb', $testdsn, $test_host,
+				$test_user, $test_password, 'admin'))
 		and  ($drh->errstr =~ /(access|permission) denied/i)) {
 		$accessDenied = 1;
 		$result = 1;
