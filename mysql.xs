@@ -1,6 +1,6 @@
 /* Hej, Emacs, this is -*- C -*- mode!
 
-   $Id: mysql.xs,v 1.3 2003/10/17 17:20:50 rlippan Exp $
+   $Id: mysql.xs,v 1.4 2004/06/29 03:03:15 rlippan Exp $
 
    Copyright (c) 2003      Rudolf Lippan
    Copyright (c) 1997-2003 Jochen Wiedmann
@@ -97,7 +97,11 @@ _admin_internal(drh,dbh,command,dbname=NULL,host=NULL,port=NULL,user=NULL,passwo
        }
  
        if (strEQ(command, "shutdown")) {
+#if MYSQL_VERSION_ID < 40103
 	   result = mysql_shutdown(sock);
+#else
+	   result = mysql_shutdown(sock, SHUTDOWN_DEFAULT);
+#endif
        } else if (strEQ(command, "reload")) {
 	   result = mysql_reload(sock);
        } else if (strEQ(command, "createdb")) {

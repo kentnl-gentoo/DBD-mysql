@@ -7,7 +7,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.c,v 1.11 2003/10/17 17:20:50 rlippan Exp $
+ *  $Id: dbdimp.c,v 1.13 2004/06/30 17:43:41 rlippan Exp $
  */
 
 
@@ -60,6 +60,7 @@ static int CountParam(char* statement) {
 
     while (c = *ptr++) {
         switch (c) {
+	  case '`':
 	  case '"':
 	  case '\'':
 	    /*
@@ -170,6 +171,7 @@ static char* ParseParam(MYSQL* sock, char* statement, STRLEN *slenPtr,
     j = 0;
     while (j < slen) {
         switch(statement[j]) {
+	  case '`':
 	  case '\'':
 	  case '"':
 	    /*

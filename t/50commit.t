@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 50commit.t,v 1.2 2003/08/28 20:31:13 rlippan Exp $
+#   $Id: 50commit.t,v 1.3 2004/06/29 03:13:39 rlippan Exp $
 #
 #   This is testing the transaction support.
 #
@@ -118,12 +118,12 @@ while (Testing()) {
 
 	# Check commit
 	Test($state or $dbh->do("DELETE FROM $table WHERE id = 1"))
-	    or ErrMsgF("Failed to insert value: err %s, errstr %s.\n",
+	    or ErrMsgF("Failed to delete value: err %s, errstr %s.\n",
 		       $dbh->err, $dbh->errstr);
 	Test($state or !($msg = NumRows($dbh, $table, 0)))
 	    or ErrMsg($msg);
 	Test($state or $dbh->commit)
-	    or ErrMsgF("Failed to rollback: err %s, errstr %s.\n",
+	    or ErrMsgF("Failed to commit: err %s, errstr %s.\n",
 		       $dbh->err, $dbh->errstr);
 	Test($state or !($msg = NumRows($dbh, $table, 0)))
 	    or ErrMsg($msg);

@@ -9,7 +9,7 @@ use DynaLoader();
 use Carp ();
 @ISA = qw(DynaLoader);
 
-$VERSION = '2.9003';
+$VERSION = '2.9004_2';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -713,7 +713,7 @@ to mysql_ssl_set, if mysql_ssl is turned on.
 As of MySQL 3.23.49, the LOCAL capability for LOAD DATA may be disabled
 in the MySQL client library by default. If your DSN contains the option
 "mysql_local_infile=1", LOAD DATA LOCAL will be enabled.  (However,
-this option is effective if the server has also been configured to
+this option is *ineffective* if the server has also been configured to
 disallow LOCAL.)
 
 
