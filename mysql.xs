@@ -104,13 +104,13 @@ _admin_internal(drh,dbh,command,dbname=NULL,host=NULL,port=NULL,user=NULL,passwo
 	   result = mysql_create_db(sock, dbname);
 #else
 	   char* buffer = malloc(strlen(dbname)+50);
-	   if (buffer == null) {
+	   if (buffer == NULL) {
 	     do_error(drh, JW_ERR_MEM, "Out of memory");
 	     XSRETURN_NO;
 	   } else {
 	     strcpy(buffer, "CREATE DATABASE ");
 	     strcat(buffer, dbname);
-	     result = mysql_query(buffer);
+	     result = mysql_real_query(sock, buffer, strlen(buffer));
 	     free(buffer);
 	   }
 #endif
@@ -119,13 +119,13 @@ _admin_internal(drh,dbh,command,dbname=NULL,host=NULL,port=NULL,user=NULL,passwo
           result = mysql_drop_db(sock, dbname);
 #else
 	   char* buffer = malloc(strlen(dbname)+50);
-	   if (buffer == null) {
+	   if (buffer == NULL) {
 	     do_error(drh, JW_ERR_MEM, "Out of memory");
 	     XSRETURN_NO;
 	   } else {
 	     strcpy(buffer, "DROP DATABASE ");
 	     strcat(buffer, dbname);
-	     result = mysql_query(buffer);
+	     result = mysql_real_query(sock, buffer, strlen(buffer));
 	     free(buffer);
 	   }
 #endif

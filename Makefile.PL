@@ -25,15 +25,6 @@ foreach my $key (qw/testdb testhost testuser testpassword cflags libs
 }
 
 print <<"MSG";
-
-This is an experimental version of DBD::mysql. For production
-environments you should prefer the Msql-Mysql-modules.
-
-MSG
-
-sleep 5;
-
-print <<"MSG";
 I will use the following settings for compiling and testing:
 
 MSG

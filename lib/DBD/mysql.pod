@@ -101,8 +101,8 @@ them. :-)
 
 In what follows we first discuss the use of DBD::mysql and DBD::mSQL,
 because this is what you will need the most. For installation, see the
-sections on L<INSTALLATION>, L<WIN32 INSTALLATION>, L<KNOWN PROBLEMS>
-and L<KNOWN BUGS> below. See L<EXAMPLE> for a simple example above.
+sections on L<INSTALLATION>, L<WIN32 INSTALLATION>, and L<KNOWN BUGS>
+below. See L<EXAMPLE> for a simple example above.
 
 From perl you activate the interface with the statement
 
@@ -1066,9 +1066,6 @@ F</usr/lib/mysql/libmysqlclient.a> or F</usr/lib/libmysqlclient.so>.
 For mSQL go looking for F<msql.h> (typically in F</usr/include/msql.h>
 and F<libmsql.a> (probably in F</usr/lib/libmsql.a>).
 
-See the L<KNOWN PROBLEMS> section below if you encounter any problems
-within "make" or "make test".
-
 
 =head1 WIN32 INSTALLATION
 
@@ -1180,8 +1177,6 @@ Continued in the usual way:
 
 =back
 
-See the first section of L<KNOWN PROBLEMS> below.
-
 If you want to create a PPM package for the ActiveState Perl version, then
 modify the above steps as follows: Run
 
@@ -1204,158 +1199,6 @@ and install them by typing
 in the PPM program.
 
 
-=head1 KNOWN PROBLEMS
-
-=over
-
-=item 1.)
-
-If the MySQL binaries are compiled with gcc or egcs (as the precompiled
-binaries are), but your Perl is using another compiler, it is likely that
-you receive an error message like the following when running "make test":
-
-  t/00base............install_driver(mysql) failed: Can't load
-  '../blib/arch/auto/DBD/mysql/mysql.so' for module DBD::mysql:
-  ../blib/arch/auto/DBD/mysql/mysql.so: undefined symbol: _umoddi3
-  at /usr/local/perl-5.005/lib/5.005/i586-linux-thread/DynaLoader.pm
-  line 168.
-
-This means, that your linker doesn't include libgcc.a. You have the
-following options:
-
-=over
-
-=item a)
-
-Either recompile Perl or Mysql, it doesn't matter which. The important
-thing is that you use the same compiler for both. This is definitely
-the recommended solution in the long term.
-
-=item b)
-
-A simple workaround is to include libgcc.a manually. Do a "make clean"
-and "make" and in the output wait for a line like
-
-  LD_RUN_PATH="/usr/lib/mysql:/lib" egcs -o
-  ../blib/arch/auto/DBD/mysql/mysql.so  -shared -L/usr/local/lib
-  dbdimp.o mysql.o -L/usr/lib/mysql -L/usr/lib/mysql -lmysqlclient
-  -lm
-
-Repeat the same line in the shell by adding
-
-  -L/usr/lib/gcc-lib/i386-redhat-linux/gcc-2.7.2.3 -lgcc
-
-where the directory is the location of libgcc.a. The best choice
-for locating this file is executing
-
-  gcc --print-libgcc-file
-
-or
-
-  gcc -v
-
-=back
-
-
-=item 2.)
-
-There are known problems with shared versions of libmysqlclient, at
-least on some Linux boxes. If you receive an error message similar to
-
-  install_driver(mysql) failed: Can't load
-  '/usr/lib/perl5/site_perl/i586-linux/auto/DBD/mysql/mysql.so'
-  for module DBD::mysql: File not found at
-  /usr/lib/perl5/i586-linux/5.00404/DynaLoader.pm line 166
-
-then this error message can be misleading: It's not mysql.so that fails
-being loaded, but libmysqlclient.so!
-
-As a workaround, recompile the Msql-Mysql-modules with
-
-  perl Makefile.PL --static --config
-  make
-  make test
-  make install
-
-This option forces linkage against the static libmysqlclient.a.
-
-
-=item 3.)
-
-By default mSQL2 is installed to allow local access only. This can break
-the test scripts akmisc.t, msql1.t and msql2.t. You might notice a message
-like
-
-  t/akmisc............Can't connect to MSQL server on localhost at
-  t/akmisc.t line 131
-  Cannot connect: Can't connect to MSQL server on localhost
-  It looks as if your server (on localhost) is not up and running.
-  This test requires a running server.
-  Please make sure your server is running and retry.
-  dubious
-  Test returned status 10 (wstat 2560, 0xa00)
-
-If this is the case, try to change the value of "Remote_Access" in
-your F<msql.conf> file to "True". If the value was set intentionally,
-you might restore the old value after the tests ran ok.
-
-
-=item 4.)
-
-If linking fails under Win32 because of a missing symbol
-pthread_cond_init, apply the following patch to dbd/dbdimp.c:
-
-  *** dbd/dbdimp.c.orig	Wed Sep 23 14:39:33 1998
-  --- dbd/dbdimp.c	Fri Oct 02 10:37:16 1998
-  ***************
-  *** 1708,1712 ****
-  --- 1709,1720 ----
-      }
-      return TRUE;
-    }
-  + 
-  + #if !defined(_UNIX_)  &&  defined(WIN32)
-  + int pthread_cond_init()
-  + {
-  +   return 0;
-  + }
-  + #endif
-
-    #endif
-
-(I could make this part of the source distribution, but I think this is an
-ugly hack and hopefully Monty will fix the missing symbol in the next
-release of MyODBC.)
-
-
-=item 5.)
-
-mSQL 2.0.4 had a bug, that caused the test t/40bindparam.t to fail.
-This bug is fixed in later versions, 2.0.6 and higher.
-
-
-=item 6.)
-
-From time to time compiling DBD::mSQL fails with messages like
-
-  In file included from ../dbd/myMsql.h:55,
-                   from ../dbd/dbdimp.h:32,
-                   from dbdimp.c:29:
-  /usr/local/Hughes/include/common/portability.h:74:
-    redefinition of `u_int'
-  /usr/include/sys/types.h:52: `u_int' previously declared here
-  /usr/local/Hughes/include/common/portability.h:78: redefinition of
-    `ssize_t'
-  /usr/include/sys/types.h:116: `ssize_t' previously declared here
-  *** Error code 1
-
-A workaroud is using
-
-	perl Makefile.PL --config DEFINE="-DHAVE_SSIZE_T  -DHAVE_U_INT"
-
-=back
-
-
 =head1 KNOWN BUGS
 
 The I<port> part of the first argument to the connect call is
@@ -1368,26 +1211,24 @@ will ever change.
 
 =head1 AUTHORS
 
-The current versions of B<DBD::mSQL> and B<DBD::mysql> is almost
-completely written by Jochen Wiedmann (I<joe@ispsoft.de>). The
-first version's author was Alligator Descartes(I<descarte@symbolstone.org>),
-who has been aided and abetted by Gary Shea, Andreas König and Tim Bunce
+The current version of B<DBD::mysql> is almost completely written
+by Jochen Wiedmann (I<joe@ispsoft.de>). The first version's author
+was Alligator Descartes(I<descarte@symbolstone.org>), who has been
+aided and abetted by Gary Shea, Andreas König and Tim Bunce
 amongst others.
 
-The B<Msql> and B<Mysql> modules have originally been written by
-Andreas König <koenig@kulturbox.de>. The current version, mainly
-an emulation layer, is from Jochen Wiedmann.
+The B<Mysql> module was originally written by Andreas König
+<koenig@kulturbox.de>. The current version, mainly an emulation
+layer, is from Jochen Wiedmann.
 
 
 =head1 COPYRIGHT
 
-This module is Copyright (c) 1997-1999 Jochen Wiedmann, with code
+This module is Copyright (c) 1997-2001 Jochen Wiedmann, with code
 portions Copyright (c)1994-1997 their original authors. This module is
 released under the same license as Perl itself. See the Perl README
 for details.
 
-
-=head1 MAILING LIST SUPPORT
 
 =head1 MAILING LIST SUPPORT
 

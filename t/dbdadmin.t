@@ -49,6 +49,20 @@ sub InDsnList($@) {
     0;
 }
 
+sub PathFor(@) {
+    eval { require File::Spec; };
+    my $haveFileSpec = $@ ? 0 : 1;
+    foreach my $f (@_) {
+	foreach my $dir ($haveFileSpec ?
+		       File::Spec->path() :
+			 split(/\:/, $ENV{PATH})) {
+	    my $p = $haveFileSpec ?
+	      File::Spec->catfile($dir, $f) : "$dir/$f";
+	    return $p if -x $p;
+	}
+    }
+    return undef;
+}
 
 #
 #   Main loop; leave this untouched, put tests after creating
@@ -184,7 +198,7 @@ while (Testing()) {
 		    close STDIN;
 		    close STDOUT;
 		    close STDERR;
-		    exec "safe_mysqld &";
+		    exec((PathFor("mysqld_safe") || "safe_mysqld") . " &");
 		}
 	    }
 	    sleep 5;
