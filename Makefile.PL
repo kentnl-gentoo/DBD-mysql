@@ -4,7 +4,6 @@
 use strict;
 BEGIN { $^W = 1; }
 use Config ();
-use DBI::DBD ();
 use Getopt::Long();
 use ExtUtils::MakeMaker();
 use Data::Dumper ();
@@ -278,6 +277,7 @@ sub libscan {
 }
 
 sub postamble {
+  require DBI::DBD;
   "\n" . DBI::DBD::dbd_postamble(@_) . <<"POSTAMBLE";
 
 installhtml: lib/DBD/mysql/INSTALL.pod
