@@ -2,22 +2,13 @@
 
 =head1 NAME
 
-DBD::mSQL / DBD::mysql - mSQL and mysql drivers for the Perl5 Database
-Interface (DBI)
+DBD::mysql - MySQL driver for the Perl5 Database Interface (DBI)
 
 =head1 SYNOPSIS
 
     use DBI;
 
-    $driver = "mSQL"; # or "mSQL1";
-    $dsn = "DBI:$driver:database=$database;host=$hostname";
-
-    $dbh = DBI->connect($dsn, undef, undef);
-
-        or
-
-    $driver = "mysql";
-    $dsn = "DBI:$driver:database=$database;host=$hostname;port=$port";
+    $dsn = "DBI:mysql:database=$database;host=$hostname;port=$port";
 
     $dbh = DBI->connect($dsn, $user, $password);
 
@@ -88,18 +79,15 @@ Interface (DBI)
 
 =head1 DESCRIPTION
 
-B<DBD::mysql> and B<DBD::mSQL> are the Perl5 Database Interface drivers
-for the mysql, mSQL 1.I<x> and mSQL 2.I<x> databases. The drivers are part
-of the I<Msql-Mysql-modules> package.
-
-In other words: DBD::mSQL and DBD::mysql are an interface between the Perl
-programming language and the mSQL or mysql programming API that come with
-the mSQL any mysql relational database management systems. Most functions
-provided by the respective programming API's are supported. Some
-rarely used functions are missing, mainly because noone ever requested
+B<DBD::mysql> is the Perl5 Database Interface driver for the MySQL
+database. In other words: DBD::mysql is an interface between the Perl
+programming language and the MySQL programming API that comes with
+the MySQL relational database management system. Most functions
+provided by this programming API are supported. Some rarely used
+functions are missing, mainly because noone ever requested
 them. :-)
 
-In what follows we first discuss the use of DBD::mysql and DBD::mSQL,
+In what follows we first discuss the use of DBD::mysql,
 because this is what you will need the most. For installation, see the
 sections on L<INSTALLATION>, L<WIN32 INSTALLATION>, and L<KNOWN BUGS>
 below. See L<EXAMPLE> for a simple example above.
@@ -108,16 +96,11 @@ From perl you activate the interface with the statement
 
     use DBI;
 
-After that you can connect to multiple mSQL or MySQL database servers
+After that you can connect to multiple MySQL database servers
 and send multiple queries to any of them via a simple object oriented
 interface. Two types of objects are available: database handles and
 statement handles. Perl returns a database handle to the connect
 method like so:
-
-  $dbh = DBI->connect("DBI:mSQL:database=$db;host=$host",
-		      undef, undef, {RaiseError => 1});
-
-or
 
   $dbh = DBI->connect("DBI:mysql:database=$db;host=$host",
 		      $user, $password, {RaiseError => 1});
@@ -165,14 +148,6 @@ But now for a more formal approach:
 
     use DBI;
 
-    $driver = "mSQL";  #  or "mSQL1"
-    $dsn = "DBI:$driver:$database";
-    $dsn = "DBI:$driver:database=$database;host=$hostname";
-
-    $dbh = DBI->connect($dsn, undef, undef);
-
-        or
-
     $dsn = "DBI:mysql:$database";
     $dsn = "DBI:mysql:database=$database;host=$hostname";
     $dsn = "DBI:mysql:database=$database;host=$hostname;port=$port";
@@ -188,15 +163,13 @@ A C<database> must always be specified.
 =item port
 
 The hostname, if not specified or specified as '', will default to an
-mysql or mSQL daemon running on the local machine on the default port
+MySQL daemon running on the local machine on the default port
 for the UNIX socket.
 
-Should the mysql or mSQL daemon be running on a non-standard port number,
+Should the MySQL daemon be running on a non-standard port number,
 you may explicitly state the port number to connect to in the C<hostname>
 argument, by concatenating the I<hostname> and I<port number> together
 separated by a colon ( C<:> ) character or by using the  C<port> argument.
-This doesn't work for mSQL 2: You have to create an alternative config
-file and load it using the msql_configfile attribute, see below.
 
 
 =item mysql_client_found_rows
@@ -211,13 +184,6 @@ then the MySQL engine will always return 0, because no rows have changed.
 With mysql_client_found_rows however, it will return the number of rows
 that have an id 1, as some people are expecting. (At least for compatibility
 to other engines.)
-
-By default this flag is disabled. However, you can enable it by default,
-when installing the Msql-Mysql-modules with
-
-  perl Makefile.PL --config --mysql-use-client-found-rows
-  make
-  make install
 
 =item mysql_compression
 
@@ -293,16 +259,12 @@ location for the socket than that built into the client.
     @dbs = $drh->func($hostname, $port, '_ListDBs');
     @dbs = $dbh->func('_ListDBs');
 
-Returns a list of all databases managed by the mysql daemon or
-mSQL daemon running on C<$hostname>, port C<$port>. This method
+Returns a list of all databases managed by the MySQL daemon
+running on C<$hostname>, port C<$port>. This method
 is rarely needed for databases running on C<localhost>: You should
 use the portable method
 
     @dbs = DBI->data_sources("mysql");
-
-        or
-
-    @dbs = DBI->data_sources("mSQL");
 
 whenever possible. It is a design problem of this method, that there's
 no way of supplying a host name or port number to C<data_sources>, that's
@@ -398,7 +360,7 @@ respectively.
 
 =head1 STATEMENT HANDLES
 
-The statement handles of DBD::mysql and DBD::mSQL support a number
+The statement handles of DBD::mysql support a number
 of attributes. You access these by using, for example,
 
   my $numFields = $sth->{'NUM_OF_FIELDS'};
@@ -447,7 +409,7 @@ header of table names together with all rows:
 
 For portable applications you should restrict yourself to attributes with
 capitalized or mixed case names. Lower case attribute names are private
-to DBD::mSQL and DBD::mysql. The attribute list includes:
+to DBD::mysql. The attribute list includes:
 
 =over
 
@@ -460,9 +422,9 @@ have impact on the I<max_length> attribute.
 =item mysql_insertid
 
 MySQL has the ability to choose unique key values automatically. If this
-happened, the new ID will be stored in this attribute. This attribute
-is not valid for DBD::mSQL. An alternative way for accessing this attribute
-is via $dbh->{'mysql_insertid'}. (Note we are using the $dbh in this case!)
+happened, the new ID will be stored in this attribute. An alternative
+way for accessing this attribute is via $dbh->{'mysql_insertid'}.
+(Note we are using the $dbh in this case!)
 
 =item mysql_is_blob
 
@@ -482,8 +444,7 @@ respective column contains numeric values.
 =item mysql_is_pri_key
 
 Reference to an array of boolean values; TRUE indicates, that the
-respective column is a primary key. This is only valid for MySQL
-and mSQL 1.0.x: mSQL 2.x uses indices.
+respective column is a primary key.
 
 =item mysql_length
 
@@ -519,10 +480,9 @@ A reference to an array of table names, useful in a I<JOIN> result.
 A reference to an array of column types. The engine's native column
 types are mapped to portable types like DBI::SQL_INTEGER() or
 DBI::SQL_VARCHAR(), as good as possible. Not all native types have
-a meaningfull equivalent, for example DBD::mSQL::IDX_TYPE() or
-DBD::mysql::FIELD_TYPE_INTERVAL are mapped to DBI::SQL_VARCHAR().
-If you need the native column types, use I<mysql_type> or I<msql_type>,
-respectively. See below.
+a meaningfull equivalent, for example DBD::mysql::FIELD_TYPE_INTERVAL
+is mapped to DBI::SQL_VARCHAR().
+If you need the native column types, use I<mysql_type>. See below.
 
 =item mysql_type
 
@@ -541,8 +501,8 @@ Whenever possible, the ANSI SQL name is preferred.
 
 =head1 TRANSACTION SUPPORT
 
-Beginning with Msql-Mysql-modules 1.2216, transactions are supported
-by DBD::mysql. The transaction support works as follows:
+Beginning with DBD::mysql 2.0416, transactions are supported.
+The transaction support works as follows:
 
 =over
 
@@ -614,7 +574,7 @@ However, such behaviour isn't portable.
 
 =head1 SQL EXTENSIONS
 
-Certain metadata functions of mSQL and mysql that are available on the
+Certain metadata functions of MySQL that are available on the
 C API level, haven't been implemented here. Instead they are implemented
 as "SQL extensions" because they return in fact nothing else but the
 equivalent of a statement handle. These are:
@@ -624,13 +584,7 @@ equivalent of a statement handle. These are:
 =item LISTFIELDS $table
 
 Returns a statement handle that describes the columns of $table.
-Ses the docs of msqlListFields or mysql_list_fields (C API) for
-details.
-
-=item LISTINDEX $table $index
-
-mSQL only; returns a statement handle that describes the index $index
-of table $table. See the docs of msqlListIndex for details.
+Ses the docs of mysql_list_fields (C API) for details.
 
 =back
 
@@ -639,38 +593,38 @@ of table $table. See the docs of msqlListIndex for details.
 =head1 COMPATIBILITY ALERT
 
 The statement attribute I<TYPE> has changed its meaning, as of
-Msql-Mysql-modules 1.19_19. Formerly it used to be the an array
+DBD::mysql 2.0119. Formerly it used to be the an array
 of native engine's column types, but it is now an array of
 portable SQL column types. The old attribute is still available
-as I<mysql_type> or I<msql_type>, respectively.
+as I<mysql_type>.
 
-The Msql-Mysql-modules are a moving target, due to a number of reasons:
+DBD::mysql is a moving target, due to a number of reasons:
 
 =over
 
 =item -
 
-Of course they have to conform the DBI guidelines and developments.
+Of course we have to conform the DBI guidelines and developments.
 
 =item -
 
-They have to keep track with the latest MySQL developments.
+We have to keep track with the latest MySQL developments.
 
 =item -
 
-And, surprisingly, they have to be as close to ODBC as possible: This is
+And, surprisingly, we have to be as close to ODBC as possible: This is
 due to the current direction of DBI.
 
 =item -
 
-And, last not least, as any tool they have a little bit of own life.
+And, last not least, as any tool it has a little bit life of its own.
 
 =back
 
-This means that a lot of things had to and have to be changed. As I am not
-interested in maintaining a lot of compatibility kludges, which only
-increase the drivers code without being really usefull, I did and will
-remove some features, methods or attributes.
+This means that a lot of things had to and have to be changed.
+As I am not interested in maintaining a lot of compatibility kludges,
+which only increase the drivers code without being really usefull,
+I did and will remove some features, methods or attributes.
 
 To ensure a smooth upgrade, the following policy will be applied:
 
@@ -705,14 +659,13 @@ Example: The statement handle attribute
 
     $sth->{'LENGTH'}
 
-was declared obsolete in Msql-Mysql-modules 1.18xy. It is considered
-deprecated in Msql-Mysql-modules 1.20xy (current as of this writing)
-and will finally be removed in Msql-Mysql-modules 1.22xy.
-
-=back
+was declared obsolete in DBD::mysql 2.00xy. It was considered
+deprecated in DBD::mysql 2.02xy and removed in 2.04xy.
 
 
 =head2 Obsolete Features
+
+=over
 
 =item Database handle attributes
 
@@ -966,17 +919,14 @@ Replaced with $sth-E<gt>{'mysql_table'}.
 
 =head1 MULTITHREADING
 
-The multithreading capabilities of the Msql-Mysql-modules depend completely
+The multithreading capabilities of DBD::mysql depend completely
 on the underlying C libraries: The modules are working with handle data
 only, no global variables are accessed or (to the best of my knowledge)
-thread unsafe functions are called. Thus DBD::mSQL and DBD::mysql are
-completely thread safe, if the C libraries thread safe and you don't
-share handles among threads.
+thread unsafe functions are called. Thus DBD::mysql is believed
+to be completely thread safe, if the C libraries are thread safe
+and you don't share handles among threads.
 
-The obvious questions is: Are the C libraries thread safe? In the case of
-mSQL the answer is definitely "no". The C library has a concept of one
-single active connection at a time and that is not what threads like.
-
+The obvious question is: Are the C libraries thread safe?
 In the case of MySQL the answer is "mostly" and, in theory, you should
 be able to get a "yes", if the C library is compiled for being thread
 safe (By default it isn't.) by passing the option -with-thread-safe-client
@@ -990,9 +940,9 @@ Windows users may skip this section and pass over to L<WIN32
 INSTALLATION> below. Others, go on reading.
 
 First of all, you do not need an installed MySQL server for installing
-DBD::mSQL and/or DBD::mysql. However, you need at least the client
+DBD::mysql. However, you need at least the client
 libraries and possibly the header files, if you are compiling DBD::mysql
-or DBD::mSQL from source. In the case of MySQL you can create a
+from source. In the case of MySQL you can create a
 client-only version by using the configure option --without-server.
 If you are using precompiled binaries, then it may be possible to
 use just selected RPM's like MySQL-client and MySQL-devel or something
@@ -1009,10 +959,6 @@ I recommend trying automatic installation via the CPAN module. Try
 If you are using the CPAN module for the first time, it will prompt
 you a lot of questions. If you finally receive the CPAN prompt, enter
 
-  install Bundle::DBD::mSQL
-
-or
-
   install Bundle::DBD::mysql
 
 If this fails (which may be the case for a number of reasons, for
@@ -1025,14 +971,14 @@ need to fetch the archives from any CPAN mirror, for example
 The following archives are required (version numbers may have
 changed, I choose those which are current as of this writing):
 
-  DBI/DBI-1.13.tar.gz
+  DBI/DBI-1.15.tar.gz
   Data/Data-ShowTable-3.3.tar.gz
-  DBD/Msql-Mysql-modules-1.2217.tar.gz
+  DBD/DBD-mysql-2.1001.tar.gz
 
 Then enter the following commands:
 
-  gzip -cd DBI-1.13.tar.gz | tar xf -
-  cd DBI-1.13
+  gzip -cd DBI-1.15.tar.gz | tar xf -
+  cd DBI-1.15
   perl Makefile.PL
   make
   make test
@@ -1046,31 +992,21 @@ Then enter the following commands:
   make install  # Don't try make test, the test suite is broken
 
   cd ..
-  gzip -cd Msql-Mysql-modules-1.2217.tar.gz | tar xf -
-  cd Msql-Mysql-modules-1.2217
+  gzip -cd DBD-mysql-2.1001.tar.gz | tar xf -
+  cd DBD-mysql-2.1001
   perl Makefile.PL
   make
   make test
   make install
 
-During "perl Makefile.PL" you will be prompted some questions. In
-particular you have to choose the installed drivers (MySQL, mSQL2
-and/or mSQL1). The MySQL driver will be called DBD::mysql, a single
-mSQL driver will be called DBD::mSQL. If you want to support both
-mSQL1 and mSQL2, they former will be DBD::mSQL1.
-
+During "perl Makefile.PL" you will be prompted some questions.
 Other questions are the directories with header files and libraries.
 For example, of your file F<mysql.h> is in F</usr/include/mysql/mysql.h>,
 then enter the header directory F</usr>, likewise for
 F</usr/lib/mysql/libmysqlclient.a> or F</usr/lib/libmysqlclient.so>.
-For mSQL go looking for F<msql.h> (typically in F</usr/include/msql.h>
-and F<libmsql.a> (probably in F</usr/lib/libmsql.a>).
 
 
 =head1 WIN32 INSTALLATION
-
-I have never attempted to install DBD::mSQL under Win32, so this is only
-for MySQL. If anyone succeeds, please let me know what you did.
 
 If you are using ActivePerl, you may use ppm to install DBD-mysql.
 For Perl 5.6, upgrade to Build 623 or later, then it is sufficient
@@ -1129,11 +1065,11 @@ files! In particular do *not* store the MySQL server in the same
 directory. If the server is already installed in F<C:\mysql>,
 choose a location like F<C:\tmp>, extract the win32clients there.
 Note that you can remove this directory entirely once you have
-installed the Msql-Mysql-modules.
+installed DBD::mysql.
 
 =item -
 
-Extract the Msql-Mysql-modules sources into another directory, for
+Extract the DBD::mysql sources into another directory, for
 example F<C:\src\siteperl>
 
 =item -
@@ -1197,16 +1133,6 @@ and install them by typing
   install http://your.server.name/your/directory/DBD-mysql.ppd
 
 in the PPM program.
-
-
-=head1 KNOWN BUGS
-
-The I<port> part of the first argument to the connect call is
-implemented in an unsafe way when using mSQL. In fact it is just
-setting the environment variable MSQL_TCP_PORT during the connect
-call. If another connect call uses another port and the handles
-are used simultaneously, they will interfere. I doubt that this
-will ever change.
 
 
 =head1 AUTHORS

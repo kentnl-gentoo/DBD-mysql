@@ -1139,7 +1139,7 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth) {
 				       DBIc_NUM_PARAMS(imp_sth),
 				       imp_sth->params,
 				       &imp_sth->cda,
-				       &imp_dbh->mysql,
+ 				       &imp_dbh->mysql,
 				       imp_sth->use_mysql_use_result))
 	!= -2) {
 	if (!imp_sth->cda) {
@@ -1820,6 +1820,7 @@ SV* dbd_db_quote(SV* dbh, SV* str, SV* type) {
     if (!SvOK(str)) {
         result = newSVpv("NULL", 4);
     } else {
+        D_imp_dbh(dbh);
         if (type  &&  SvOK(type)) {
 	    int i;
 	    int tp = SvIV(type);
@@ -1839,34 +1840,8 @@ SV* dbd_db_quote(SV* dbh, SV* str, SV* type) {
 	sptr = SvPVX(result);
 
 	*sptr++ = '\'';
-	while (len--) {
-	    switch (*ptr) {
-	      case '\'':
-		*sptr++ = '\\';
-		*sptr++ = '\'';
-		break;
-	      case '\\':
-		*sptr++ = '\\';
-		*sptr++ = '\\';
-		break;
-	      case '\n':
-		*sptr++ = '\\';
-		*sptr++ = 'n';
-		break;
-	      case '\r':
-		*sptr++ = '\\';
-		*sptr++ = 'r';
-		break;
-	      case '\0':
-		*sptr++ = '\\';
-		*sptr++ = '0';
-		break;
-	      default:
-		*sptr++ = *ptr;
-		break;
-	    }
-	    ++ptr;
-	}
+	sptr += mysql_real_escape_string(&imp_dbh->mysql, sptr,
+					 ptr, len);
 	*sptr++ = '\'';
 	SvPOK_on(result);
 	SvCUR_set(result, sptr - SvPVX(result));
