@@ -1,3 +1,8 @@
+2003-06-25  Jochen Wiedmann  <joe@ispsoft.de> (2.1028)
+
+	* t/mysql.dbtest: have_innobase is have_innodb in
+	  MySQL 4.1. Stefan Zingler, <s.zingler at mobilcom.de>
+
 2003-05-31  Jochen Wiedmann  <joe@ispsoft.de> (2.1027)
 
 	* t/mysql.t: Fixed the checks for test results

@@ -2,7 +2,7 @@
          'testhost' => '',
          'testpassword' => 'jwi',
          'ssl' => 0,
-         'testuser' => 'jwi',
+         'testuser' => '',
          'nocatchstderr' => 0,
          'libs' => '-L/usr/lib/mysql -lmysqlclient -lz -lcrypt -lnsl -lm',
          'cflags' => '-I\'/usr/include/mysql\'',
