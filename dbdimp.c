@@ -1952,7 +1952,7 @@ int mysql_db_reconnect(SV* h) {
     return FALSE;
   }
 
-  if (DBIc_has(imp_dbh, DBIcf_AutoCommit)) {
+  if (!DBIc_has(imp_dbh, DBIcf_AutoCommit)) {
     /* We never reconnect if AutoCommit is turned off.
      * Otherwise we might get an inconsistent transaction
      * state.
