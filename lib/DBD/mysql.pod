@@ -14,7 +14,10 @@ DBD::mysql - MySQL driver for the Perl5 Database Interface (DBI)
 
 
     $drh = DBI->install_driver("mysql");
-    @databases = $drh->func($host, $port, '_ListDBs');
+    @databases = DBI->data_sources("mysql");
+       or
+    @databases = DBI->data_sources("mysql",
+				   {"host" => $host, "port" => $port});
 
     $sth = $dbh->prepare("SELECT * FROM foo WHERE bla");
        or

@@ -1,3 +1,15 @@
+2003-01-21  Jochen Wiedmann <joe@ispsoft.de> (2.1025)
+
+        * lib/DBD/mysql.pm: added support for optional
+          DBI->data_sources() \%attributes parameter.
+          Georg Rehfeld, <georg.rehfeld@gmx.de>
+        * lib/DBD/mysql.pod: documented optional
+          DBI->data_sources() \%attributes parameter.
+          Georg Rehfeld, <georg.rehfeld@gmx.de>
+        * t/dbdadmin.t: changed to use optional
+          DBI->data_sources() \%attributes parameter.
+          Georg Rehfeld, <georg.rehfeld@gmx.de>
+
 2003-01-20  Jochen Wiedmann <joe@ispsoft.de> (2.1024)
 
 	* dbdimp.c: Fixed missing support for double quotes

@@ -9,7 +9,7 @@ use DynaLoader();
 use Carp ();
 @ISA = qw(DynaLoader);
 
-$VERSION = '2.1024';
+$VERSION = '2.1025';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -132,7 +132,13 @@ sub connect {
 
 sub data_sources {
     my($self) = shift;
-    my(@dsn) = $self->func('', '_ListDBs');
+    my($attributes) = shift;
+    my($host, $port) = ('', '');
+    if ($attributes) {
+      $host = $attributes->{host} || '';
+      $port = $attributes->{port} || '';
+    }
+    my(@dsn) = $self->func($host, $port, '_ListDBs');
     my($i);
     for ($i = 0;  $i < @dsn;  $i++) {
 	$dsn[$i] = "DBI:mysql:$dsn[$i]";

@@ -111,7 +111,13 @@ sub selectdb ($$) {
 sub listdbs ($) {
     my($self) = shift;
     my $drh = $self->{'drh'};
-    my @dbs = $drh->func($self->{'host'}, '_ListDBs');
+    my $host = $self->{'host'};
+    my @dbs;
+    if ($host) {
+	@dbs = $drh->func($host, "", "_ListDBs");
+    } else {
+	@dbs = $drh->func("", "", "_ListDBs");
+    }
     $db_errstr = $drh->errstr();
     @dbs;
 }
