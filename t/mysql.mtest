@@ -1,17 +1,20 @@
 { local $opt = {
+         'testsocket' => '',
          'testpassword' => '',
          'testhost' => '',
          'nofoundrows' => 0,
          'ssl' => 0,
          'testuser' => '',
          'nocatchstderr' => 0,
-         'libs' => '-L/usr/local/mysql/lib -lmysqlclient -lz -lcrypt -lnsl -lm -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv',
+         'libs' => '-L/usr/local/mysql/lib -lmysqlclient -lcrypt -lnsl -lm -lz -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv',
          'cflags' => '-I/usr/local/mysql/include -mcpu=pentiumpro',
-         'testdb' => 'test'
+         'testdb' => 'test',
+         'mysql_config' => 'mysql_config'
        };
 $::test_host = $opt->{'testhost'};
 $::test_port = $opt->{'testport'};
 $::test_user = $opt->{'testuser'};
+$::test_socket = $opt->{'testsocket'};
 $::test_password = $opt->{'testpassword'};
 $::test_db = $opt->{'testdb'};
 $::test_dsn = "DBI:mysql:$::test_db";

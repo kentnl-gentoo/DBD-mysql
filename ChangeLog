@@ -1,3 +1,24 @@
+2004-10-20  Rudolf Lippan <rlippan@remotelinux.com> (2.9005_1)
+	* Added $dbh->{mysql_unsafe_bind_type_guessing} = 2 which will look at
+	  each bind_param and make guess based on whether it looks like a 
+	  number, and if the parameter looks like a number, it will not be 
+	  quoted.  [thanks to dragonchild for cleaning up the initial rough 
+	  draft impementation making it ready for prime time]
+	* Applied patch to fix column which broke with later version of mysql
+	  [Tim Bunce]
+	* Merged $dbh->last_inert_id() from the 3.0 dev tree
+	* If you are using perl 5.008 without a $ENV{LANG} of "C". Makefile.PL
+	  will now 1. Complain loudly, and 2. set LANG to "C" and then
+	  exec itself with the new lang setting.
+	* Added '$dbh->{mysql_unsafe_bind_type_guessing}'. When this flag is
+	  enabled any scalar that is passed to execute() and was used in
+	  numeric context will be treated as a number when being sent to the
+	  database backend. This can be a secuity problem in that if you 
+	  use a string in numeric context, it will NOT be quoted before being 
+	  passed to the database -- use at your own risk. The default is off.
+	* fixed typo in pod chaning  failed_auto_reconnects_failed to 
+	  auto_reconnects_failed [Paul DuBois <paul@snake.net>]
+
 2004-07-13  Rudolf Lippan <rlippan@remotelinux.com> (2.9004)
         * myld now exits with the return value of ld rather than always exiting
           with a value of when when myld returned something other than 0.
@@ -760,7 +781,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog,v 1.18 2004/07/13 18:22:24 rlippan Exp $
+$Id: ChangeLog,v 1.21 2004/10/20 17:14:31 rlippan Exp $
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 

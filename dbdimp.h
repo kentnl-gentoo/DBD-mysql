@@ -11,7 +11,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h,v 1.5 2003/10/17 17:20:50 rlippan Exp $
+ *  $Id: dbdimp.h,v 1.11 2004/10/04 00:50:08 rlippan Exp $
  */
 
 /*
@@ -114,6 +114,7 @@ struct imp_dbh_st {
 	    unsigned int auto_reconnects_ok;
 	    unsigned int auto_reconnects_failed;
     } stats;
+    unsigned short int  bind_type_guessing;
 };
 
 
@@ -150,7 +151,7 @@ struct imp_sth_st {
     int   done_desc;      /* have we described this sth yet ?	    */
     long  long_buflen;    /* length for long/longraw (if >0)	    */
     bool  long_trunc_ok;  /* is truncating a long an error	    */
-    unsigned long insertid; /* ID of auto insert                      */
+    my_ulonglong insertid; /* ID of auto insert                      */
     imp_sth_ph_t* params; /* Pointer to parameter array             */
     AV* av_attr[AV_ATTRIB_LAST];/*  For caching array attributes        */
     int   use_mysql_use_result;  /*  TRUE if execute should use     */
@@ -189,6 +190,7 @@ struct imp_sth_st {
 #define do_error		mysql_dr_error
 #define dbd_db_type_info_all    mysql_db_type_info_all
 #define dbd_db_quote            mysql_db_quote
+#define dbd_db_last_insert_id   mysql_db_last_insert_id
 
 #include <dbd_xsh.h>
 void	 do_error (SV* h, int rc, const char *what);
@@ -204,3 +206,7 @@ extern MYSQL* mysql_dr_connect(MYSQL*, char*, char*, char*, char*, char*,
 
 
 extern int mysql_db_reconnect(SV*);
+
+SV *mysql_db_last_insert_id(SV* dbh, imp_dbh_t *imp_dbh,
+        SV *catalog, SV *schema, SV *table, SV *field,SV *attr);
+
