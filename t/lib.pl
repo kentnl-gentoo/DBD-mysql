@@ -238,8 +238,8 @@ sub DbiError ($$) {
 }
 
 
-sub ErrMsg (@_) { print (@_); }
-sub ErrMsgF (@_) { printf (@_); }
+sub ErrMsg (@) { print (@_); }
+sub ErrMsgF (@) { printf (@_); }
 
 
 1;
