@@ -1,0 +1,61 @@
+
+DBD::mysql - A Perl5 Database Interface to the MySQL database
+=============================================================
+
+The driver installation is described in
+
+  INSTALL.html
+
+In short: If you are using
+
+  ActivePerl/Windows:
+
+    ppm install DBI
+    ppm install DBD::mysql
+
+  Red Hat Linux 7.1 (you may prefer gnorpm)
+
+    rpm -i mysql mysql-devel mysql-server
+    rpm -i perl-DBI
+    rpm -i DBD-MySQL
+    rpm -i zlib-devel
+
+  SuSE Linux 7.2 (you may prefer yast)
+
+    rpm -i mysql mysql-client mysql-devel mysql-shared
+    rpm -i perl-DBI
+    rpm -i perl-Msql-Mysql-modules
+
+  Mandrake Linux 8.0 (any Mandrake specific installation tool?)
+
+    rpm -i MySQL MySQL-client MySQL-devel MySQL-shared
+    rpm -i perl-DBI
+    rpm -i perl-Mysql
+    rpm -i zlib-devel
+
+  Debian Linux
+
+    Install the packages
+
+      mysql-client mysql-server mysql-doc mysql-common
+      libdbi-perl lidbd-mysql-perl
+
+    No idea how one does install these under Debian, but I am
+    sure you know. :-)      
+
+  For others, or in case of problems see INSTALL.html.
+
+
+The drivers documentation can be obtained with
+
+  perldoc lib/DBD/mysql.pod
+
+or
+
+  pod2html lib/DBD/mysql.pod >mysql.html
+
+
+
+The driver is maintained by a mailing list:
+
+  msql-mysql-modules@lists.mysql.com

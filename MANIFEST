@@ -3,6 +3,7 @@ INSTALL.html
 MANIFEST
 MANIFEST.SKIP
 Makefile.PL
+README
 dbdimp.c
 mysql.xs
 t/ak-dbd.t

@@ -159,7 +159,7 @@ But now for a more formal approach:
 
 =head2 Class Methods
 
-=over 4
+=over
 
 =item B<connect>
 
@@ -181,7 +181,7 @@ But now for a more formal approach:
 
 A C<database> must always be specified.
 
-=over 8
+=over
 
 =item host
 
@@ -284,7 +284,7 @@ location for the socket than that built into the client.
 
 =head2 Private MetaData Methods
 
-=over 4
+=over
 
 =item B<ListDBs>
 
@@ -308,10 +308,12 @@ whenever possible. It is a design problem of this method, that there's
 no way of supplying a host name or port number to C<data_sources>, that's
 the only reason why we still support C<ListDBs>. :-(
 
+=back
+
 
 =head2 Server Administration
 
-=over 4
+=over
 
 =item admin
 
@@ -341,7 +343,7 @@ There's only one function available for administrative purposes, comparable
 to the m(y)sqladmin programs. The command being execute depends on the
 first argument:
 
-=over 8
+=over
 
 =item createdb
 
@@ -369,7 +371,6 @@ Reloads the servers configuration files and/or tables. This can be particularly
 important if you modify access privileges or create new users.
 
 =back
-
 
 =back
 
@@ -448,7 +449,7 @@ For portable applications you should restrict yourself to attributes with
 capitalized or mixed case names. Lower case attribute names are private
 to DBD::mSQL and DBD::mysql. The attribute list includes:
 
-=over 4
+=over
 
 =item ChopBlanks
 
@@ -618,7 +619,7 @@ C API level, haven't been implemented here. Instead they are implemented
 as "SQL extensions" because they return in fact nothing else but the
 equivalent of a statement handle. These are:
 
-=over 4
+=over
 
 =item LISTFIELDS $table
 
@@ -645,7 +646,7 @@ as I<mysql_type> or I<msql_type>, respectively.
 
 The Msql-Mysql-modules are a moving target, due to a number of reasons:
 
-=over 8
+=over
 
 =item -
 
@@ -673,7 +674,7 @@ remove some features, methods or attributes.
 
 To ensure a smooth upgrade, the following policy will be applied:
 
-=over 8
+=over
 
 =item Obsolete features
 
@@ -778,7 +779,7 @@ in DBD::mysql version 3.11.
 
 =head2 Historic Features
 
-=over 8
+=over
 
 =item _CreateDB
 
@@ -1097,7 +1098,7 @@ I recommend using the win32clients package for installing DBD::mysql
 under Win32, available for download on www.tcx.se. The following steps
 have been required for me:
 
-=over 8
+=over
 
 =item -
 
@@ -1205,7 +1206,7 @@ in the PPM program.
 
 =head1 KNOWN PROBLEMS
 
-=over 8
+=over
 
 =item 1.)
 
@@ -1222,7 +1223,7 @@ you receive an error message like the following when running "make test":
 This means, that your linker doesn't include libgcc.a. You have the
 following options:
 
-=over 12
+=over
 
 =item a)
 

@@ -826,6 +826,22 @@ int dbd_db_STORE_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv, SV* valuesv) {
  *
  **************************************************************************/
 
+
+static SV* my_ulonglong2str(my_ulonglong val) {
+  if (val == 0) {
+    return newSVpv("0", 1);
+  } else {
+    char buf[64];
+    char* ptr = buf+63;
+    *ptr = '\0';
+    while (val > 0) {
+      *(--ptr) = ('0' + (val % 10));
+      val = val / 10;
+    }
+    return newSVpv(ptr, (buf+63)-ptr);
+  }
+}
+
 SV* dbd_db_FETCH_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv) {
   STRLEN kl;
   char *key = SvPV(keysv, kl);
@@ -876,9 +892,7 @@ SV* dbd_db_FETCH_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv) {
       } else if (kl == 8  &&  strEQ(key, "insertid")) {
 	/* We cannot return an IV, because the insertid is a long.
 	 */
-	char buf[64];
-	sprintf(buf, "%lu", mysql_insert_id(&imp_dbh->mysql));
-	result = sv_2mortal(newSVpv(buf, strlen(buf)));
+	result = sv_2mortal(my_ulonglong2str(mysql_insert_id(&imp_dbh->mysql))); 
       }
       break;
     case 'p':
@@ -1111,8 +1125,8 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth) {
     for (i = 0;  i < AV_ATTRIB_LAST;  i++) {
 	if (imp_sth->av_attr[i]) {
 #ifdef DEBUGGING_MEMORY_LEAK
-	    printf("Execute: Decrementing refcnt: old = %d\n",
-		   SvREFCNT(imp_sth->av_attr[i]));
+	    PerlIO_printf("Execute: Decrementing refcnt: old = %d\n",
+			  SvREFCNT(imp_sth->av_attr[i]));
 #endif
 	    SvREFCNT_dec(imp_sth->av_attr[i]);
 	}
@@ -1305,8 +1319,8 @@ void dbd_st_destroy(SV* sth, imp_sth_t* imp_sth) {
     for (i = 0;  i < AV_ATTRIB_LAST;  i++) {
 	if (imp_sth->av_attr[i]) {
 #ifdef DEBUGGING_MEMORY_LEAK
-	    printf("DESTROY: Decrementing refcnt: old = %d\n",
-		   SvREFCNT(imp_sth->av_attr[i]));
+	    PerlIO_printf("DESTROY: Decrementing refcnt: old = %d\n",
+			  SvREFCNT(imp_sth->av_attr[i]));
 #endif
 	    SvREFCNT_dec(imp_sth->av_attr[i]);
 	}
@@ -1579,9 +1593,7 @@ SV* dbd_st_FETCH_attrib(SV* sth, imp_sth_t* imp_sth, SV* keysv) {
 	    if (strEQ(key, "mysql_insertid")) {
 	      /* We cannot return an IV, because the insertid is a long.
 	       */
-	      char buf[64];
-	      sprintf(buf, "%lu", imp_sth->insertid);
-	      return sv_2mortal(newSVpv(buf, strlen(buf)));
+	      return sv_2mortal(my_ulonglong2str(imp_sth->insertid));
 	    }
 	    break;
 	  case 15:
@@ -1864,3 +1876,5 @@ SV* dbd_db_quote(SV* dbh, SV* str, SV* type) {
     }
     return result;
 }
+
+

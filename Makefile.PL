@@ -186,7 +186,10 @@ sub Configure {
   } elsif ($param eq "cflags") {
     $source->{$param} = "guessed";
     my $dir = SearchFor('include', 'mysql.h');
-    return "-I$dir" if $dir;
+    if ($dir) {
+      $opt->{$param} = "-I$dir";
+      return;
+    }
     die <<"MSG";
 Failed to determine directory of mysql.h. Use
 
@@ -202,7 +205,10 @@ MSG
     my @files = ($^O =~ /mswin32/i) ? qw(mysqlclient.lib) :
 			qw(libmysqlclient.a libmysqlclient.so);
     my $dir = SearchFor('lib', @files);
-    return "-L$dir -lmysqlclient -lz -lgz" if $dir;
+    if ($dir) {
+      $opt->{$param} = "-L$dir -lmysqlclient -lz -lgz";
+      return;
+    }
     my $f = join("|", @files);
     die <<"MSG";
 Failed to determine directory of $f. Use

@@ -9,7 +9,7 @@ use DynaLoader();
 use Carp ();
 @ISA = qw(DynaLoader);
 
-$VERSION = '2.0901';
+$VERSION = '2.0902';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -247,7 +247,8 @@ sub _SelectDB ($$) {
 	    }
 	}
 	my $sth2 = $dbh2->prepare("SHOW TABLES", { 'rows' => \@tables,
-						  'NAME' => $names });
+						   'NAME' => $names,
+						   'NUM_OF_FIELDS' => 5 });
 	if (!$sth2) {
 	    DBI::set_err($sth2, $dbh2->err(), $dbh2->errstr());
 	}
