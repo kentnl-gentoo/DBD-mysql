@@ -1,4 +1,4 @@
-2004-06-30  Rudolf Lippan <rlippan@remotelinux.com> (2.9004_2)
+2004-07-13  Rudolf Lippan <rlippan@remotelinux.com> (2.9004)
         * myld now exits with the return value of ld rather than always exiting
           with a value of when when myld returned something other than 0.
         * Table names that had '?'s in them and were quoted using '`' would thow
@@ -760,7 +760,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog,v 1.17 2004/06/30 17:46:00 rlippan Exp $
+$Id: ChangeLog,v 1.18 2004/07/13 18:22:24 rlippan Exp $
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 
