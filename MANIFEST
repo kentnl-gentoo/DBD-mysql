@@ -36,4 +36,3 @@ lib/DBD/mysql/INSTALL.pod
 lib/DBD/mysql/GetInfo.pm
 lib/Bundle/DBD/mysql.pm
 myld
-META.yml                                 Module meta-data (added by MakeMaker)

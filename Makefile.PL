@@ -159,7 +159,7 @@ if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
   $o{'AUTHOR'} = 'Rudy Lippan <rlippan@remotelinux.com>';
   $o{'ABSTRACT'} =
     'A MySQL driver for the Perl5 Database Interface (DBI)';
-  $o{'PREREQ_PM'} = { 'DBI' => 1.43,
+  $o{'PREREQ_PM'} = { 'DBI' => 1.08,
 		      'Data::Dumper' => 0 };
 }
 ExtUtils::MakeMaker::WriteMakefile(%o);
@@ -382,7 +382,8 @@ sub SearchFor {
 
 package MY;
 
-sub libscan {
+sub libscan
+{
     my($self, $path) = @_;
     if ($path =~ /~$|SCCS/) { return undef; }
     $path;

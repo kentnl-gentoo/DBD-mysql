@@ -7,7 +7,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.c,v 1.20 2004/10/20 15:56:52 rlippan Exp $
+ *  $Id: dbdimp.c,v 1.23 2005/03/29 02:27:21 capttofu Exp $
  */
 
 
@@ -161,7 +161,7 @@ static char* ParseParam(MYSQL* sock, char* statement, STRLEN *slenPtr,
 		    ph->type = SQL_INTEGER;
 
 		    seen_neg = 0; seen_dec = 0;
-		    for (j = 0; j < vallen; ++j) {
+		    for (j = 0; j < (int)vallen; ++j) {
 		        testchar = *(valbuf+j);
 			if ('-' == testchar) {
 			    if (seen_neg) {
@@ -1157,19 +1157,28 @@ int dbd_db_login(SV* dbh, imp_dbh_t* imp_dbh, char* dbname, char* user,
  **************************************************************************/
 
 int dbd_db_commit(SV* dbh, imp_dbh_t* imp_dbh) {
-  if (DBIc_has(imp_dbh, DBIcf_AutoCommit)) {
+  if (DBIc_has(imp_dbh, DBIcf_AutoCommit))
+  {
     do_warn(dbh, TX_ERR_AUTOCOMMIT,
 	    "Commmit ineffective while AutoCommit is on");
     return TRUE;
   }
 
-  if (imp_dbh->has_transactions) {
-    if (mysql_real_query(&imp_dbh->mysql, "COMMIT", 6) != 0) {
+  if (imp_dbh->has_transactions)
+  {
+#if MYSQL_VERSION_ID < 40100
+    if (mysql_real_query(&imp_dbh->mysql, "COMMIT", 6))
+#else
+    if (mysql_commit(&imp_dbh->mysql))
+#endif
+    {
       do_error(dbh, mysql_errno(&imp_dbh->mysql),
 	       mysql_error(&imp_dbh->mysql));
       return FALSE;
     }
-  } else {
+  }
+  else
+  {
     do_warn(dbh, JW_ERR_NOT_IMPLEMENTED,
 	    "Commmit ineffective while AutoCommit is on");
   }
@@ -1184,13 +1193,21 @@ int dbd_db_rollback(SV* dbh, imp_dbh_t* imp_dbh) {
     return FALSE;
   }
 
-  if (imp_dbh->has_transactions) {
-    if (mysql_real_query(&imp_dbh->mysql, "ROLLBACK", 8) != 0) {
+  if (imp_dbh->has_transactions)
+  {
+#if MYSQL_VERSION_ID < 40100
+    if (mysql_real_query(&imp_dbh->mysql, "ROLLBACK", 8))
+#else
+    if (mysql_rollback(&imp_dbh->mysql))
+#endif
+    {
       do_error(dbh, mysql_errno(&imp_dbh->mysql),
 	       mysql_error(&imp_dbh->mysql));
       return FALSE;
     }
-  } else {
+  }
+  else
+  {
     do_error(dbh, JW_ERR_NOT_IMPLEMENTED,
 	     "Rollback ineffective while AutoCommit is on");
   }
@@ -1316,71 +1333,77 @@ void dbd_db_destroy(SV* dbh, imp_dbh_t* imp_dbh) {
  **************************************************************************/
 
 int dbd_db_STORE_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv, SV* valuesv) {
-    STRLEN kl;
-    char *key = SvPV(keysv, kl);
-    SV *cachesv = Nullsv;
-    int cacheit = FALSE;
-    bool bool_value = SvTRUE(valuesv);
+  STRLEN key_len;
+  char *key = SvPV(keysv, key_len);
+  SV *cachesv = Nullsv;
+  int cacheit = FALSE;
+  bool bool_value = SvTRUE(valuesv);
 
-    if (kl==10 && strEQ(key, "AutoCommit")){
-      if (imp_dbh->has_transactions) {
-        int oldval = DBIc_has(imp_dbh,DBIcf_AutoCommit);
+  if (key_len == 10 && strEQ(key, "AutoCommit"))
+  {
+    if (imp_dbh->has_transactions)
+    {
+      int oldval = DBIc_has(imp_dbh,DBIcf_AutoCommit);
 
- 	/* if setting AutoCommit on ... */
-	if (bool_value) {
-	    if (!oldval) {
-	        /*  Need to issue a commit before entering AutoCommit  */
-	        if (mysql_real_query(&imp_dbh->mysql,"COMMIT",6) != 0) {
-		    do_error(dbh, TX_ERR_COMMIT,"COMMIT failed");
-		    return FALSE;
-		}
-		if (mysql_real_query(&imp_dbh->mysql, "SET AUTOCOMMIT=1", 16)
-		    != 0) {
-		  do_error(dbh, TX_ERR_AUTOCOMMIT,
-			   "Turning on AutoCommit failed");
-		  return FALSE;
-		}
-		DBIc_set(imp_dbh, DBIcf_AutoCommit, bool_value);
-	    }
-	} else {
-	    if (oldval) {
-	        if (mysql_real_query(&imp_dbh->mysql, "SET AUTOCOMMIT=0",
-				     16) != 0) {
-		  do_error(dbh, TX_ERR_AUTOCOMMIT,
-			   "Turning off AutoCommit failed");
-		  return FALSE;
-		}
-		DBIc_set(imp_dbh, DBIcf_AutoCommit, bool_value);
-	    }
-	}
-      } else {
-        /*
-	 *  We do support neither transactions nor "AutoCommit".
-	 *  But we stub it. :-)
-	 */
-        if (!SvTRUE(valuesv)) {
-	    do_error(dbh, JW_ERR_NOT_IMPLEMENTED,
-			   "Transactions not supported by database");
-	    croak("Transactions not supported by database");
-	}
-      }
-    } else if (strlen("mysql_auto_reconnect") 
-		    == kl && strEQ(key,"mysql_auto_reconnect") ) 
-    {
-        /*XXX: Does DBI handle the magic ? */
-	imp_dbh->auto_reconnect = bool_value;
-	/* imp_dbh->mysql.reconnect=0; */
-    } else if (strlen("mysql_unsafe_bind_type_guessing") 
-		    == kl && strEQ(key,"mysql_unsafe_bind_type_guessing") ) 
-    {
-	imp_dbh->bind_type_guessing = SvIV(valuesv);
-    } else {
+      if (bool_value == oldval)
+        return TRUE;
+
+#if MYSQL_VERSION_ID >= 40100
+      if (mysql_autocommit(&imp_dbh->mysql, bool_value))
+      {
+        do_error(dbh, TX_ERR_AUTOCOMMIT,
+                 bool_value ? "Turning on AutoCommit failed" : "Turning off AutoCommit failed");
         return FALSE;
+      }
+#else
+      /* if setting AutoCommit on ... */
+      if (bool_value)
+      {
+        /* Setting autocommit will do a commit of any pending statement */
+        if (mysql_real_query(&imp_dbh->mysql, "SET AUTOCOMMIT=1", 16))
+        {
+          do_error(dbh, TX_ERR_AUTOCOMMIT, "Turning on AutoCommit failed");
+          return FALSE;
+        }
+      }
+      else
+      {
+        if (mysql_real_query(&imp_dbh->mysql, "SET AUTOCOMMIT=0", 16))
+        {
+          do_error(dbh, TX_ERR_AUTOCOMMIT, "Turning off AutoCommit failed");
+          return FALSE;
+        }
+      }
+#endif
+      DBIc_set(imp_dbh, DBIcf_AutoCommit, bool_value);
     }
+    else
+    {
+      /*
+       *  We do support neither transactions nor "AutoCommit".
+       *  But we stub it. :-)
+     */
+      if (!SvTRUE(valuesv))
+      {
+        do_error(dbh, JW_ERR_NOT_IMPLEMENTED,
+                 "Transactions not supported by database");
+        croak("Transactions not supported by database");
+      }
+    }
+  }
+  else if (key_len == 20 && strEQ(key,"mysql_auto_reconnect") ) 
+  {
+    /*XXX: Does DBI handle the magic ? */
+    imp_dbh->auto_reconnect = bool_value;
+  }
+  else if (key_len == 31 && strEQ(key,"mysql_unsafe_bind_type_guessing") ) 
+    imp_dbh->bind_type_guessing = SvIV(valuesv);
+  else
+    return FALSE;
 
-    if (cacheit) /* cache value for later DBI 'quick' fetch? */
-        hv_store((HV*)SvRV(dbh), key, kl, cachesv, 0);
-    return TRUE;
+  if (cacheit) /* cache value for later DBI 'quick' fetch? */
+    hv_store((HV*)SvRV(dbh), key, key_len, cachesv, 0);
+  return TRUE;
 }
 
 
@@ -1417,8 +1440,8 @@ static SV* my_ulonglong2str(my_ulonglong val) {
 }
 
 SV* dbd_db_FETCH_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv) {
-  STRLEN kl;
-  char *key = SvPV(keysv, kl);
+  STRLEN key_len;
+  char *key = SvPV(keysv, key_len);
   char* fine_key = NULL;
   SV* result = NULL;
 
@@ -1436,17 +1459,17 @@ SV* dbd_db_FETCH_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv) {
   if (strncmp(key, "mysql_", 6) == 0) {
     fine_key = key;
     key = key+6;
-    kl = kl-6;
+    key_len = key_len-6;
   }
 
+  /* MONTY:  Check if key_len should not be used or used everywhere */
   switch(*key) {
    case 'a':
-      if (kl == strlen("auto_reconnect") && strEQ(key, "auto_reconnect"))
+      if (key_len == 14 && strEQ(key, "auto_reconnect"))
 		result = sv_2mortal(newSViv(imp_dbh->auto_reconnect));
       break;
     case 'u':
-      if (kl == strlen("unsafe_bind_type_guessing") && 
-          strEQ(key, "unsafe_bind_type_guessing"))
+      if (key_len == 25 && strEQ(key, "unsafe_bind_type_guessing"))
 		result = sv_2mortal(newSViv(imp_dbh->bind_type_guessing));
       break;
     case 'e':
@@ -1482,19 +1505,19 @@ SV* dbd_db_FETCH_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv) {
       if (strEQ(key, "info")) {
 	const char* info = mysql_info(&imp_dbh->mysql);
 	result = info ? sv_2mortal(newSVpv(info, strlen(info))) : &sv_undef;
-      } else if (kl == 8  &&  strEQ(key, "insertid")) {
+      } else if (key_len == 8  &&  strEQ(key, "insertid")) {
 	/* We cannot return an IV, because the insertid is a long.
 	 */
 	result = sv_2mortal(my_ulonglong2str(mysql_insert_id(&imp_dbh->mysql))); 
       }
       break;
     case 'p':
-      if (kl == 9  &&  strEQ(key, "protoinfo")) {
+      if (key_len == 9  &&  strEQ(key, "protoinfo")) {
 	result = sv_2mortal(newSViv(mysql_get_proto_info(&imp_dbh->mysql)));
       }
       break;
     case 's':
-      if (kl == 10  &&  strEQ(key, "serverinfo")) {
+      if (key_len == 10  &&  strEQ(key, "serverinfo")) {
 	const char* serverinfo = mysql_get_server_info(&imp_dbh->mysql);
 	result = serverinfo ?
 	  sv_2mortal(newSVpv(serverinfo, strlen(serverinfo))) : &sv_undef;
@@ -1514,7 +1537,7 @@ SV* dbd_db_FETCH_attrib(SV* dbh, imp_dbh_t* imp_dbh, SV* keysv) {
       }
       break;
     case 't':
-      if (kl == 9  &&  strEQ(key, "thread_id")) {
+      if (key_len == 9  &&  strEQ(key, "thread_id")) {
 	result = sv_2mortal(newSViv(mysql_thread_id(&imp_dbh->mysql)));
       }
     break;
@@ -1599,7 +1622,7 @@ int dbd_st_prepare(SV* sth, imp_sth_t* imp_sth, char* statement, SV* attribs) {
  *
  **************************************************************************/
 
-int mysql_st_internal_execute(SV* h, SV* statement, SV* attribs,
+my_ulonglong mysql_st_internal_execute(SV* h, SV* statement, SV* attribs,
 			      int numParams, imp_sth_ph_t* params,
 			      MYSQL_RES** cdaPtr, MYSQL* svsock,
 			      int use_mysql_use_result) {
@@ -1760,7 +1783,7 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth) {
 		      imp_sth->row_num);
     }
 
-    return imp_sth->row_num;
+    return (int) imp_sth->row_num;
 }
 
 
@@ -1952,8 +1975,8 @@ void dbd_st_destroy(SV* sth, imp_sth_t* imp_sth) {
  **************************************************************************/
 
 int dbd_st_STORE_attrib(SV* sth, imp_sth_t* imp_sth, SV* keysv, SV* valuesv) {
-    STRLEN(kl);
-    char* key = SvPV(keysv, kl);
+    STRLEN(key_len);
+    char* key = SvPV(keysv, key_len);
     int result = FALSE;
 
     if (dbis->debug >= 2) {
@@ -2139,10 +2162,10 @@ SV* dbd_st_FETCH_internal(SV* sth, int what, MYSQL_RES* res, int cacheit) {
     dbd_st_FETCH_internal(sth, (what), imp_sth->cda, TRUE)
 
 SV* dbd_st_FETCH_attrib(SV* sth, imp_sth_t* imp_sth, SV* keysv) {
-    STRLEN(kl);
-    char* key = SvPV(keysv, kl);
+    STRLEN(key_len);
+    char* key = SvPV(keysv, key_len);
     SV* retsv = Nullsv;
-    if (kl < 2) {
+    if (key_len < 2) {
         return Nullsv;
     }
 
@@ -2176,7 +2199,7 @@ SV* dbd_st_FETCH_attrib(SV* sth, imp_sth_t* imp_sth, SV* keysv) {
 	}
 	break;
       case 'm':
-	switch (kl) {
+	switch (key_len) {
 	  case 10:
 	    if (strEQ(key, "mysql_type")) {
 	        retsv = ST_FETCH_AV(AV_ATTRIB_TYPE);
@@ -2419,13 +2442,13 @@ AV* dbd_db_type_info_all(SV* dbh, imp_dbh_t* imp_dbh) {
 
     hv = newHV();
     av_push(av, newRV_noinc((SV*) hv));
-    for (i = 0;  i < (sizeof(cols) / sizeof(const char*));  i++) {
+    for (i = 0;  i < (int)(sizeof(cols) / sizeof(const char*));  i++) {
         if (!hv_store(hv, (char*) cols[i], strlen(cols[i]), newSViv(i), 0)) {
 	    SvREFCNT_dec((SV*) av);
 	    return Nullav;
 	}
     }
-    for (i = 0;  i < SQL_GET_TYPE_INFO_num;  i++) {
+    for (i = 0;  i < (int)SQL_GET_TYPE_INFO_num;  i++) {
         const sql_type_info_t* t = &SQL_GET_TYPE_INFO_values[i];
 
 	row = newAV();
@@ -2477,7 +2500,7 @@ SV* dbd_db_quote(SV* dbh, SV* str, SV* type) {
         if (type  &&  SvOK(type)) {
 	    int i;
 	    int tp = SvIV(type);
-	    for (i = 0;  i < SQL_GET_TYPE_INFO_num;  i++) {
+	    for (i = 0;  i < (int)SQL_GET_TYPE_INFO_num;  i++) {
 	        const sql_type_info_t* t = &SQL_GET_TYPE_INFO_values[i];
 		if (t->data_type == tp) {
 		    if (!t->literal_prefix) {

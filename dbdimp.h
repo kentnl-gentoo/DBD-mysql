@@ -11,7 +11,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h,v 1.11 2004/10/04 00:50:08 rlippan Exp $
+ *  $Id: dbdimp.h,v 1.14 2005/03/29 02:27:21 capttofu Exp $
  */
 
 /*
@@ -146,7 +146,7 @@ struct imp_sth_st {
 
     MYSQL_RES* cda;       /* result                                 */
     int currow;           /* number of current row                  */
-    long row_num;         /* total number of rows                   */
+    my_ulonglong row_num;         /* total number of rows                   */
 
     int   done_desc;      /* have we described this sth yet ?	    */
     long  long_buflen;    /* length for long/longraw (if >0)	    */
@@ -163,7 +163,8 @@ struct imp_sth_st {
 /*
  *  And last, not least: The prototype definitions.
  *
- * These defines avoid name clashes for multiple statically linked DBD's	*/
+ * These defines avoid name clashes for multiple statically linked DBD's
+ */
 #define dbd_init		mysql_dr_init
 #define dbd_db_login		mysql_db_login
 #define dbd_db_do		mysql_db_do
@@ -197,7 +198,7 @@ void	 do_error (SV* h, int rc, const char *what);
 SV	*dbd_db_fieldlist (MYSQL_RES* res);
 
 void    dbd_preparse (imp_sth_t *imp_sth, SV *statement);
-int mysql_st_internal_execute(SV*, SV*, SV*, int, imp_sth_ph_t*, MYSQL_RES**,
+my_ulonglong mysql_st_internal_execute(SV*, SV*, SV*, int, imp_sth_ph_t*, MYSQL_RES**,
 			      MYSQL*, int);
 AV* dbd_db_type_info_all (SV* dbh, imp_dbh_t* imp_dbh);
 SV* dbd_db_quote(SV*, SV*, SV*);
