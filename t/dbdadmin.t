@@ -135,7 +135,8 @@ while (Testing()) {
 	    or print STDERR ("New DB not in DSN list\n");
 
 	Test($state or $accessDenied
-	     or $drh->func('dropdb', $testdsn, 'admin'))
+	     or $drh->func('dropdb', $testdsn, $test_host,
+			   $test_user, $test_password, 'admin'))
 	    or print STDERR ("Error while executing _DropDB: "
 			     . $drh->errstr);
 
@@ -146,28 +147,32 @@ while (Testing()) {
 	my($mayShutdown) = $ENV{'DB_SHUTDOWN_ALLOWED'};
 
 	Test($state or $accessDenied
-	     or $drh->func('createdb', $testdsn1, 'admin'))
+	     or $drh->func('createdb', $testdsn1, $test_host,
+			   $test_user, $test_password, 'admin'))
 	    or printf STDERR ("\$drh->admin('createdb') failed: %s\n",
 			      $drh->errstr);
 	Test($state or $accessDenied
 	     or InDsnList($testdsn1, DBI->data_sources($mdriver)))
 	    or printf STDERR ("DSN $testdsn1 not in DSN list.\n");
 	Test($state or $accessDenied
-	     or $drh->func('dropdb', $testdsn1, 'admin'))
+	     or $drh->func('dropdb', $testdsn1, $test_host,
+			   $test_user, $test_password, 'admin'))
 	    or printf STDERR ("\$drh->admin('dropdb') failed: %s\n",
 			      $drh->errstr);
 	Test($state or $accessDenied
 	     or !InDsnList($testdsn1, DBI->data_sources($mdriver)))
 	    or printf STDERR ("DSN $testdsn1 not removed from DSN list.\n");
 	Test($state or $accessDenied
-	     or $drh->func('createdb', $testdsn2, 'admin'))
+	     or $drh->func('createdb', $testdsn2, $test_host,
+			   $test_user, $test_password, 'admin'))
 	    or printf STDERR ("\$drh->admin('createdb') failed: %s\n",
 			      $drh->errstr);
 	Test($state or $accessDenied
 	     or InDsnList($testdsn2, DBI->data_sources($mdriver)))
 	    or printf STDERR ("DSN $testdsn2 not in DSN list.\n");
 	Test($state or $accessDenied
-	     or $drh->func('dropdb', $testdsn2, 'admin'))
+	     or $drh->func('dropdb', $testdsn2, $test_host,
+			   $test_user, $test_password, 'admin'))
 	    or printf STDERR ("\$drh->admin('dropdb') failed: %s\n",
 			      $drh->errstr);
 	Test($state or $accessDenied

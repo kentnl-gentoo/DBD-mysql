@@ -1,3 +1,14 @@
+2003-01-20  Jochen Wiedmann <joe@ispsoft.de> (2.1024)
+
+	* dbdimp.c: Fixed missing support for double quotes
+	  in ParseParam. JUERD@cpan.org
+	* Test suite: Multiple patches for Windows/CygWin (case
+	  insensitive file names and the like). Georg Rehfeld,
+	  <georg.rehfeld@gmx.de>
+	* lib/DBD/mysql/INSTALL.pod: Added description on how
+	  to install with Windows/CygWin. Georg Rehfeld,
+	  <georg.rehfeld@gmx.de>
+
 2003-01-18  Jochen Wiedmann  <joe@ispsoft.de> (2.1023)
 
 	* Remove compiler warnings

@@ -8,7 +8,7 @@ The driver installation is described in
 
 In short: If you are using
 
-  ActivePerl/Windows:
+  Windows/ActivePerl
 
     1.) If you need to use an HTTP Proxy, set the environment
         variable http_proxy, for example like this:
@@ -28,27 +28,49 @@ In short: If you are using
 
           ppm install http://theoryx5.uwinnipeg.ca/ppms/DBD-mysql.ppd
 
-  Red Hat Linux 7.1 (you may prefer gnorpm)
+  Windows/CygWin
+
+    Unfortunately it seems that the usual MySQL windows binaries
+    cannot be combined with the CygWin libraries. At least I don't
+    know how. In other words: You need to compile your own MySQL
+    client binaries. In what follows I assume that you have
+    downloaded and extracted the MySQL sources and the DBD::mysq
+    sources to /usr/local/src. The following steps should do:
+
+      cd /usr/local/src/mysql-4.0.9
+       ./configure --without-server --prefix=/usr/local/mysql-4.0.9
+      make
+      make install
+      cd /usr/local/src/DBD-mysql-2.1023
+      perl Makefile.PL \
+	--libs="-L/usr/local/mysql-4.0.9/lib/mysql -lmysqlclient -lz" \
+	--cflags=-I/usr/local/mysql-4.0.9/include/mysql \
+	--testhost=127.0.0.1
+      make
+      make test # Some minor error messages can be ignored here
+      make install
+
+  Linux/Red Hat (you may prefer gnorpm to use)
 
     rpm -i mysql mysql-devel mysql-server
     rpm -i perl-DBI
     rpm -i DBD-MySQL
     rpm -i zlib-devel
 
-  SuSE Linux 7.2 (you may prefer yast)
+  Linux/SuSEs(you may prefer to use yast)
 
     rpm -i mysql mysql-client mysql-devel mysql-shared
     rpm -i perl-DBI
     rpm -i perl-Msql-Mysql-modules
 
-  Mandrake Linux 8.0 (any Mandrake specific installation tool?)
+  Linux/Mandrake (you may prefer to use any Mandrake specific tool?)
 
     rpm -i MySQL MySQL-client MySQL-devel MySQL-shared
     rpm -i perl-DBI
     rpm -i perl-Mysql
     rpm -i zlib-devel
 
-  Debian Linux
+  Linux/Debian
 
     Install the packages
 

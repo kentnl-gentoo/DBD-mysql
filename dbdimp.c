@@ -178,22 +178,26 @@ static char* ParseParam(MYSQL* sock, char* statement, STRLEN *slenPtr,
     while (j < slen) {
         switch(statement[j]) {
 	  case '\'':
+	  case '"':
 	    /*
 	     * Skip string
 	     */
-	    *ptr++ = statement[j++];
-	    while (j < slen  &&  statement[j] != '\'') {
+	    {
+	      char endToken = statement[j++];
+	      *ptr++ = endToken;
+	      while (j < slen  &&  statement[j] != endToken) {
 	        if (statement[j] == '\\') {
+		  *ptr++ = statement[j++];
+		  if (j < slen) {
 		    *ptr++ = statement[j++];
-		    if (j < slen) {
-		        *ptr++ = statement[j++];
-		    }
+		  }
 		} else {
-		    *ptr++ = statement[j++];
+		  *ptr++ = statement[j++];
 		}
-	    }
-	    if (j < slen) {
+	      }
+	      if (j < slen) {
 	        *ptr++ = statement[j++];
+	      }
 	    }
 	    break;
 	  case '?':
