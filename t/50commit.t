@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 50commit.t,v 1.3.2.1 2004/09/04 01:23:38 capttofu Exp $ 
+#   $Id: 50commit.t,v 1.5 2004/09/03 23:09:27 capttofu Exp $
 #
 #   This is testing the transaction support.
 #
@@ -157,7 +157,7 @@ while (Testing()) {
 	    eval { $dbh->{AutoCommit} = 0; }
 	}
 	$dbdriver = "" unless $dbdriver; # Avoid "used only once" warning
-	Test($state or $@ or $dbdriver eq "mysql" or $dbdriver eq "mysqlEmb")
+	Test($state or $@ or $dbdriver eq "mysql")
 	    or ErrMsg("Expected fatal error for AutoCommit => 0\n");
 
 	for (my $i = 0;  $i < 14;  $i++) {

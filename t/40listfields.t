@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 40listfields.t,v 1.2.4.1 2005/04/22 22:27:31 capttofu Exp $
+#   $Id: 40listfields.t,v 1.3 2004/09/10 21:26:19 capttofu Exp $
 #
 #   This is a test for statement attributes being present appropriately.
 #
@@ -129,8 +129,7 @@ while (Testing()) {
 	or DbiError($cursor->err, $cursor->errstr);
 
     #  NUM_OF_FIELDS should be zero (Non-Select)
-    Test($state or (! defined $cursor->{'NUM_OF_FIELDS'} ||
-          $cursor->{'NUM_OF_FIELDS'} == 0))
+    Test($state or (! defined $cursor->{'NUM_OF_FIELDS'} || $cursor->{'NUM_OF_FIELDS'} == 0))
 	or !$verbose or printf("NUM_OF_FIELDS is %s, not zero.\n",
 			       $cursor->{'NUM_OF_FIELDS'});
     Test($state or (undef $cursor) or 1);
