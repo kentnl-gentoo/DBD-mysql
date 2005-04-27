@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 30insertfetch.t,v 1.3 2004/09/03 23:09:27 capttofu Exp $
+#   $Id: 30insertfetch.t,v 1.1.4.1 2004/09/04 01:23:38 capttofu Exp $
 #
 #   This is a simple insert/fetch test.
 #
@@ -47,6 +47,7 @@ while (Testing()) {
     #   Connect to the database
     Test($state or $dbh = DBI->connect($test_dsn, $test_user, $test_password))
 	or ServerError();
+    #DBI->trace(2);
 
     #
     #   Find a possible new table name
