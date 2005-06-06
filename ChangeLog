@@ -1,3 +1,9 @@
+2005-06-02 Rudolf Lippan <rlippan@remotelinux.com> (2.9008)
+
+	* reset errorno before a fetch to prevent errors from showing up on
+	  the wrong $sth [spotted by: Joel Stevenson]
+	* removed "E<gt>" from pod [spotted by: Tim Heaney]
+
 2005-04-12 Patrick Galbraith <patg@mysql.com> (2.9007)
         * Fix to Statement.pm for old API call for numfields that caused
           warnings on 40numrows and akmisc tests
@@ -815,7 +821,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog,v 1.30 2005/04/26 16:22:26 capttofu Exp $
+$Id: ChangeLog,v 1.32 2005/06/06 00:57:24 rlippan Exp $
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 
