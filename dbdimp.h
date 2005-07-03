@@ -11,7 +11,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h 1279 2005-04-22 22:27:31Z capttofu $
+ *  $Id: dbdimp.h 1372 2005-07-03 20:34:15Z capttofu $
  */
 
 /*
@@ -173,8 +173,6 @@ typedef struct imp_sth_fbh_st {
     char           * data;
     double        ddata;
     long          ldata;
-    long long     lldata;
-
 } imp_sth_fbh_t;
 
 
