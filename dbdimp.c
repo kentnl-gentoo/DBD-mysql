@@ -8,7 +8,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.c 1372 2005-07-03 20:34:15Z capttofu $
+ *  $Id: dbdimp.c 1377 2005-07-04 15:46:53Z capttofu $
  */
 
 
@@ -1432,7 +1432,7 @@ MYSQL* mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
 /*
   safe_hv_fetch
 */
-static char *safe_hv_fetch(HV *hv, const char *name, uint name_length)
+static char *safe_hv_fetch(HV *hv, const char *name, int name_length)
 {
   SV** svp;
   STRLEN len;
