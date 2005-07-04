@@ -2,6 +2,7 @@
   * Changed uint argument in safe_sv_fetch to int due to 
     uint not being available on windows unless you include
     my_globals.h in dbdimp.h, which also breaks on unixen!
+  * Removed // comments from mysql.xs (thanks Bodo Bergman!)
 
 2005-07-03 Patrick Galbraith <patg@mysql.com> (3.0000_0)
   * Special Thanks to Steve Hay for his patch to fix windows 
@@ -811,7 +812,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog 1377 2005-07-04 15:46:53Z capttofu $
+$Id: ChangeLog 1378 2005-07-04 16:00:47Z capttofu $
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 

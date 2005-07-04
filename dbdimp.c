@@ -8,7 +8,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.c 1377 2005-07-04 15:46:53Z capttofu $
+ *  $Id: dbdimp.c 1380 2005-07-04 16:10:20Z capttofu $
  */
 
 
@@ -1174,7 +1174,7 @@ MYSQL* mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
 
         if (!imp_drh->embedded.state)
         {
-          //Init embedded server
+          /* Init embedded server */
           if ((svp = hv_fetch(hv, "mysql_embedded_groups", 21, FALSE))  &&
               *svp  &&  SvTRUE(*svp))
           {
