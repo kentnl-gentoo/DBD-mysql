@@ -8,7 +8,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.c 1386 2005-07-07 00:40:52Z capttofu $
+ *  $Id: dbdimp.c 1385 2005-07-07 00:30:13Z capttofu $
  */
 
 
