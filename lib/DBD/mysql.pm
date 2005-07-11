@@ -9,7 +9,7 @@ use DynaLoader();
 use Carp ();
 @ISA = qw(DynaLoader);
 
-$VERSION = '3.0001_3';
+$VERSION = '3.0002';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -25,12 +25,12 @@ sub driver{
     $class .= "::dr";
 
     # not a 'my' since we use it above to prevent multiple drivers
-    $drh = DBI::_new_drh($class, { 'Name' => 'mysql',
-				   'Version' => $VERSION,
-				   'Err'    => \$DBD::mysql::err,
-				   'Errstr' => \$DBD::mysql::errstr,
-				   'Attribution' => 'DBD::mysql by Rudy Lippan'
-				 });
+    $drh = DBI::_new_drh($class, 
+        { 'Name' => 'mysql',
+        'Version' => $VERSION,
+        'Err'    => \$DBD::mysql::err,
+        'Errstr' => \$DBD::mysql::errstr,
+        'Attribution' => 'DBD::mysql by Rudy Lippan and Patrick Galbraith' });
 
     $drh;
 }

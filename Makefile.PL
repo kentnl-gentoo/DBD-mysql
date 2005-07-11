@@ -39,7 +39,7 @@ Getopt::Long::GetOptions(
     "cflags=s",
     "libs=s",
     "verbose",
-    "ps-protocol=s",
+    "ps-protocol",
     "nocatchstderr",
     "ssl!",
     "nofoundrows!",
@@ -49,9 +49,6 @@ Getopt::Long::GetOptions(
     ) || die Usage();
 
 my $source = {};
-
-# ps-protocol is set to 1 by default in this dev release
-$opt->{'ps-protocol'}= 1 if (! exists $opt->{'ps-protocol'});
 
 if ($^O !~ /mswin32/i)
 {
@@ -185,8 +182,6 @@ MSG
 sleep 5;
 
 eval { require File::Spec };
-my $ps_dsn= (exists $opt->{'ps-protocol'} && $opt->{'ps-protocol'} == 1) ?
-  "\$::test_dsn .= \":mysql_server_prepare=1;\"\n" : '';
 my $fileName = $@ ?
   "t/mysql.mtest" : File::Spec->catfile("t", "mysql.mtest");
 (open(FILE, ">$fileName") &&
@@ -201,7 +196,7 @@ my $fileName = $@ ?
 	      "\$::test_dsn .= \";mysql_socket=\$::test_socket\" if \$::test_socket;\n" .
               "\$::test_dsn .= \":\$::test_host\" if \$::test_host;\n" .
 	      "\$::test_dsn .= \":\$::test_port\" if \$::test_port;\n" .
-              $ps_dsn .
+              "\$::test_dsn .= \":mysql_server_prepare=1\" if \$opt->{'ps-protcol'} || \$ENV{'MYSQL_SERVER_PREPARE'};\n" .
 	      "} 1;\n"))  &&
   close(FILE))  ||  die "Failed to create $fileName: $!";
 
@@ -407,7 +402,7 @@ Possible options are:
   --nofoundrows          Change the behavoiur of \$sth->rows() so that it
   			 returns the number of rows physically modified 
 			 instead of the rows matched
-  --ps-protocol=<1|0>    Toggle the use of server-side prepare, requires 
+  --ps-protocol    	 Toggle the use of server-side prepare, requires 
                          MySQL server version 4.1.3 if set to 1 
   --force-embedded       Force to build embedded version of driver
   --ssl			 Enable SSL support
@@ -444,11 +439,6 @@ sub Configure
 {
   my($opt, $source, $param) = @_;
 
-  if ($param eq 'ps-protocol')
-  {
-      $source->{$param}= ($opt->{$param} == 0) ? "User's choice" : 'default';
-      return;
-  }
   if (exists($opt->{$param}))
   {
     $source->{$param} = "User's choice";
@@ -511,7 +501,7 @@ sub Configure
     $source->{$param} = "default";
     $opt->{$param} = "";
   }
-  elsif($param eq 'force-embedded')
+  elsif($param eq 'ps-protocol' || $param eq 'force-embedded')
   {
     $source->{$param} = $opt->{$param} ? "default" : 'not set';
   }
