@@ -11,7 +11,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h 1376 2005-07-04 15:46:09Z capttofu $
+ *  $Id: dbdimp.h 1454 2005-08-04 02:46:19Z capttofu $
  */
 
 /*
@@ -173,7 +173,6 @@ typedef struct imp_sth_fbh_st {
     char           * data;
     double        ddata;
     long          ldata;
-
 } imp_sth_fbh_t;
 
 
@@ -203,7 +202,7 @@ struct imp_sth_st {
     imp_sth_phb_t    *fbind;
     imp_sth_fbh_t    *fbh;
     int              has_been_bound;
-    int use_server_side_prepare;     /* does server support new binary protocol */
+    int use_server_side_prepare;  /* server side prepare statements? */
 #endif
 
     MYSQL_RES* result;       /* result                                 */
@@ -263,12 +262,23 @@ void	 do_error (SV* h, int rc, const char *what);
 SV	*dbd_db_fieldlist (MYSQL_RES* res);
 
 void    dbd_preparse (imp_sth_t *imp_sth, SV *statement);
-my_ulonglong mysql_st_internal_execute(SV*, SV*, SV*, int, imp_sth_ph_t*, MYSQL_RES**,
-			      MYSQL*, int);
+my_ulonglong mysql_st_internal_execute(SV *,
+                                       SV *,
+                                       SV *,
+                                       int,
+                                       imp_sth_ph_t *,
+                                       MYSQL_RES **,
+                                       MYSQL *,
+                                       int);
 
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
-my_ulonglong mysql_st_internal_execute41(SV*, SV*, SV*, int, imp_sth_ph_t*, MYSQL_RES**,
-                              MYSQL*, int, MYSQL_STMT*, MYSQL_BIND*, int*);
+my_ulonglong mysql_st_internal_execute41(SV *,
+                                         int,
+                                         MYSQL_RES **,
+                                         MYSQL_STMT *,
+                                         MYSQL_BIND *,
+                                         int *);
+
 
 int mysql_st_clean_cursor(SV*, imp_sth_t*);
 #endif

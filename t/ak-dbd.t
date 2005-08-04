@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: ak-dbd.t 1337 2005-07-01 01:42:02Z capttofu $
+#   $Id: ak-dbd.t 1454 2005-08-04 02:46:19Z capttofu $
 #
 #   This is a skeleton test. For writing new tests, take this file
 #   and modify/extend it.
@@ -372,6 +372,8 @@ while (Testing()) {
 	Test($state or
 	     ($rc = $dbh->do($query, undef, "test")))
 	    or printf("Failed to update: %s\n", $dbh->errstr());
+#  Test($state or $dbh->trace("3", "/tmp/trace.log")) or DbiError($dbh->err, $dbh->errstr);
+#fail
 	Test($state or $rc == 1)
 	    or printf("Expected 1st Update to return 1 without"
 		      . " mysql_client_found_rows, got $rc\n");
@@ -393,11 +395,13 @@ while (Testing()) {
 	    or printf("Failed to update: %s\n", $dbh->errstr());
 	Test($state or ($rc = $dbh->do($query, undef, "test")))
 	    or printf("Failed to reupdate: %s\n", $dbh->errstr());
+#fail
 	Test($state or $rc == 1)
 	    or printf("Expected 1st Update to return 1 with"
 		      . " mysql_client_found_rows, got $rc\n");
 	Test($state or ($rc = $dbh->do($query, undef, "test")))
 	    or printf("Failed to reupdate: %s\n", $dbh->errstr());
+#fail
 	Test($state or $rc == 1)
 	    or printf("Expected 2nd Update to return 1 with"
 		      . " mysql_client_found_rows, got $rc\n");
