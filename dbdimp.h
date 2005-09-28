@@ -11,7 +11,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h 1454 2005-08-04 02:46:19Z capttofu $
+ *  $Id: dbdimp.h 1534 2005-09-28 17:00:16Z capttofu $
  */
 
 /*
