@@ -11,7 +11,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h 1534 2005-09-28 17:00:16Z capttofu $
+ *  $Id: dbdimp.h 2202 2005-11-06 21:32:00Z capttofu $
  */
 
 /*
@@ -27,8 +27,10 @@
  * the server will be used to process prepare
  * statements as opposed to emulation in the driver
 */
+#define MULTIPLE_RESULT_SET_VERSION 40102
 #define SERVER_PREPARE_VERSION 40103
-#define LIMIT_PLACEHOLDER_VERSION 50007 
+#define LIMIT_PLACEHOLDER_VERSION 50007
+#define NEW_DATATYPE_VERSION 50007
 
 /*
  *  The following are return codes passed in $h->err in case of
@@ -239,6 +241,7 @@ struct imp_sth_st {
 #define dbd_st_prepare		mysql_st_prepare
 #define dbd_st_execute		mysql_st_execute
 #define dbd_st_fetch		mysql_st_fetch
+#define dbd_st_more_results     mysql_st_next_results
 #define dbd_st_finish		mysql_st_finish
 #define dbd_st_destroy		mysql_st_destroy
 #define dbd_st_blob_read	mysql_st_blob_read
