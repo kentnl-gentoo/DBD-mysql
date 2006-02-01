@@ -1,3 +1,8 @@
+2006-01-31 Patrick Galbraith <patg@mysql.com> (3.0002_5)
+  * Fixed bugs 15546 (selectcol_arrayref failing on SHOW TABLES)
+    and 15665, 'USE dbname' failing when driver is not in emulated
+    prepare mode
+
 2005-10-26 Patrick Galbraith <patg@mysql.com> (3.0002_4)
   * Added Guy Harrison's patch for multiple result sets
   * Fixed bugs with declarations in middle of functions

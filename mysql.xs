@@ -301,6 +301,33 @@ do(dbh, statement, attr=Nullsv, ...)
         PerlIO_printf(DBILOGFP, "CREATE set use_server_side_prepare to 0\n");
       use_server_side_prepare= 0;
     }
+      /*
+        LOCK /UNLOCK tables not supported in prepared statements
+      */
+      if ( (statement_ptr[i]   == 'l' || statement_ptr[i]   == 'L') &&
+           (statement_ptr[i+1] == 'o' || statement_ptr[i+1] == 'O') &&
+           (statement_ptr[i+2] == 'c' || statement_ptr[i+2] == 'C') &&
+           (statement_ptr[i+3] == 'k' || statement_ptr[i+3] == 'K') &&
+            statement_ptr[i+4] == ' ' &&
+           (statement_ptr[i+5] == 't' || statement_ptr[i+5] == 'T') &&
+           (statement_ptr[i+6] == 'a' || statement_ptr[i+6] == 'A'))
+      {
+        if (dbis->debug >= 2)
+          PerlIO_printf(DBILOGFP, "LOCK/UNLOCK set use_server_side_prepare to 0\n");
+        use_server_side_prepare= 0;
+      }
+      /*
+        LOCK /UNLOCK tables not supported in prepared statements
+      */
+      if ( (statement_ptr[i]   == 'u' || statement_ptr[i]   == 'U') &&
+           (statement_ptr[i+1] == 's' || statement_ptr[i+1] == 'S') &&
+           (statement_ptr[i+2] == 'e' || statement_ptr[i+2] == 'E') &&
+            statement_ptr[i+3] == ' ')
+      {
+        if (dbis->debug >= 2)
+          PerlIO_printf(DBILOGFP, "USE set use_server_side_prepare to 0\n");
+        use_server_side_prepare= 0;
+      }
 
     /*
       No alter in prep statement_ptr API

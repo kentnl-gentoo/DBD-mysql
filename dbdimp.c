@@ -246,7 +246,9 @@ static enum enum_field_types mysql_to_perl_type(enum enum_field_types type)
   case MYSQL_TYPE_LONG:
   case MYSQL_TYPE_INT24:
   case MYSQL_TYPE_YEAR:
+#if MYSQL_VERSION_ID > NEW_DATATYPE_VERSION
   case MYSQL_TYPE_BIT:
+#endif
     return MYSQL_TYPE_LONG;
 
   case MYSQL_TYPE_DECIMAL:
@@ -256,13 +258,15 @@ static enum enum_field_types mysql_to_perl_type(enum enum_field_types type)
   case MYSQL_TYPE_DATETIME:
   case MYSQL_TYPE_NEWDATE:
   case MYSQL_TYPE_VAR_STRING:
+#if MYSQL_VERSION_ID > GEO_DATATYPE_VERSION
+  case MYSQL_TYPE_GEOMETRY:
+#endif
+#if MYSQL_VERSION_ID > NEW_DATATYPE_VERSION
   case MYSQL_TYPE_VARCHAR:
+#endif
   case MYSQL_TYPE_STRING:
   case MYSQL_TYPE_BLOB:
   case MYSQL_TYPE_TINY_BLOB:
-#ifdef MYSQL_VERSION_ID > NEW_DATATYPE_VERSION
-  case MYSQL_TYPE_GEOMETRY:
-#endif
   case MYSQL_TYPE_TIMESTAMP:
   /* case MYSQL_TYPE_UNKNOWN: */
     return MYSQL_TYPE_STRING;
@@ -2157,7 +2161,7 @@ dbd_st_prepare(
 
       /*
         CREATE and DROP procedure are not supported in the prepared statement
-        API, though CREATE and DROP table are. However, no need to make this
+        API, though CREATE table is. However, no need to make this
         over-complicated, no real reason CREATE and DROP need to run through
         a prepared statement, so I'll turn them off for both
       */
@@ -2173,6 +2177,34 @@ dbd_st_prepare(
         imp_sth->use_server_side_prepare= 0;
       }
 
+      /*
+        USE is not supported - bug 15665
+      */
+      if ( (statement[i]   == 'u' || statement[i]   == 'U') &&
+           (statement[i+1] == 's' || statement[i+1] == 'S') &&
+           (statement[i+2] == 'e' || statement[i+2] == 'E') &&
+            statement[i+3] == ' ')
+      {
+        if (dbis->debug >= 2)
+          PerlIO_printf(DBILOGFP, "USE set use_server_side_prepare to 0\n");
+        imp_sth->use_server_side_prepare= 0;
+      }
+
+      /*
+        LOCK /UNLOCK tables not supported in prepared statements
+      */
+      if ( (statement[i]   == 'l' || statement[i]   == 'L') &&
+           (statement[i+1] == 'o' || statement[i+1] == 'O') &&
+           (statement[i+2] == 'c' || statement[i+2] == 'C') &&
+           (statement[i+3] == 'k' || statement[i+3] == 'K') &&
+            statement[i+4] == ' ' &&
+           (statement[i+5] == 't' || statement[i+5] == 'T') &&
+           (statement[i+6] == 'a' || statement[i+6] == 'A'))
+      {
+        if (dbis->debug >= 2)
+          PerlIO_printf(DBILOGFP, "LOCK/UNLOCK set use_server_side_prepare to 0\n");
+        imp_sth->use_server_side_prepare= 0;
+      }
       /*
         No alter in prep statement API
       */
@@ -2200,6 +2232,7 @@ dbd_st_prepare(
       /*
        prepared statements for SHOW commands are not supported
       */
+      /*
       if ( (statement[i]   == 's' || statement[i]   == 'S') &&
            (statement[i+1] == 'h' || statement[i+1] == 'H') &&
            (statement[i+2] == 'o' || statement[i+2] == 'O') &&
@@ -2209,6 +2242,7 @@ dbd_st_prepare(
           PerlIO_printf(DBILOGFP, "SHOW set use_server_side_prepare to 0\n");
         imp_sth->use_server_side_prepare= 0;
       }
+      */
 
       /*
         multiple result sets are not supported in the prepared
@@ -2386,6 +2420,10 @@ AV *my_setup_fbav(imp_sth_t *imp_sth)
   /*dPERINTERP;*/
   int i;
   AV *av;
+  if (dbis->debug >= 2)
+  {
+    PerlIO_printf(DBILOGFP, "\n   -> my_setup_fbav\n");
+  }
 
   /*if (DBIc_FIELDS_AV(imp_sth))
     return DBIc_FIELDS_AV(imp_sth);*/
@@ -2401,7 +2439,7 @@ AV *my_setup_fbav(imp_sth_t *imp_sth)
   av = newAV();
   if (dbis->debug >= 2)
   {
-    PerlIO_printf(DBILOGFP, "\t->my_setup_fbav: created new AV");
+    PerlIO_printf(DBILOGFP, "\tmy_setup_fbav: created new AV\n");
   }
 
   /* load array with writeable SV's. Do this backwards so	*/
@@ -2413,6 +2451,10 @@ AV *my_setup_fbav(imp_sth_t *imp_sth)
   /* sth is re-executed (since this code won't get rerun)		*/
   DBIc_ROW_COUNT(imp_sth)= 0;
   DBIc_FIELDS_AV(imp_sth)= av;
+  if (dbis->debug >= 2)
+  {
+    PerlIO_printf(DBILOGFP, "\n    <- my_setup_fbav");
+  }
   return av;
 }
 
@@ -2425,6 +2467,10 @@ AV * my_get_fbav(imp_sth_t *imp_sth)
 {
     AV *av;
 
+    if (dbis->debug >= 2)
+    {
+      PerlIO_printf(DBILOGFP, "\n-> my_get_fbav\n");
+    }
     av=  my_setup_fbav(imp_sth);
 
     if (1)
@@ -2433,7 +2479,7 @@ AV * my_get_fbav(imp_sth_t *imp_sth)
 	if (dbis->debug >= 2)
         {
 	  PerlIO_printf(DBILOGFP,
-		  "    -> my_get_fbav; DBIc_NUM_FIELDS=%llu\n", (u_long) i);
+		  "   my_get_fbav; DBIc_NUM_FIELDS=%llu\n", (u_long) i);
 	}
 
 	/* don't let SvUTF8 flag persist from one row to the next   */
@@ -2450,6 +2496,10 @@ AV * my_get_fbav(imp_sth_t *imp_sth)
 
     /* XXX fancy stuff to happen here later (re scrolling etc)	*/
     ++DBIc_ROW_COUNT(imp_sth);
+    if (dbis->debug >= 2)
+    {
+      PerlIO_printf(DBILOGFP, "\n<- my_get_fbav\n");
+    }
     return av;
 }
 
@@ -2478,7 +2528,7 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
   if (dbis->debug >= 2)
   {
     PerlIO_printf(DBILOGFP,
-		  "    -> dbd_st_more_results for %08lx\n", (u_long) sth);
+		  "\n    -> dbd_st_more_results for %08lx\n", (u_long) sth);
   }
 
   if (!SvROK(sth) || SvTYPE(SvRV(sth)) != SVt_PVHV)
@@ -2498,7 +2548,7 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
   {
     AV* av= my_get_fbav(imp_sth);
     PerlIO_printf(DBILOGFP,
-                  "      <- dbs_st_more_rows av_len(imp_sth->av_attr)=%d\n",
+                  "\n      <- dbs_st_more_rows av_len(imp_sth->av_attr)=%d\n",
                   AvFILL(av));
   }
 
@@ -2525,7 +2575,7 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
     /* No rowsets*/
     if (dbis->debug >= 2)
       PerlIO_printf(DBILOGFP,
-		    "      <- dbs_st_more_rows no more results\n");
+		    "\n      <- dbs_st_more_rows no more results\n");
     return 0;
   }
   else
@@ -2546,7 +2596,7 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
       /* No "real" rowset*/
       if (dbis->debug >= 2)
 	PerlIO_printf(DBILOGFP,
-		      "      <- dbs_st_more_rows: null result set\n");
+		      "\n      <- dbs_st_more_rows: null result set\n");
 
 	return 0;
     }
@@ -3287,7 +3337,14 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
 
     lengths= mysql_fetch_lengths(imp_sth->result);
 #if MYSQL_VERSION_ID >= MULTIPLE_RESULT_SET_VERSION
-    av= my_get_fbav(imp_sth);
+    /* 
+      this check is for BUG# 15546. I would
+     like to investigate why it doesn't work, TODO
+     */ 
+    if (imp_sth->use_server_side_prepare)
+      av= my_get_fbav(imp_sth);
+    else
+      av= DBIS->get_fbav(imp_sth);
 #else
     av= DBIS->get_fbav(imp_sth);
 #endif
