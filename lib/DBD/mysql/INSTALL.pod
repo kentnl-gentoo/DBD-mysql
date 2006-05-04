@@ -29,7 +29,7 @@ sections. L<BINARY INSTALLATION>. L<SOURCE INSTALLATION>.
 Finally, if you encounter any problems, do not forget to
 read the section on known problems. L<KNOWN PROBLEMS>. If
 that doesn't help, you should look into the archive of the
-mailing list B<msql-mysql-modules@lists.mysql.com>. See
+mailing list B<perl@lists.mysql.com>. See
 http://www.mysql.com for archive locations. And if that
 still doesn't help, please post a question on this mailing
 list.
@@ -50,11 +50,11 @@ http://www.activestate.com for details.
 
 You need not install the actual MySQL database server, the
 client files and the devlopment files are sufficient. For
-example, Fedora Core 4 Linux distribution comes with RPM files
-(using YUM) B<mysql.i386> and B<mysql-server.i386> (use "yum search" 
-to find exact package names). These are sufficient, if the MySQL 
-server is located on a foreign machine.  You may also create client
-files by compiling from the MySQL source distribution and using
+example, the Red Hat Linux distribution comes with RPM files
+B<mysql-client> and B<mysql-devel>. These are sufficient,
+if the MySQL server is located on a foreign machine. You may
+also create client files by compiling from the MySQL source
+distribution and using
 
   configure --without-server
 
@@ -154,30 +154,6 @@ Optional are
 
   mysql-server
 
-=head2 Fedora Core Linux
-
-As of version 3, Fedora Linux comes with MySQL and DBD::mysql.
-You need to ensure that the following RPM's are installed:
-
-  mysql or mysql-server
-  perl-DBD-MySQL
-
-For installation from source the following RPM's are required
-
-  mysql-devel
-  libz-devel
-
-Please try 
-
-  yum search mysql
-
-To see the exact names
-
-Note: (important) FC 3 comes with MySQL 3.x, and some people have
-upgraded using MySQL RPMs for newer versions. If you do this, you 
-must re-compile you DBD::mysql because your existing DBD::mysql will be
-linked against the old version of MySQL's client libs. CPAN has no way to
-know or detect that you have upgraded MySQL.
 
 =head2 Other systems
 
@@ -200,6 +176,18 @@ of multiple sites, will choose automatic installation. All of
 these installation types have an own section. L</CPAN installation>.
 L</Manual installation>. L</Configuration>.
 
+The DBD::mysql Makefile.PL needs to know where to find your MySQL
+installation. This may be achieved using command line switches
+(see L</Configuration>) or automatically using the mysql_config binary
+which comes with most MySQL distributions. If your MySQL distribution
+contains mysql_config the easiest method is to ensure this binary
+is on your path.
+
+e.g.
+
+  PATH=$PATH:/usr/local/mysql/bin
+  export PATH
+
 
 =head2 CPAN installation
 
@@ -217,10 +205,11 @@ instead need a
   install DBD::mysql
 
 If you cannot get the CPAN module working, you might try manual
-installation. If installation with CPAN fails because the your
-local settings have been guessed wrong, you might try to
-create a script called C<mysql_config>. This is described in
-more details later. L</Configuration>.
+installation. If installation with CPAN fails because the your local
+settings have been guessed wrong, you need to ensure MySQL's
+mysql_config is on your path (see L</SOURCE INSTALLATION>) or
+alternatively create a script called C<mysql_config>. This is
+described in more details later. L</Configuration>.
 
 
 =head2 Manual installation
@@ -252,10 +241,10 @@ subdirectory and type
 
   make install
 
-If the tests fail, you might need to configure some settings.
+If the make or tests fail, you might need to configure some settings.
 For example you might choose a different database, the C
 compiler or the linker might need some flags. L</Configuration>.
-L</C Compiler flags>. L</Linker flags>.
+L</Compiler flags>. L</Linker flags>.
 
 For Windows/CygWin there is a special section below.
 L<Windows/CygWin>.
@@ -298,12 +287,6 @@ Host name or IP number of the test database; defaults to localhost.
 
 Port number of the test database
 
-=item ps-protcol=1 or 0
-
-Whether to run the test suite using server prepared statements or driver
-emulated prepared statemetns. ps-protocol=1 means use server prepare,
-ps-protocol=0 means driver emulated.
-
 =item cflags
 
 This is a list of flags that you want to give to the C compiler.
@@ -322,7 +305,7 @@ The default flags are determined by running
   mysql_config --cflags
 
 More details on the C compiler flags can be found in the following
-section. L</C Compiler flags>.
+section. L</Compiler flags>.
 
 =item libs
 
@@ -359,11 +342,7 @@ database user and so on, then you have to create a script with
 the same name, that replies
 
   
-=head2 C Compiler flags
-
-Note: the folling info about compiler and linker flags, you shouldn't have
-to use these options because Makefile.PL is pretty good at utilising
-mysql_config to get the flags that you need for a successful compile.
+=head2 Compiler flags
 
 It is typically not so difficult to determine the appropriate
 flags for the C compiler. The linker flags, which you find in
@@ -778,7 +757,7 @@ before runing 'perl Makefile.PL'
 
 Finally, if everything else fails, you are not alone. First of
 all, for an immediate answer, you should look into the archives
-of the mailing list B<msql-mysql-modules@lists.mysql.com>. See
+of the mailing list B<perl@lists.mysql.com>. See
 http://www.mysql.com for archive locations.
 
 If you don't find an appropriate posting and reply in the

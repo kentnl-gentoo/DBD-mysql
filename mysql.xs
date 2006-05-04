@@ -1,6 +1,6 @@
 /* Hej, Emacs, this is -*- C -*- mode!
 
-   $Id: mysql.xs 2185 2005-11-05 02:02:20Z capttofu $
+   $Id: mysql.xs 1379 2005-07-04 16:02:42Z capttofu $
 
    Copyright (c) 2003      Rudolf Lippan
    Copyright (c) 1997-2003 Jochen Wiedmann
@@ -225,310 +225,199 @@ do(dbh, statement, attr=Nullsv, ...)
   SV *        dbh
   SV *	statement
   SV *        attr
-  PROTOTYPE: $$;$@
+  PROTOTYPE: $$;$@      
   CODE:
 {
   D_imp_dbh(dbh);
-  int num_params= 0;
+  struct imp_sth_ph_st* params = NULL;
+  int numParams = 0;
+  MYSQL_RES* result = NULL;
   int retval;
-  struct imp_sth_ph_st* params= NULL;
-  MYSQL_RES* result= NULL;
-#if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
+#if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION 
   STRLEN slen;
-  char            *str_ptr, *statement_ptr, *buffer;
+  MYSQL_STMT      *stmt = NULL;
+  MYSQL_BIND      *bind = NULL;
+  imp_sth_phb_t   *fbind = NULL;
   int             has_binded;
-  int             col_type= MYSQL_TYPE_STRING;
-  int             buffer_is_null= 0;
-  int             buffer_length= slen;
-  int             buffer_type= 0;
-  int             param_type= SQL_VARCHAR;
+  char            *str;
+  char            *buffer;
+  int             col_type = MYSQL_TYPE_STRING;
+  int             buffer_is_null = 0;
+  int             buffer_length = slen;
+  int             buffer_type = 0;
+  int             param_type = SQL_VARCHAR;
   int             use_server_side_prepare= 0;
-  MYSQL_STMT      *stmt= NULL;
-  MYSQL_BIND      *bind= NULL;
-  imp_sth_phb_t   *fbind= NULL;
+/* Globaly disabled using of server side prepared statement 
+   for dbh->do() statements. It is possible to force driver 
+   to use server side prepared statement mechanism by adding 
+   'mysql_server_prepare' attribute to do() method localy:
 
-  /*
-   * Globaly enabled using of server side prepared statement
-   * for dbh->do() statements. It is possible to force driver
-   * to use server side prepared statement mechanism by adding
-   * 'mysql_emulated_prepare' attribute to do() method localy:
-   * $dbh->do($stmt, {mysql_emulated_prepared=>1});
-  */
-
-  use_server_side_prepare = imp_dbh->use_server_side_prepare; 
+   $dbh->do($stmt, {mysql_server_prepare=>1});
+*/
+#ifdef DBD_ENABLE_GLOBAL_PREPARE_FOR_DO
+  use_server_side_prepare = imp_dbh->use_server_side_prepare;
+#endif
   if (attr)
   {
     SV **svp;
     DBD_ATTRIBS_CHECK("do", dbh, attr);
-    svp = DBD_ATTRIB_GET_SVP(attr, "mysql_emulated_prepare", 22);
+    svp = DBD_ATTRIB_GET_SVP(attr, "mysql_server_prepare", 20);
 
-    use_server_side_prepare = (svp) ?
-      !SvTRUE(*svp) : imp_dbh->use_server_side_prepare;
-  }
-  if (dbis->debug >= 2)
-    PerlIO_printf(DBILOGFP,
-                  "mysql.xs do() use_server_side_prepare %d\n",
-                  use_server_side_prepare);
-
-  /*
-    loop through the statement and make sure that we turn off
-    server-side prepare if there are any statements that the
-    API doesn't support
-  */
-  statement_ptr= SvPV(statement, slen);
-  for (str_ptr= statement_ptr; *str_ptr; str_ptr++)
-  {
-    int i= (str_ptr - statement_ptr)/sizeof(char);
-    if (dbis->debug >= 2)
-      PerlIO_printf(DBILOGFP, "STATEMENT %c%c%c%c%c%c%c",
-                    statement_ptr[i], statement_ptr[i+1], statement_ptr[i+2],
-                    statement_ptr[i+3], statement_ptr[i+4], statement_ptr[i+5],
-                    statement_ptr[i+6]);
-    /*
-      CREATE and DROP procedure are not supported in the prepared statement_ptr
-      API, though CREATE and DROP table are. However, no need to make this
-      over-complicated, no real reason CREATE and DROP need to run through
-      a prepared statement_ptr, so I'll turn them off for both
-    */
-    if ( (statement_ptr[i]   == 'c' || statement_ptr[i]   == 'C') &&
-         (statement_ptr[i+1] == 'r' || statement_ptr[i+1] == 'R') &&
-         (statement_ptr[i+2] == 'e' || statement_ptr[i+2] == 'E') &&
-         (statement_ptr[i+3] == 'a' || statement_ptr[i+3] == 'A') &&
-         (statement_ptr[i+4] == 't' || statement_ptr[i+4] == 'T') &&
-         (statement_ptr[i+5] == 'e' || statement_ptr[i+5] == 'E'))
+    if (svp)
     {
-      if (dbis->debug >= 2)
-        PerlIO_printf(DBILOGFP, "CREATE set use_server_side_prepare to 0\n");
-      use_server_side_prepare= 0;
-    }
-      /*
-        LOCK /UNLOCK tables not supported in prepared statements
-      */
-      if ( (statement_ptr[i]   == 'l' || statement_ptr[i]   == 'L') &&
-           (statement_ptr[i+1] == 'o' || statement_ptr[i+1] == 'O') &&
-           (statement_ptr[i+2] == 'c' || statement_ptr[i+2] == 'C') &&
-           (statement_ptr[i+3] == 'k' || statement_ptr[i+3] == 'K') &&
-            statement_ptr[i+4] == ' ' &&
-           (statement_ptr[i+5] == 't' || statement_ptr[i+5] == 'T') &&
-           (statement_ptr[i+6] == 'a' || statement_ptr[i+6] == 'A'))
-      {
-        if (dbis->debug >= 2)
-          PerlIO_printf(DBILOGFP, "LOCK/UNLOCK set use_server_side_prepare to 0\n");
-        use_server_side_prepare= 0;
-      }
-      /*
-        LOCK /UNLOCK tables not supported in prepared statements
-      */
-      if ( (statement_ptr[i]   == 'u' || statement_ptr[i]   == 'U') &&
-           (statement_ptr[i+1] == 's' || statement_ptr[i+1] == 'S') &&
-           (statement_ptr[i+2] == 'e' || statement_ptr[i+2] == 'E') &&
-            statement_ptr[i+3] == ' ')
-      {
-        if (dbis->debug >= 2)
-          PerlIO_printf(DBILOGFP, "USE set use_server_side_prepare to 0\n");
-        use_server_side_prepare= 0;
-      }
-
-    /*
-      No alter in prep statement_ptr API
-    */
-    if ( (statement_ptr[i]   == 'a' || statement_ptr[i]   == 'A') &&
-         (statement_ptr[i+1] == 'l' || statement_ptr[i+1] == 'L') &&
-         (statement_ptr[i+2] == 't' || statement_ptr[i+2] == 'T') &&
-         (statement_ptr[i+3] == 'e' || statement_ptr[i+3] == 'E') &&
-         (statement_ptr[i+4] == 'r' || statement_ptr[i+4] == 'R'))
-    {
-      if (dbis->debug >= 2)
-        PerlIO_printf(DBILOGFP, "ALTER set use_server_side_prepare to 0\n");
-      use_server_side_prepare= 0;
-    }
-
-    if ( (statement_ptr[i]   == 'd' || statement_ptr[i]   == 'D') &&
-         (statement_ptr[i+1] == 'r' || statement_ptr[i+1] == 'R') &&
-         (statement_ptr[i+2] == 'o' || statement_ptr[i+2] == 'O') &&
-         (statement_ptr[i+3] == 'p' || statement_ptr[i+3] == 'P'))
-    {
-      if (dbis->debug >= 2)
-        PerlIO_printf(DBILOGFP, "DROP set use_server_side_prepare to 0\n");
-      use_server_side_prepare= 0;
-    }
-
-    /*
-      prepared statement_ptrs for SHOW commands are not supported
-    */
-    if ( (statement_ptr[i]   == 's' || statement_ptr[i]   == 'S') &&
-         (statement_ptr[i+1] == 'h' || statement_ptr[i+1] == 'H') &&
-         (statement_ptr[i+2] == 'o' || statement_ptr[i+2] == 'O') &&
-         (statement_ptr[i+3] == 'w' || statement_ptr[i+3] == 'W'))
-    {
-      if (dbis->debug >= 2)
-        PerlIO_printf(DBILOGFP, "SHOW set use_server_side_prepare to 0\n");
-      use_server_side_prepare= 0;
-    }
-
-    /*
-      multiple result sets are not supported in the prepared
-      statement API
-    */
-    if (   (statement_ptr[i]   == 'c' || statement_ptr[i]   == 'C') &&
-           (statement_ptr[i+1] == 'a' || statement_ptr[i+1] == 'A') &&
-           (statement_ptr[i+2] == 'l' || statement_ptr[i+2] == 'L') &&
-           (statement_ptr[i+3] == 'l' || statement_ptr[i+3] == 'L'))
-    {
-      if (dbis->debug >= 2)
-        PerlIO_printf(DBILOGFP, "CALL set use_server_side_prepare to 0\n");
-      use_server_side_prepare= 0;
+      use_server_side_prepare = SvTRUE(*svp);
     }
   }
 
-  if (use_server_side_prepare)
+  if (use_server_side_prepare) 
   {
-    str_ptr= SvPV(statement, slen);
+    str = SvPV(statement, slen);
 
-    stmt= mysql_stmt_init(&imp_dbh->mysql);
+    stmt = mysql_stmt_init(&imp_dbh->mysql);
 
-    if (! mysql_stmt_prepare(stmt, str_ptr, strlen(str_ptr)))
+    if (! mysql_stmt_prepare(stmt, str , strlen(str)))
     {
-      /*
+      /* 
         * 'items' is the number of arguments passed to XSUB, supplied by xsubpp
         * compiler, as listed in manpage for perlxs
       */
-      if (items > 3)
+      if (items > 3) 
       {
-        /*
-          Handle binding supplied values to placeholders assume user has
-          passed the correct number of parameters
-        */
+        /*  Handle binding supplied values to placeholders	   */
+        /*  Assume user has passed the correct number of parameters  */
         int i;
-        num_params= items - 3;
-        /*num_params = mysql_stmt_param_count(stmt);*/
-        Newz(0, params, sizeof(*params)*num_params, struct imp_sth_ph_st);
-        Newz(0, bind, num_params, MYSQL_BIND);
-        Newz(0, fbind, num_params, imp_sth_phb_t);
+        numParams = items - 3;
+        /*numParams = mysql_stmt_param_count(stmt);*/
+        Newz(0, params, sizeof(*params)*numParams, struct imp_sth_ph_st);
+        Newz(0, bind, numParams, MYSQL_BIND);
+        Newz(0, fbind, numParams, imp_sth_phb_t);
 
-        for (i = 0; i < num_params; i++)
+        for (i = 0; i < numParams; i++)
         {
-          params[i].value= ST(i+3);
+          params[i].value = ST(i+3);
 
           if ((SvOK(params[i].value) && params[i].value))
           {
-            buffer= SvPV(params[i].value, slen);
-            buffer_is_null= 0;
-            buffer_length= slen;
+            buffer = SvPV(params[i].value, slen);
+            buffer_is_null = 0;
+            buffer_length = slen;
           }
           else
           {
-            buffer= NULL;
-            buffer_is_null= 1;
-            buffer_length= 0;
+            buffer = NULL;
+            buffer_is_null = 1;
+            buffer_length = 0;
           }
 
-          /*
-            if this statement has a result set, field types will be correctly
-            identified. If there is no result set, such as with an INSERT,
-            fields will not be defined, and all buffer_type will default to
-            MYSQL_TYPE_VAR_STRING
-          */
-          col_type= (stmt->fields) ? stmt->fields[i].type : MYSQL_TYPE_STRING;
+          /* if this statement has a result set, field types will be correctly identified. If there 
+           * is no result set, such as with an INSERT, fields will not be defined, and all buffer_type
+           * will default to MYSQL_TYPE_VAR_STRING */
+          col_type = (stmt->fields) ? stmt->fields[i].type : MYSQL_TYPE_STRING;
 
           switch (col_type) {
           case MYSQL_TYPE_DECIMAL:
-            param_type= SQL_DECIMAL;
-            buffer_type= MYSQL_TYPE_DOUBLE;
+            param_type = SQL_DECIMAL;
+            buffer_type = MYSQL_TYPE_DOUBLE;
             break;
 
           case MYSQL_TYPE_DOUBLE:
-            param_type= SQL_DOUBLE;
-            buffer_type= MYSQL_TYPE_DOUBLE;
+            param_type = SQL_DOUBLE;
+            buffer_type = MYSQL_TYPE_DOUBLE;
             break;
 
           case MYSQL_TYPE_FLOAT:
-            buffer_type= MYSQL_TYPE_DOUBLE;
-            param_type= SQL_FLOAT;
+            buffer_type = MYSQL_TYPE_DOUBLE;
+            param_type = SQL_FLOAT;
             break;
 
           case MYSQL_TYPE_SHORT:
-            buffer_type= MYSQL_TYPE_DOUBLE;
-            param_type= SQL_FLOAT;
+            buffer_type = MYSQL_TYPE_DOUBLE;
+            param_type = SQL_FLOAT;
             break;
 
           case MYSQL_TYPE_TINY:
-            buffer_type= MYSQL_TYPE_DOUBLE;
-            param_type= SQL_FLOAT;
+            buffer_type = MYSQL_TYPE_DOUBLE;
+            param_type = SQL_FLOAT;
             break;
 
           case MYSQL_TYPE_LONG:
-            buffer_type= MYSQL_TYPE_LONG;
-            param_type= SQL_BIGINT;
+            buffer_type = MYSQL_TYPE_LONG;
+            param_type = SQL_BIGINT;
             break;
 
           case MYSQL_TYPE_INT24:
           case MYSQL_TYPE_YEAR:
-            buffer_type= MYSQL_TYPE_LONG;
-            param_type= SQL_INTEGER; 
+            buffer_type = MYSQL_TYPE_LONG;
+            param_type = SQL_INTEGER; 
             break;
 
           case MYSQL_TYPE_LONGLONG:
             /* perl handles long long as double
              * so we'll set this to string */
             buffer_type= MYSQL_TYPE_STRING;
-            param_type= SQL_VARCHAR;
+            param_type = SQL_VARCHAR;
             break;
 
           case MYSQL_TYPE_NEWDATE:
           case MYSQL_TYPE_DATE:
             buffer_type= MYSQL_TYPE_STRING;
-            param_type= SQL_DATE;
+            param_type = SQL_DATE;
             break;
 
           case MYSQL_TYPE_TIME:
             buffer_type= MYSQL_TYPE_STRING;
-            param_type= SQL_TIME;
+            param_type = SQL_TIME;
             break;
 
           case MYSQL_TYPE_TIMESTAMP:
             buffer_type= MYSQL_TYPE_STRING;
-            param_type= SQL_TIMESTAMP;
+            param_type = SQL_TIMESTAMP;
             break;
 
           case MYSQL_TYPE_VAR_STRING:
           case MYSQL_TYPE_STRING:
           case MYSQL_TYPE_DATETIME:
             buffer_type= MYSQL_TYPE_STRING;
-            param_type= SQL_VARCHAR;
+            param_type = SQL_VARCHAR;
             break;
 
           case MYSQL_TYPE_BLOB:
             buffer_type= MYSQL_TYPE_STRING;
-            param_type= SQL_BINARY;
+            param_type = SQL_BINARY;
             break;
 
           default:
             buffer_type= MYSQL_TYPE_STRING;
-            param_type= SQL_VARCHAR;
+            param_type = SQL_VARCHAR;
             break;
           }
 
-          bind[i].buffer_type = buffer_type;
-          bind[i].buffer_length= buffer_length;
-          bind[i].buffer= buffer;
-          fbind[i].length= buffer_length;
+          bind[i].buffer_type = buffer_type; 
+          bind[i].buffer_length= buffer_length; 
+          bind[i].buffer = buffer; 
+          fbind[i].length = buffer_length;
           fbind[i].is_null= buffer_is_null;
-          params[i].type= param_type;
+          params[i].type = param_type;
         }
-        has_binded= 0;
+        has_binded=0;
       }
-      retval = mysql_st_internal_execute41(dbh,
-                                           num_params,
+      retval = mysql_st_internal_execute41(dbh, statement, attr,
+                                           numParams,
+                                           params,
                                            &result,
+                                           &imp_dbh->mysql,
+                                           0,
                                            stmt,
                                            bind,
                                            &has_binded);
       if (bind)
+      {
         Safefree(bind);
+      }
       if (fbind)
+      {
         Safefree(fbind);
-
+      }
       if(mysql_stmt_close(stmt))
       {
         fprintf(stderr, "\n failed while closing the statement");
@@ -537,41 +426,39 @@ do(dbh, statement, attr=Nullsv, ...)
     }
     else
     {
-      fprintf(stderr,"DO: Something wrong while try to prepare query %s\n",
-              mysql_error(&imp_dbh->mysql));
+      fprintf(stderr,"DO: Something wrong while try to prepare query %s\n", mysql_error(&imp_dbh->mysql));
       retval=-2;
       mysql_stmt_close(stmt);
-      stmt= NULL;
+      stmt = NULL;
     }
   }
   else
   {
 #endif
-    if (items > 3)
-    {
+    if (items > 3) {
       /*  Handle binding supplied values to placeholders	   */
       /*  Assume user has passed the correct number of parameters  */
       int i;
-      num_params= items-3;
-      Newz(0, params, sizeof(*params)*num_params, struct imp_sth_ph_st);
-      for (i= 0;  i < num_params;  i++)
+      numParams = items-3;
+      Newz(0, params, sizeof(*params)*numParams, struct imp_sth_ph_st);
+      for (i = 0;  i < numParams;  i++)
       {
-        params[i].value= ST(i+3);
-        params[i].type= SQL_VARCHAR;
+        params[i].value = ST(i+3);
+        params[i].type = SQL_VARCHAR;
       }
     }
-    retval = mysql_st_internal_execute(dbh, statement, attr, num_params,
+    retval = mysql_st_internal_execute(dbh, statement, attr, numParams,
                                        params, &result, &imp_dbh->mysql, 0);
-#if MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
+#if MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION 
   }
 #endif
   if (params)
-    Safefree(params);
-
-  if (result)
   {
+    Safefree(params);
+  }
+
+  if (result) {
     mysql_free_result(result);
-    result= 0;
   }
   /* remember that dbd_st_execute must return <= -2 for error	*/
   if (retval == 0)		/* ok with no rows affected	*/
@@ -621,27 +508,6 @@ quote(dbh, str, type=NULL)
 MODULE = DBD::mysql    PACKAGE = DBD::mysql::st
 
 int
-more_results(sth)
-    SV *	sth
-    CODE:
-{
-#if (MYSQL_VERSION_ID >= MULTIPLE_RESULT_SET_VERSION)
-  D_imp_sth(sth);
-  int retval;
-  if (dbd_st_more_results(sth, imp_sth))
-  {
-    RETVAL=1;
-  }
-  else
-  {
-    RETVAL=0;
-  }
-#endif
-}
-    OUTPUT:
-      RETVAL
-
-int
 dataseek(sth, pos)
     SV* sth
     int pos
@@ -649,18 +515,18 @@ dataseek(sth, pos)
   CODE:
 {
   D_imp_sth(sth);
-#if (MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION)
+#if (MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION) 
   if (imp_sth->use_server_side_prepare)
   {
     if (imp_sth->use_mysql_use_result || 1)
     {
-      if (imp_sth->result && imp_sth->stmt)
+      if (imp_sth->result && imp_sth->stmt) 
       {
         mysql_stmt_data_seek(imp_sth->stmt, pos);
         imp_sth->fetch_done=0;
         RETVAL = 1;
-      }
-      else
+      } 
+      else 
       {
         RETVAL = 0;
         do_error(sth, JW_ERR_NOT_ACTIVE, "Statement not active");
@@ -672,7 +538,7 @@ dataseek(sth, pos)
       do_error(sth, JW_ERR_NOT_ACTIVE, "No result set");
     }
   }
-  else
+  else 
   {
 #endif
   if (imp_sth->result) {
@@ -779,7 +645,7 @@ dbd_mysql_get_info(dbh, sql_info_type)
 	    newSVpv(imp_dbh->mysql.host_info,strlen(imp_dbh->mysql.host_info));
 	    break;
     	default:
- 		croak("Unknown SQL Info type: %i",dbh);
+    		croak("Unknown SQL Info type: %i",dbh);
     }
     ST(0) = sv_2mortal(retsv);
 

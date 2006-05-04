@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 35limit.t 2202 2005-11-06 21:32:00Z capttofu $
+#   $Id: 35limit.t 1228 2004-09-04 01:23:38Z capttofu $
 #
 #   This is a simple insert/fetch test.
 #
@@ -50,6 +50,7 @@ while (Testing()) {
     Test($state or $dbh = DBI->connect($test_dsn, $test_user, $test_password))
 	or ServerError();
 
+    #Test($state or $dbh->trace(2));
     #
     #   Find a possible new table name
     #

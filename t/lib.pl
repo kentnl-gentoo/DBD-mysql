@@ -1,6 +1,6 @@
 #   Hej, Emacs, give us -*- perl mode here!
 #
-#   $Id: lib.pl 1136 2003-08-28 20:34:33Z rlippan $
+#   $Id: lib.pl 6011 2006-05-03 22:20:21Z capttofu $
 #
 #   lib.pl is the file where database specific things should live,
 #   whereever possible. For example, you define certain constants
@@ -44,7 +44,7 @@ if (-f ($file = "t/$dbdriver.dbtest")  ||
     }
     $::test_dsn      = $::test_dsn || $ENV{'DBI_DSN'} || 'DBI:mysql:database=test';
     $::test_user     = $::test_user|| $ENV{'DBI_USER'}  ||  '';
-    $::test_password = $::test_passowrd || $ENV{'DBI_PASS'}  ||  '';
+    $::test_password = $::test_password || $ENV{'DBI_PASS'}  ||  '';
 }
 if (-f ($file = "t/$mdriver.mtest")  ||
     -f ($file = "$mdriver.mtest")    ||
@@ -85,9 +85,10 @@ if (-f ($file = "t/$mdriver.mtest")  ||
 {
     # Note the use of the pairing {} in order to get local, but static,
     # variables.
-    my (@stateStack, $count, $off);
+    my (@stateStack, $count, $off, $skip_all_reason, $skip_n_reason, @skip_n);
 
     $count = 0;
+    @skip_n = ();
 
     sub Testing(;$) {
 	my ($command) = shift;
@@ -148,6 +149,14 @@ if (-f ($file = "t/$mdriver.mtest")  ||
 #
     sub Test ($;$$) {
 	my($result, $error, $diag) = @_;
+	return Skip($skip_all_reason) if (defined($skip_all_reason));
+	if (scalar(@skip_n)) {
+	    my $skipped = 0;
+	    my $t = $::numTests + 1;
+	    foreach my $n (@skip_n) {
+		return Skip($skip_n_reason) if ($n == $t);
+	    }
+	}
 	++$::numTests;
 	if ($count == 2) {
 	    if (defined($diag)) {
@@ -179,6 +188,13 @@ if (-f ($file = "t/$mdriver.mtest")  ||
 	    }
 	}
 	return 1;
+    }
+    sub SkipAll($) {
+	$skip_all_reason = shift;
+    }
+    sub SkipN($@) {
+	$skip_n_reason = shift;
+	@skip_n = @_;
     }
 }
 
