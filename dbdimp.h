@@ -11,7 +11,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h 1376 2005-07-04 15:46:09Z capttofu $
+ *  $Id: dbdimp.h 5985 2006-04-29 22:37:14Z capttofu $
  */
 
 /*
@@ -27,7 +27,11 @@
  * the server will be used to process prepare
  * statements as opposed to emulation in the driver
 */
+#define MULTIPLE_RESULT_SET_VERSION 40102
 #define SERVER_PREPARE_VERSION 40103
+#define LIMIT_PLACEHOLDER_VERSION 50100
+#define GEO_DATATYPE_VERSION 50007
+#define NEW_DATATYPE_VERSION 50003
 
 /*
  *  The following are return codes passed in $h->err in case of
@@ -173,7 +177,6 @@ typedef struct imp_sth_fbh_st {
     char           * data;
     double        ddata;
     long          ldata;
-
 } imp_sth_fbh_t;
 
 
@@ -203,7 +206,7 @@ struct imp_sth_st {
     imp_sth_phb_t    *fbind;
     imp_sth_fbh_t    *fbh;
     int              has_been_bound;
-    int use_server_side_prepare;     /* does server support new binary protocol */
+    int use_server_side_prepare;  /* server side prepare statements? */
 #endif
 
     MYSQL_RES* result;       /* result                                 */
@@ -239,6 +242,7 @@ struct imp_sth_st {
 #define dbd_st_prepare		mysql_st_prepare
 #define dbd_st_execute		mysql_st_execute
 #define dbd_st_fetch		mysql_st_fetch
+#define dbd_st_more_results     mysql_st_next_results
 #define dbd_st_finish		mysql_st_finish
 #define dbd_st_destroy		mysql_st_destroy
 #define dbd_st_blob_read	mysql_st_blob_read
@@ -263,12 +267,23 @@ void	 do_error (SV* h, int rc, const char *what);
 SV	*dbd_db_fieldlist (MYSQL_RES* res);
 
 void    dbd_preparse (imp_sth_t *imp_sth, SV *statement);
-my_ulonglong mysql_st_internal_execute(SV*, SV*, SV*, int, imp_sth_ph_t*, MYSQL_RES**,
-			      MYSQL*, int);
+my_ulonglong mysql_st_internal_execute(SV *,
+                                       SV *,
+                                       SV *,
+                                       int,
+                                       imp_sth_ph_t *,
+                                       MYSQL_RES **,
+                                       MYSQL *,
+                                       int);
 
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
-my_ulonglong mysql_st_internal_execute41(SV*, SV*, SV*, int, imp_sth_ph_t*, MYSQL_RES**,
-                              MYSQL*, int, MYSQL_STMT*, MYSQL_BIND*, int*);
+my_ulonglong mysql_st_internal_execute41(SV *,
+                                         int,
+                                         MYSQL_RES **,
+                                         MYSQL_STMT *,
+                                         MYSQL_BIND *,
+                                         int *);
+
 
 int mysql_st_clean_cursor(SV*, imp_sth_t*);
 #endif

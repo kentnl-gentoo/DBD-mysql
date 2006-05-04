@@ -8,7 +8,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.c 6016 2006-05-03 23:11:25Z capttofu $
+ *  $Id: dbdimp.c 6011 2006-05-03 22:20:21Z capttofu $
  */
 
 
@@ -233,6 +233,9 @@ FreeParam(imp_sth_ph_t *params, int num_params)
 
 static enum enum_field_types mysql_to_perl_type(enum enum_field_types type)
 {
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP, "\t-> mysql_to_perl_type\n");
+
   switch (type) {
   case MYSQL_TYPE_DOUBLE:
   case MYSQL_TYPE_FLOAT:
@@ -243,6 +246,9 @@ static enum enum_field_types mysql_to_perl_type(enum enum_field_types type)
   case MYSQL_TYPE_LONG:
   case MYSQL_TYPE_INT24:
   case MYSQL_TYPE_YEAR:
+#if MYSQL_VERSION_ID > NEW_DATATYPE_VERSION
+  case MYSQL_TYPE_BIT:
+#endif
     return MYSQL_TYPE_LONG;
 
   case MYSQL_TYPE_DECIMAL:
@@ -252,17 +258,26 @@ static enum enum_field_types mysql_to_perl_type(enum enum_field_types type)
   case MYSQL_TYPE_DATETIME:
   case MYSQL_TYPE_NEWDATE:
   case MYSQL_TYPE_VAR_STRING:
+#if MYSQL_VERSION_ID > GEO_DATATYPE_VERSION
+  case MYSQL_TYPE_GEOMETRY:
+#endif
+#if MYSQL_VERSION_ID > NEW_DATATYPE_VERSION
+  case MYSQL_TYPE_VARCHAR:
+#endif
   case MYSQL_TYPE_STRING:
   case MYSQL_TYPE_BLOB:
+  case MYSQL_TYPE_TINY_BLOB:
   case MYSQL_TYPE_TIMESTAMP:
   /* case MYSQL_TYPE_UNKNOWN: */
     return MYSQL_TYPE_STRING;
 
   default:
-    if (dbis->debug >= 2)
-      PerlIO_printf(DBILOGFP, "case default for col_type => %d\n", type);
     return MYSQL_TYPE_STRING;    /* MySQL can handle all types as strings */
   }
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP, "\t\tcol_type => %d\n", type);
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP, "\t<- mysql_to_perl_type\n");
 }
 #endif
 
@@ -360,8 +375,9 @@ char **fill_out_embedded_options(char *options,
     /* first item in server_options list is ignored. fill it with \0 */
     if (!(options_list[0]= calloc(1,sizeof(char))))
     {
-      PerlIO_printf(DBILOGFP,
-                    "Initialize embedded server. Out of memory \n");
+      if (dbis->debug >= 2)
+        PerlIO_printf(DBILOGFP,
+                      "Initialize embedded server. Out of memory \n");
       return NULL;
     }
     ind++;
@@ -377,8 +393,9 @@ char **fill_out_embedded_options(char *options,
         len--;
       if (!(options_list[ind]=calloc(len+1,sizeof(char))))
       {
-        PerlIO_printf(DBILOGFP,
-                      "Initialize embedded server. Out of memory\n");
+        if (dbis->debug >= 2)
+          PerlIO_printf(DBILOGFP,
+                        "Initialize embedded server. Out of memory\n");
         return NULL;
       }
       strncpy(options_list[ind], options, len);
@@ -455,7 +472,7 @@ static char *parse_params(
           /* patch from Dragonchild */
           seen_neg= 0;
           seen_dec= 0;
-          for (j= 0; j < vallen; ++j)
+          for (j= 0; j < (int)vallen; ++j)
           {
             testchar= *(valbuf+j);
             if ('-' == testchar)
@@ -1076,6 +1093,8 @@ void do_error(SV* h, int rc, const char* what)
   D_imp_xxh(h);
   STRLEN lna;
 
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP, "\t\t--> do_error\n");
   SV *errstr = DBIc_ERRSTR(imp_xxh);
   sv_setiv(DBIc_ERR(imp_xxh), (IV)rc);	/* set err early	*/
   sv_setpv(errstr, what);
@@ -1083,6 +1102,8 @@ void do_error(SV* h, int rc, const char* what)
   if (dbis->debug >= 2)
     PerlIO_printf(DBILOGFP, "%s error %d recorded: %s\n",
     what, rc, SvPV(errstr,lna));
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP, "\t\t<-- do_error\n");
 }
 
 /*
@@ -1141,7 +1162,7 @@ void do_warn(SV* h, int rc, char* what)
  *
  **************************************************************************/
 
-MYSQL* mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
+MYSQL *mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
 			char* port, char* user, char* password,
 			char* dbname, imp_dbh_t *imp_dbh) {
   int portNr;
@@ -1158,7 +1179,8 @@ MYSQL* mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
   /* already in client.c in API */
   /* if (user && !*user) user = NULL; */
   /* if (password && !*password) password = NULL; */
- 
+
+
   if (dbis->debug >= 2)
     PerlIO_printf(DBILOGFP,
 		  "imp_dbh->mysql_dr_connect: host = |%s|, port = %d," \
@@ -1166,7 +1188,7 @@ MYSQL* mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
 		  host ? host : "NULL", portNr,
 		  user ? user : "NULL",
 		  password ? password : "NULL");
- 
+
   {
 
 #if defined(DBD_MYSQL_EMBEDDED)
@@ -1207,7 +1229,8 @@ MYSQL* mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
               server_groups=fill_out_embedded_options(options, 0, (int)lna, ++server_groups_cnt);
               if (dbis->debug >= 2)
               {
-                PerlIO_printf(DBILOGFP, "Groups names passed to embedded server:\n");
+                PerlIO_printf(DBILOGFP,
+                              "Groups names passed to embedded server:\n");
                 print_embedded_options(server_groups, server_groups_cnt);
               }
             }
@@ -1232,11 +1255,12 @@ MYSQL* mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
           }
           if (mysql_server_init(server_args_cnt, server_args, server_groups))
           {
-            do_warn(dbh, AS_ERR_EMBEDDED, "Embedded server was not started. Could not initialize environment.");
-            return NULL;            
+            do_warn(dbh, AS_ERR_EMBEDDED, "Embedded server was not started. \
+                    Could not initialize environment.");
+            return NULL;
           }
           imp_drh->embedded.state=1;
- 
+
           if (server_args_cnt)
             free_embedded_options(server_args, server_args_cnt);
           if (server_groups_cnt)
@@ -1259,7 +1283,9 @@ MYSQL* mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
 
           if (rc)
           {
-            do_warn(dbh, AS_ERR_EMBEDDED, "Embedded server was already started. You cannot pass init parameters to embedded server once");
+            do_warn(dbh, AS_ERR_EMBEDDED,
+                    "Embedded server was already started. You cannot pass init\
+                    parameters to embedded server once");
             return NULL;
           }
         }
@@ -1273,7 +1299,7 @@ MYSQL* mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
     unsigned int client_flag = CLIENT_FOUND_ROWS;
 #endif
     mysql_init(sock);
-   
+
     if (imp_dbh)
     {
       SV* sv = DBIc_IMP_DATA(imp_dbh);
@@ -1284,7 +1310,7 @@ MYSQL* mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
 	HV* hv = (HV*) SvRV(sv);
 	SV** svp;
 	STRLEN lna;
-	
+
 	if ((svp = hv_fetch(hv, "mysql_compression", 17, FALSE))  &&
 	    *svp && SvTRUE(*svp))
         {
@@ -1342,29 +1368,25 @@ MYSQL* mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
                           imp_dbh->use_mysql_use_result);
         }
 
-
-	/* took out  client_flag |= CLIENT_PROTOCOL_41; */
-	/* because libmysql.c already sets this no matter what */
-
 #if MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
 
-	if ((svp = hv_fetch(hv, "mysql_server_prepare", 20,
-			    FALSE))  &&  *svp) {
+        /*client_flag |= CLIENT_PROTOCOL_41;*/
+        imp_dbh->use_server_side_prepare= TRUE;
+        if (dbis->debug >= 2)
+          PerlIO_printf(DBILOGFP, "server side prepare %d\n",imp_dbh->use_server_side_prepare);
+
+	if ((svp = hv_fetch(hv, "mysql_emulated_prepare", 22, FALSE)) && *svp)
+        {
 	  if (SvTRUE(*svp))
           {
-	    client_flag |= CLIENT_PROTOCOL_41;
-            imp_dbh->use_server_side_prepare = TRUE;
-	  }
-          else
-          {
 	    client_flag &= ~CLIENT_PROTOCOL_41;
-            imp_dbh->use_server_side_prepare = FALSE;
+            imp_dbh->use_server_side_prepare= FALSE;
 	  }
-	  if (dbis->debug >= 2)
-	    PerlIO_printf(DBILOGFP,
-			  "imp_dbh->use_server_side_prepare: %d",
-                          imp_dbh->use_server_side_prepare);
 	}
+        if (dbis->debug >= 2)
+          PerlIO_printf(DBILOGFP,
+                        "imp_dbh->use_server_side_prepare: %d",
+                        imp_dbh->use_server_side_prepare);
 #endif
 
 #if defined(DBD_MYSQL_WITH_SSL) && !defined(DBD_MYSQL_EMBEDDED) && \
@@ -1424,6 +1446,10 @@ MYSQL* mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
     if (dbis->debug >= 2)
       PerlIO_printf(DBILOGFP, "imp_dbh->mysql_dr_connect: client_flags = %d\n",
 		    client_flag);
+ 
+#if MYSQL_VERSION_ID >= MULTIPLE_RESULT_SET_VERSION
+    client_flag|= CLIENT_MULTI_RESULTS;
+#endif
     result = mysql_real_connect(sock, host, user, password, dbname,
 				portNr, mysql_socket, client_flag);
     if (dbis->debug >= 2)
@@ -1663,9 +1689,8 @@ dbd_db_rollback(SV* dbh, imp_dbh_t* imp_dbh) {
              "Rollback ineffective while AutoCommit is on");
   return TRUE;
 }
-/* }}} */
 
-/* {{{ int dbd_db_disconnect(SV* dbh, imp_dbh_t* imp_dbh)
+/*
  ***************************************************************************
  *
  *  Name:    dbd_db_disconnect
@@ -1878,10 +1903,9 @@ dbd_db_STORE_attrib(
   else if (kl == 16 && strEQ(key,"mysql_use_result"))
     imp_dbh->use_mysql_use_result = bool_value;
   else if (kl == 20 && strEQ(key,"mysql_auto_reconnect"))
-    /*XXX: Does DBI handle the magic ? */
     imp_dbh->auto_reconnect = bool_value;
-  else if (kl == 20 && strEQ(key, "mysql_server_prepare"))
-    imp_dbh->use_server_side_prepare=SvTRUE(valuesv);
+  else if (kl == 22 && strEQ(key, "mysql_emulated_prepare"))
+    imp_dbh->use_server_side_prepare= SvTRUE(valuesv) ? 0 : 1;
 
   else if (kl == 31 && strEQ(key,"mysql_unsafe_bind_type_guessing"))
 	imp_dbh->bind_type_guessing = SvIV(valuesv);
@@ -2090,24 +2114,31 @@ dbd_st_prepare(
   SV *attribs)
 {
   int i;
+  SV **svp;
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
-  char *searchptr;
-  int col_type;
-  int limit_flag= 0;
-  int statement_length= 0;
-  imp_sth_phb_t *fbind;
+  char *str_ptr;
+  int col_type, prepare_retval, limit_flag=0;
   MYSQL_BIND *bind, *bind_end;
+  imp_sth_phb_t *fbind;
 #endif
 
-  SV **svp;
   D_imp_dbh_from_sth;
+        if (dbis->debug >= 2)
+          PerlIO_printf(DBILOGFP,
+                        "\t-> dbd_st_prepare MYSQL_VERSION_ID %d\n",
+                        MYSQL_VERSION_ID);
 
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
-  statement_length = strlen(statement);
+ /* Set default value of 'mysql_emulated_prepare' attribute for sth from dbh */
+  imp_sth->use_server_side_prepare= imp_dbh->use_server_side_prepare;
+  if (attribs)
+  {
+    svp= DBD_ATTRIB_GET_SVP(attribs, "mysql_emulated_prepare", 22);
+    imp_sth->use_server_side_prepare = (svp) ?
+      SvTRUE(*svp) : imp_dbh->use_server_side_prepare;
+  }
+
   imp_sth->fetch_done= 0;
-#else
-  /* Count the number of parameters (driver, vs server-side) */
-  DBIc_NUM_PARAMS(imp_sth) = count_params(statement);
 #endif
 
   imp_sth->done_desc= 0;
@@ -2119,140 +2150,117 @@ dbd_st_prepare(
   imp_sth->use_mysql_use_result= svp ?
     SvTRUE(*svp) : imp_dbh->use_mysql_use_result;
 
-#if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
- /* Set default value of 'mysql_server_prepare' attribute for sth from dbh */
-  svp= DBD_ATTRIB_GET_SVP(attribs, "mysql_server_prepare", 20);
-  imp_sth->use_server_side_prepare = svp ?
-    SvTRUE(*svp) : imp_dbh->use_server_side_prepare;
+  for (i= 0; i < AV_ATTRIB_LAST; i++)
+    imp_sth->av_attr[i]= Nullav;
 
+#if (MYSQL_VERSION_ID < LIMIT_PLACEHOLDER_VERSION) && \
+      (MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION)
   if (imp_sth->use_server_side_prepare)
   {
-    /* This block is for the situation where there is a LIMIT statement
-    * with placeholders, which MySQL currently doesn't support, so we
-    * need to just parse the values and build an SQL statement with the
-    * limit values replacing the placeholders */
-    for ( i = 0; i < statement_length - 1; i++)
+    if (dbis->debug >= 2)
+      PerlIO_printf(DBILOGFP,
+                    "\t\tuse_server_side_prepare set, check LIMIT\n");
+/*
+ This code is here because mysql 5.0 didn't support placeholders
+ in prepared statements
+ */ 
+    if (dbis->debug >= 2)
+      PerlIO_printf(DBILOGFP,
+                    "\t\tneed to test for LIMIT\n");
+    for (str_ptr= statement; *str_ptr; str_ptr++)
     {
-      searchptr= &statement[i];
-      /* prepared statements for SHOW commands are not supported */
-      if ( ((*searchptr == 's' || *searchptr == 'S') &&
-            (!strncmp(searchptr+1,"how ", 4) ||
-             !strncmp(searchptr+1, "HOW ", 4)) ))
-        imp_sth->use_server_side_prepare = 0;
-      /* if there is a 'limit' in the statement... */
-      if (!limit_flag && ((*searchptr == 'l' || *searchptr == 'L') &&
-           (!strncmp(searchptr+1, "imit ?",6) || 
-            (!strncmp(searchptr+1, "IMIT ?",6)) )))
+      i= (str_ptr - statement)/sizeof(char);
+      /*
+        If there is a 'limit' in the statement and placeholders are
+        NOT supported
+      */
+      if ( (statement[i]   == 'l' || statement[i]   == 'L') &&
+           (statement[i+1] == 'i' || statement[i+1] == 'I') &&
+           (statement[i+2] == 'm' || statement[i+2] == 'M') &&
+           (statement[i+3] == 'i' || statement[i+3] == 'I') &&
+           (statement[i+4] == 't' || statement[i+4] == 'T'))
       {
+        if (dbis->debug >= 2)
+          PerlIO_printf(DBILOGFP, "LIMIT set limit flag to 1\n");
         limit_flag= 1;
-        i+= 6;
       }
       if( limit_flag)
       {
         /* ... and place holders after the limit flag is set... */
         if (statement[i] == '?')
         {
+          if (dbis->debug >= 2)
+            PerlIO_printf(DBILOGFP,
+                    "\t\tLIMIT and ? found, set to use_server_side_prepare=0\n");
           /* ... then we do not want to try server side prepare (use emulation) */
-          imp_sth->use_server_side_prepare = 0;
+          imp_sth->use_server_side_prepare= 0;
           break;
         }
       }
     }
   }
 #endif
-
-  for (i= 0; i < AV_ATTRIB_LAST; i++)
-  {
-    imp_sth->av_attr[i]= Nullav;
-  }
-
-
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
-
-  if (imp_sth->use_server_side_prepare == 0)
-  {
-    /* Count the number of parameters, the same way mysql_param_count does for server side prepares */
-    if (dbis->debug >= 2)
-      PerlIO_printf(DBILOGFP, "dbd_st_prepare calling count_params (counting params emulation)\n");
-
-    DBIc_NUM_PARAMS(imp_sth)= count_params(statement);
-  }
-
- /*
-  *  Perform check for LISTFIELDS command
-  *  and if we met it then mark as uncompatible with new 4.1 protocol
-  *  i.e. we leave imp_sth->use_server_side_prepare=0 for this stmt
-  *  and it will be executed later in mysql_st_internal_execute()
-  *  TODO: I think we can replace LISTFIELDS with SHOW COLUMNS [LIKE ...]
-  *        to remove this extension hack
-  */
-
-    /* this is a better way to do this */
-  if ( (!strncmp(statement, "listfields ", 11) ||
-        !strncmp(statement, "LISTFIELDS ", 11)) &&
-        imp_sth->use_server_side_prepare)
-  {
-    if (dbis->debug >= 2)
-      PerlIO_printf(DBILOGFP,
-                    "\"listfields\" Statement: %s\n setting \
-                    use_server_side_prepare to 0\n", statement);
-
-    imp_sth->use_server_side_prepare= 0;
-  }
-
   if (imp_sth->use_server_side_prepare)
   {
     if (dbis->debug >= 2)
       PerlIO_printf(DBILOGFP,
-                    "-->> dbd_st_prepare prepared statement query: %s\n",
-                    statement);
+                    "\t\tuse_server_side_prepare set\n");
     /* do we really need this? If we do, we should return, not just continue */
     if (imp_sth->stmt)
       fprintf(stderr,
               "ERROR: Trying to prepare new stmt while we have \
               already not closed one \n");
 
-    if (dbis->debug >= 2)
-      PerlIO_printf(DBILOGFP,
-                    "dbd_st_prepare calling mysql_stmt_init\n");
-
     imp_sth->stmt= mysql_stmt_init(&imp_dbh->mysql);
 
     if (! imp_sth->stmt)
     {
-      PerlIO_printf(DBILOGFP,
-                    "ERROR: Unable to return MYSQL_STMT structure \
-                    from mysql_stmt_init(): ERROR NO: %d ERROR MSG:%s\n",
-                    mysql_errno(&imp_dbh->mysql),
-                    mysql_error(&imp_dbh->mysql));
+      if (dbis->debug >= 2)
+        PerlIO_printf(DBILOGFP,
+                      "\t\tERROR: Unable to return MYSQL_STMT structure \
+                      from mysql_stmt_init(): ERROR NO: %d ERROR MSG:%s\n",
+                      mysql_errno(&imp_dbh->mysql),
+                      mysql_error(&imp_dbh->mysql));
     }
 
+    prepare_retval= mysql_stmt_prepare(imp_sth->stmt,
+                                       statement,
+                                       strlen(statement));
     if (dbis->debug >= 2)
-      PerlIO_printf(DBILOGFP,
-                    "dbd_st_prepare calling mysql_stmt_prepare \
-                    using statement %s length %d\n",
-                    statement, statement_length);
+        PerlIO_printf(DBILOGFP,
+                      "\t\tmysql_stmt_prepare returned %d\n",
+                      prepare_retval);
 
-    if (mysql_stmt_prepare(imp_sth->stmt, statement, statement_length))
+    if (prepare_retval)
     {
-      do_error(sth, mysql_errno(&imp_dbh->mysql), mysql_error(&imp_dbh->mysql));
-      mysql_stmt_close(imp_sth->stmt);
-      imp_sth->stmt= NULL;
+        if (dbis->debug >= 2)
+          PerlIO_printf(DBILOGFP,
+                    "\t\tmysql_stmt_prepare %d %s\n",
+                    mysql_stmt_errno(imp_sth->stmt),
+                    mysql_stmt_error(imp_sth->stmt));
 
       /* For commands that are not supported by server side prepared statement
          mechanism lets try to pass them through regular API */
-      if (mysql_errno(&imp_dbh->mysql) == ER_UNSUPPORTED_PS)
+      if (mysql_stmt_errno(imp_sth->stmt) == ER_UNSUPPORTED_PS)
+      {
+        if (dbis->debug >= 2)
+          PerlIO_printf(DBILOGFP,
+                    "\t\tSETTING imp_sth->use_server_side_prepare to 0\n");
         imp_sth->use_server_side_prepare= 0;
+        mysql_stmt_close(imp_sth->stmt);
+      }
       else
+      {
+        do_error(sth, mysql_stmt_errno(imp_sth->stmt),
+                 mysql_stmt_error(imp_sth->stmt));
+        mysql_stmt_close(imp_sth->stmt);
+        imp_sth->stmt= NULL;
         return FALSE;
+      }
     }
     else
     {
-      if (dbis->debug >= 2)
-        PerlIO_printf(DBILOGFP,
-                     "dbd_st_prepare called mysql_stmt_prepare, with %d params",
-                      DBIc_NUM_PARAMS(imp_sth));
-
       DBIc_NUM_PARAMS(imp_sth)= mysql_stmt_param_count(imp_sth->stmt);
       /* mysql_stmt_param_count */
 
@@ -2281,6 +2289,10 @@ dbd_st_prepare(
                      imp_sth->stmt->fields[i].type : MYSQL_TYPE_STRING);
 
           bind->buffer_type=  mysql_to_perl_type(col_type);
+
+          if (dbis->debug >= 2)
+            PerlIO_printf(DBILOGFP, "\t\tmysql_to_perl_type returned %d\n", col_type);
+
           bind->buffer=       NULL;
           bind->length=       &(fbind->length);
           bind->is_null=      (char*) &(fbind->is_null);
@@ -2292,12 +2304,251 @@ dbd_st_prepare(
   }
 #endif
 
+#if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
+  /* Count the number of parameters (driver, vs server-side) */
+  if (imp_sth->use_server_side_prepare == 0)
+    DBIc_NUM_PARAMS(imp_sth) = count_params(statement);
+#else
+    DBIc_NUM_PARAMS(imp_sth) = count_params(statement);
+#endif
+
   /* Allocate memory for parameters */
   imp_sth->params= alloc_param(DBIc_NUM_PARAMS(imp_sth));
   DBIc_IMPSET_on(imp_sth);
 
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP, "\t<- dbd_st_prepare\n");
   return 1;
 }
+
+/* My setup_fbav */
+AV *my_setup_fbav(imp_sth_t *imp_sth)
+{
+  /*dPERINTERP;*/
+  int i;
+  AV *av;
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP, "\t-> my_setup_fbav\n");
+
+  /*if (DBIc_FIELDS_AV(imp_sth))
+    return DBIc_FIELDS_AV(imp_sth);*/
+
+  i= DBIc_NUM_FIELDS(imp_sth);
+  if (dbis->debug >= 2)
+  {
+    PerlIO_printf(DBILOGFP, "\t\tmy_setup_fbav num_fields=%d\n",i);
+  }
+  if (i <= 0 || i > 32000)	/* trap obvious mistakes */
+    croak("my_setup_fbav: invalid number of fields: %d%s",
+          i, ", NUM_OF_FIELDS attribute probably not set right");
+  av = newAV();
+  if (dbis->debug >= 2)
+  {
+    PerlIO_printf(DBILOGFP, "\t\tmy_setup_fbav: created new AV\n");
+  }
+
+  /* load array with writeable SV's. Do this backwards so	*/
+  /* the array only gets extended once.			*/
+  while(i--)			/* field 1 stored at index 0	*/
+    av_store(av, i, newSV(0));
+  SvREADONLY_on(av);		/* protect against shift @$row etc */
+  /* row_count will need to be manually reset by the driver if the	*/
+  /* sth is re-executed (since this code won't get rerun)		*/
+  DBIc_ROW_COUNT(imp_sth)= 0;
+  DBIc_FIELDS_AV(imp_sth)= av;
+  if (dbis->debug >= 2)
+  {
+    PerlIO_printf(DBILOGFP, "\t<- my_setup_fbav");
+  }
+  return av;
+}
+
+/* *************************************************************
+ * "My" version of get_fbav.  The DBI implementation seems to retain
+ * a "memory" of the previous result set got by a statement, so this
+ * one re-initializes the array every time
+ *************************************************************/
+AV * my_get_fbav(imp_sth_t *imp_sth)
+{
+    AV *av;
+
+    if (dbis->debug >= 2)
+    {
+      PerlIO_printf(DBILOGFP, "\n-> my_get_fbav\n");
+    }
+    av=  my_setup_fbav(imp_sth);
+
+    if (1)
+    { /* XXX turn into option later */
+	int i= DBIc_NUM_FIELDS(imp_sth);
+	if (dbis->debug >= 2)
+        {
+	  PerlIO_printf(DBILOGFP,
+		  "   my_get_fbav; DBIc_NUM_FIELDS=%llu\n", (u_long) i);
+	}
+
+	/* don't let SvUTF8 flag persist from one row to the next   */
+	/* (only affects drivers that use sv_setpv, but most XS do) */
+	while(i--)                  /* field 1 stored at index 0    */
+	    SvUTF8_off(AvARRAY(av)[i]);
+    }
+
+    if (DBIc_is(imp_sth, DBIcf_TaintOut))
+    {
+	dTHR;
+	TAINT;	/* affects sv_setsv()'s called within same perl statement */
+    }
+
+    /* XXX fancy stuff to happen here later (re scrolling etc)	*/
+    ++DBIc_ROW_COUNT(imp_sth);
+    if (dbis->debug >= 2)
+    {
+      PerlIO_printf(DBILOGFP, "\n<- my_get_fbav\n");
+    }
+    return av;
+}
+
+#if MYSQL_VERSION_ID >= MULTIPLE_RESULT_SET_VERSION
+/***************************************************************************
+ * Name: dbd_st_more_results
+ *
+ * Purpose: Move onto the next result set (if any)
+ *
+ * Inputs: sth - Statement handle
+ *         imp_sth - driver's private statement handle
+ *
+ * Returns: 0 if there are more results sets
+ *          1 if there are not
+ *         <1 for errors.
+ *************************************************************************/
+int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
+{
+  D_imp_dbh_from_sth;
+
+  int use_mysql_use_result=imp_sth->use_mysql_use_result;
+  int next_result_return_code, i;
+  MYSQL_RES** result= &imp_sth->result;
+  MYSQL* svsock= &imp_dbh->mysql;
+
+  if (dbis->debug >= 2)
+  {
+    PerlIO_printf(DBILOGFP,
+		  "\n    -> dbd_st_more_results for %08lx\n", (u_long) sth);
+  }
+
+  if (!SvROK(sth) || SvTYPE(SvRV(sth)) != SVt_PVHV)
+    croak("Expected hash array");
+
+  /*
+   *  Free cached array attributes
+   */
+  for (i= 0;  i < AV_ATTRIB_LAST;  i++)
+  {
+    if (imp_sth->av_attr[i])
+      SvREFCNT_dec(imp_sth->av_attr[i]);
+
+    imp_sth->av_attr[i]= Nullav;
+  }
+  if (dbis->debug >= 2)
+  {
+    AV* av= my_get_fbav(imp_sth);
+    PerlIO_printf(DBILOGFP,
+      "\n      <- dbs_st_more_rows av_len(imp_sth->av_attr)=%d\n",
+      AvFILL(av));
+  }
+
+  /* Release previous MySQL result*/
+  mysql_free_result(imp_sth->result);
+
+  if (mysql_errno(svsock))
+    do_error(sth, mysql_errno(svsock), mysql_error(svsock));
+
+  next_result_return_code= mysql_next_result(svsock);
+  /*
+    mysql_next_result returns
+     0 if there are more results1
+     -1 if there are no more results
+     >1 if there was an error
+   */
+  if (next_result_return_code > 0)
+  {
+    do_error(sth,mysql_errno(svsock),mysql_error(svsock));
+    return 0;
+  }
+  else if (next_result_return_code < 0)
+  {
+    /* No rowsets*/
+    if (dbis->debug >= 2)
+      PerlIO_printf(DBILOGFP,
+		    "\n      <- dbs_st_more_rows no more results\n");
+    return 0;
+  }
+  else
+  {
+    /*if (dbis->debug >= 2)
+      PerlIO_printf(DBILOGFP,
+      "      <- dbd_st_more_rows use_mysql_use_result=%d\n",
+      use_mysql_use_result);
+      imp_sth->result= use_mysql_use_result ?
+      mysql_use_result(svsock) : mysql_store_result(svsock);*/
+    *result= mysql_store_result(svsock);
+
+    if (mysql_errno(svsock))
+      do_error(sth, mysql_errno(svsock), mysql_error(svsock));
+
+    if (*result == NULL)
+    {
+      /* No "real" rowset*/
+      if (dbis->debug >= 2)
+	PerlIO_printf(DBILOGFP,
+		      "\n      <- dbs_st_more_rows: null result set\n");
+
+	return 0;
+    }
+    /* We have a new rowset */
+    imp_sth->currow=0;
+
+    if (dbis->debug >= 5)
+    {
+      PerlIO_printf(DBILOGFP, "   <- dbd_st_more_results result set details\n");
+      PerlIO_printf(DBILOGFP,
+                    "             imp_sth->result=%08lx\n",
+                    imp_sth->result);
+      PerlIO_printf(DBILOGFP, "             mysql_num_fields=%llu\n",
+                    mysql_num_fields(imp_sth->result));
+
+      PerlIO_printf(DBILOGFP, "      <-     mysql_num_rows=%llu\n",
+                    mysql_num_rows(imp_sth->result));
+      PerlIO_printf(DBILOGFP, "      <-     mysql_affected_rows=%llu\n",
+                    mysql_affected_rows(svsock));
+    }
+
+    /** Store the result in the current statement handle */
+    DBIc_ACTIVE_on(imp_sth);
+    int num_fields=mysql_num_fields(imp_sth->result);
+
+    DBIc_NUM_FIELDS(imp_sth) = num_fields;
+
+    if (dbis->debug >= 5)
+    {
+      PerlIO_printf(DBILOGFP,
+                    "      <- dbd_st_more_results num_fields=%d\n", num_fields);
+      PerlIO_printf(DBILOGFP,
+                    "         DBIc_NUM_FIELDS=%d\n",DBIc_NUM_FIELDS(imp_sth));
+    }
+    imp_sth->done_desc = 0;
+    if (dbis->debug >= 2)
+    {
+      AV* av= my_get_fbav(imp_sth);
+      PerlIO_printf(DBILOGFP,
+                    "      <- dbs_st_more_rows av_len(imp_sth->av_attr)=%d\n",
+                    AvFILL(av));
+    }
+    (imp_dbh->mysql).net.last_errno= 0;
+    return 1;
+  }
+}
+#endif
 /**************************************************************************
  *
  *  Name:    mysql_st_internal_execute
@@ -2317,31 +2568,61 @@ dbd_st_prepare(
 
 
 my_ulonglong mysql_st_internal_execute(
-                          SV *h,
-                          SV *statement,
-                          SV *attribs,
-                          int num_params,
-                          imp_sth_ph_t *params,
-                          MYSQL_RES **result,
-                          MYSQL *svsock,
-                          int use_mysql_use_result
-                         )
+                                       SV *h, /* could be sth or dbh */
+                                       SV *statement,
+                                       SV *attribs,
+                                       int num_params,
+                                       imp_sth_ph_t *params,
+                                       MYSQL_RES **result,
+                                       MYSQL *svsock,
+                                       int use_mysql_use_result
+                                      )
 {
-  D_imp_sth(h);
-  D_imp_dbh_from_sth;
+  bool bind_type_guessing;
   STRLEN slen;
   char *sbuf = SvPV(statement, slen);
-  char *salloc = parse_params(svsock,
+  char *table;
+  char *salloc;
+  int htype;
+  my_ulonglong rows= 0;
+
+  /* thank you DBI.c for this info! */
+  D_imp_xxh(h);
+  htype= DBIc_TYPE(imp_xxh);
+  /*
+    It is important to import imp_dbh properly according to the htype
+    that it is! Also, one might ask why bind_type_guessing is assigned
+    in each block. Well, it's because D_imp_ macros called in these
+    blocks make it so imp_dbh is not "visible" or defined outside of the
+    if/else (when compiled, it fails for imp_dbh not being defined).
+  */
+  /* h is a dbh */
+  if (htype==DBIt_DB)
+  {
+    D_imp_dbh(h);
+    bind_type_guessing= imp_dbh->bind_type_guessing;
+  }
+  /* h is a sth */
+  else
+  {
+    D_imp_sth(h);
+    D_imp_dbh_from_sth;
+    bind_type_guessing= imp_dbh->bind_type_guessing;
+  }
+
+  salloc= parse_params(svsock,
                               sbuf,
                               &slen,
                               params,
                               num_params,
-                              imp_dbh->bind_type_guessing);
-  char *table;
-  my_ulonglong rows= 0;
+                              bind_type_guessing);
 
   if (dbis->debug >= 2)
     PerlIO_printf(DBILOGFP, "mysql_st_internal_execute\n");
+
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP, "mysql_st_internal_execute MYSQL_VERSION_ID %d\n",
+                  MYSQL_VERSION_ID );
 
   if (salloc)
   {
@@ -2428,7 +2709,7 @@ my_ulonglong mysql_st_internal_execute(
  *
  *  Purpose: Internal version for executing a prepared statement, called both
  *           from within the "do" and the "execute" method.
- *           MYSQL 4.1 API          
+ *           MYSQL 4.1 API
  *
  *
  *  Inputs:  h - object handle, for storing error messages
@@ -2444,25 +2725,26 @@ my_ulonglong mysql_st_internal_execute(
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
 
 my_ulonglong mysql_st_internal_execute41(
-                                         SV *h,
-                                         SV *statement,
-                                         SV *attribs,
+                                         SV *sth,
                                          int num_params,
-                                         imp_sth_ph_t *params,
                                          MYSQL_RES **result,
-                                         MYSQL *svsock,
-                                         int use_mysql_use_result,
                                          MYSQL_STMT *stmt,
                                          MYSQL_BIND *bind,
                                          int *has_been_bound
                                         )
 {
-  my_ulonglong rows;
+  int execute_retval;
+  my_ulonglong rows=0;
 
-  if (*result) /* do we free metadata info */
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP,
+                  "\t-> mysql_st_internal_execute41\n");
+
+  /* free result if exists */
+  if (*result)
   {
-    mysql_free_result(*result); /* free it if not */
-    *result= NULL;
+    mysql_free_result(*result);
+    *result= 0;
   }
 
   /*
@@ -2472,27 +2754,25 @@ my_ulonglong mysql_st_internal_execute41(
 
   if (num_params > 0 && !(*has_been_bound))
   {
-
     if (mysql_stmt_bind_param(stmt,bind))
-    {
-      do_error(h, mysql_stmt_errno(stmt), mysql_stmt_error(stmt));
-      return -2;
-    }
+      goto error;
+
     *has_been_bound= 1;
   }
 
   if (dbis->debug >= 2)
-  {
     PerlIO_printf(DBILOGFP,
-                  "mysql_st_internal_execute41 calling mysql_execute\n");
-  }
+                  "\t\tmysql_st_internal_execute41 calling mysql_execute\
+                  with %d num_params %d\n",
+                  num_params);
 
-  if (mysql_stmt_execute(stmt))
-  {
-    do_error(h, mysql_stmt_errno(stmt), mysql_stmt_error(stmt));
-    mysql_stmt_reset(stmt);
-    return  -2;
-  }
+  execute_retval= mysql_stmt_execute(stmt);
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP,
+                  "\t\tmysql_stmt_execute returned %d\n",
+                  execute_retval);
+  if (execute_retval)
+    goto error;
 
   /*
    This statement does not return a result set (INSERT, UPDATE...)
@@ -2500,33 +2780,45 @@ my_ulonglong mysql_st_internal_execute41(
   if (!(*result= mysql_stmt_result_metadata(stmt)))
   {
     if (mysql_stmt_errno(stmt))
-    {
-      do_error(h, mysql_stmt_errno(stmt), mysql_stmt_error(stmt));
-      return -2;
-    }
+      goto error;
+
+    rows= mysql_stmt_affected_rows(stmt);
   }
   /*
     This statement returns a result set (SELECT...)
   */
   else
   {
-      if (use_mysql_use_result)
-        rows= mysql_num_rows(*result);
-      else
-      {
-        /*
-        * Get the total rows affected and return
-        */
-        if (mysql_stmt_store_result(stmt))
-        {
-          do_error(h, mysql_stmt_errno(stmt), mysql_stmt_error(stmt));
-          return -2;
-        }
-        else
-         rows= mysql_stmt_num_rows(stmt);
-      }
+    /* Get the total rows affected and return */
+    if (mysql_stmt_store_result(stmt))
+      goto error;
+    else
+      rows= mysql_stmt_num_rows(stmt);
   }
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP,
+                  "\t<- mysql_internal_execute_41 returning %d rows\n",
+                  rows);
   return(rows);
+
+error:
+  if (*result)
+  {
+    mysql_free_result(*result);
+    *result= 0;
+  }
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP,
+                  "     errno %d err message %s\n",
+                  mysql_stmt_errno(stmt),
+                  mysql_stmt_error(stmt));
+  do_error(sth, mysql_stmt_errno(stmt), mysql_stmt_error(stmt));
+  mysql_stmt_reset(stmt);
+
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP,
+                  "\t<- mysql_st_internal_execute41\n");
+  return -2;
 
 }
 #endif
@@ -2559,7 +2851,7 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
 
   if (dbis->debug >= 2)
     PerlIO_printf(DBILOGFP,
-      "    -> dbd_st_execute for %08lx\n", (u_long) sth);
+      " -> dbd_st_execute for %08lx\n", (u_long) sth);
 
   if (!SvROK(sth)  ||  SvTYPE(SvRV(sth)) != SVt_PVHV)
     croak("Expected hash array");
@@ -2573,27 +2865,34 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
     imp_sth->av_attr[i]= Nullav;
   }
 
-  
-
   statement= hv_fetch((HV*) SvRV(sth), "Statement", 9, FALSE);
 
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP,
+                  "  mysql_version_id %d server_prepare_version %d\n",
+                  MYSQL_VERSION_ID, SERVER_PREPARE_VERSION);
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
 
-  if (imp_sth->use_server_side_prepare)
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP,
+                "  dbd_st_execute imp_dbh->use_server_side_prepare %d\
+                imp_sth->use_server_side_prepare %d\n",
+                imp_dbh->use_server_side_prepare,
+                imp_sth->use_server_side_prepare);
+
+  if (imp_sth->use_server_side_prepare && ! imp_sth->use_mysql_use_result)
   {
-   /* FIXME: Have to add do_error HERE */
     if (DBIc_ACTIVE(imp_sth) && !(mysql_st_clean_cursor(sth, imp_sth)))
+    {
+      do_error(sth, JW_ERR_SEQUENCE,
+               "Error happened while tried to clean up stmt");
       return 0;
+    }
 
     imp_sth->row_num= mysql_st_internal_execute41(
                                                   sth,
-                                                  *statement,
-                                                  NULL,
                                                   DBIc_NUM_PARAMS(imp_sth),
-                                                  imp_sth->params,
                                                   &imp_sth->result,
-                                                  &imp_dbh->mysql,
-                                                  imp_sth->use_mysql_use_result,
                                                   imp_sth->stmt,
                                                   imp_sth->bind,
                                                   &imp_sth->has_been_bound
@@ -2612,7 +2911,7 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
                                                 imp_sth->use_mysql_use_result
                                                );
 
-  if (imp_sth->row_num+1 != (my_ulonglong)-1 )
+  if (imp_sth->row_num+1 != (my_ulonglong)-1)
   {
     if (!imp_sth->result)
       imp_sth->insertid= mysql_insert_id(&imp_dbh->mysql);
@@ -2634,7 +2933,7 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
     */
     sprintf(actual_row_num, "%llu", imp_sth->row_num);
     PerlIO_printf(DBILOGFP,
-                  "    <- dbd_st_execute returning imp_sth->row_num %s\n",
+                  " <- dbd_st_execute returning imp_sth->row_num %s\n",
                   actual_row_num);
   }
 
@@ -2660,7 +2959,7 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
 {
 
   if (dbis->debug >= 2)
-    PerlIO_printf(DBILOGFP, "** dbd_describe() **\n");
+    PerlIO_printf(DBILOGFP, "\t--> dbd_describe\n");
 
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
 
@@ -2674,7 +2973,8 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
     MYSQL_FIELD *fields;
 
     if (dbis->debug >= 2)
-      PerlIO_printf(DBILOGFP, "** dbd_describe() num_fields %d**\n", num_fields);
+      PerlIO_printf(DBILOGFP, "\t\tdbd_describe() num_fields %d\n",
+                    num_fields);
 
     if (imp_sth->done_desc)
       return TRUE;
@@ -2687,12 +2987,13 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
       return 0;
     }
 
-    /* allocate fields buffers  */ 
+    /* allocate fields buffers  */
     if (  !(imp_sth->fbh= alloc_fbuffer(num_fields))
           || !(imp_sth->buffer= alloc_bind(num_fields)) )
     {
       /* Out of memory */
-      do_error(sth, JW_ERR_SEQUENCE, "Out of memory in dbd_sescribe()");
+      do_error(sth, JW_ERR_SEQUENCE,
+               "Out of memory in dbd_sescribe()");
       return 0;
     }
 
@@ -2707,11 +3008,16 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
       /* get the column type */
       col_type = fields ? fields[i].type : MYSQL_TYPE_STRING;
       if (dbis->debug >= 2)
-        PerlIO_printf(DBILOGFP,
-                      "col %d\ncol type %d\ncol len%d\ncol buf_len%d\n",
-                      i, col_type, fbh->length, fields[i].length);
+      {
+        PerlIO_printf(DBILOGFP,"\t\tcol %d type %d len %d\n",
+                      i, col_type, fbh->length);
+        PerlIO_printf(DBILOGFP,"\t\tcol buf_len%d type %d\n",
+                      fields[i].length, fields[i].type);
+      }
 
       bind->buffer_type= mysql_to_perl_type(col_type);
+      if (dbis->debug >= 2)
+        PerlIO_printf(DBILOGFP, "\t\tmysql_to_perl_type returned %d\n", col_type);
       bind->buffer_length= fields[i].length;
       bind->length= &(fbh->length);
       bind->is_null= &(fbh->is_null);
@@ -2745,6 +3051,8 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
 #endif
 
   imp_sth->done_desc= 1;
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP, "\t<- dbd_describe\n");
   return TRUE;
 }
 
@@ -2766,19 +3074,17 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
 AV*
 dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
 {
-  int rc;
-  int num_fields;
-  int ChopBlanks;
-  unsigned int i;
+  int num_fields, ChopBlanks, i, rc;
   unsigned long *lengths;
   AV *av;
   MYSQL_ROW cols;
   imp_sth_fbh_t *fbh;
-
 #if MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
   MYSQL_BIND *bind;
 #endif
   D_imp_dbh_from_sth;
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP, "\t-> dbd_st_fetch\n");
 
 #if MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
   if (imp_sth->use_server_side_prepare)
@@ -2809,11 +3115,9 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
   ChopBlanks = DBIc_is(imp_sth, DBIcf_ChopBlanks);
 
   if (dbis->debug >= 2)
-  {
     PerlIO_printf(DBILOGFP,
-                  "    -> dbd_st_fetch for %08lx, chopblanks %d\n",
+                  "\t\tdbd_st_fetch for %08lx, chopblanks %d\n",
                   (u_long) sth, ChopBlanks);
-  }
 
   if (!imp_sth->result)
   {
@@ -2828,7 +3132,7 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
   if (imp_sth->use_server_side_prepare)
   {
     if (dbis->debug >= 2)
-      PerlIO_printf(DBILOGFP, "dbd_st_fetch calling mysql_fetch\n");
+      PerlIO_printf(DBILOGFP, "\t\tdbd_st_fetch calling mysql_fetch\n");
 
     if ((rc= mysql_stmt_fetch(imp_sth->stmt)))
     {
@@ -2852,10 +3156,10 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
     imp_sth->currow++;
 
     av= DBIS->get_fbav(imp_sth);
-    num_fields= av_len(av)+1;
+    num_fields=mysql_stmt_field_count(imp_sth->stmt);
     if (dbis->debug >= 2)
       PerlIO_printf(DBILOGFP,
-                    "dbd_st_fetch called mysql_fetch, rc %d num_fields %d\n",
+                    "\t\tdbd_st_fetch called mysql_fetch, rc %d num_fields %d\n",
                     rc, num_fields);
 
     for (
@@ -2883,8 +3187,8 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
         */
         if (fbh->length > bind->buffer_length)
         {
-          if (dbis->debug >= 2)
-            PerlIO_printf(DBILOGFP,"Refetch BLOB/TEXT column: %d\n", i);
+          if (dbis->debug > 2)
+            PerlIO_printf(DBILOGFP,"\t\tRefetch BLOB/TEXT column: %d\n", i);
 
           Renew(fbh->data, fbh->length, char);
           bind->buffer_length= fbh->length;
@@ -2899,26 +3203,26 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
         /* Credit due to Georg - mysqli_api.c  ;) --PMG */
         switch (bind->buffer_type) {
         case MYSQL_TYPE_DOUBLE:
-          if (dbis->debug >= 2)
-            PerlIO_printf(DBILOGFP, "st_fetch double data %f\n", fbh->ddata);
+          if (dbis->debug > 2)
+            PerlIO_printf(DBILOGFP, "\t\tst_fetch double data %f\n", fbh->ddata);
           sv_setnv(sv, fbh->ddata);
           break;
 
         case MYSQL_TYPE_LONG:
-          if (dbis->debug >= 2)
-            PerlIO_printf(DBILOGFP, "st_fetch int data %d\n", fbh->ldata);
+          if (dbis->debug > 2)
+            PerlIO_printf(DBILOGFP, "\t\tst_fetch int data %d\n", fbh->ldata);
           sv_setuv(sv, fbh->ldata);
           break;
 
         case MYSQL_TYPE_STRING:
-          if (dbis->debug >= 2)
-            PerlIO_printf(DBILOGFP, "st_fetch string data %s\n", fbh->data);
+          if (dbis->debug > 2)
+            PerlIO_printf(DBILOGFP, "\t\tst_fetch string data %s\n", fbh->data);
           sv_setpvn(sv, fbh->data, fbh->length);
           break;
 
         default:
-          if (dbis->debug >= 2)
-            PerlIO_printf(DBILOGFP, "ERROR IN st_fetch_string");
+          if (dbis->debug > 2)
+            PerlIO_printf(DBILOGFP, "\t\tERROR IN st_fetch_string");
           sv_setpvn(sv, fbh->data, fbh->length);
           break;
 
@@ -2927,7 +3231,7 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
     }
 
     if (dbis->debug >= 2)
-      PerlIO_printf(DBILOGFP, "<- dbd_st_fetch, %d cols\n", num_fields);
+      PerlIO_printf(DBILOGFP, "\t<- dbd_st_fetch, %d cols\n", num_fields);
 
     return av;
   }
@@ -2937,7 +3241,21 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
 
     imp_sth->currow++;
 
-    if (!(cols = mysql_fetch_row(imp_sth->result)))
+    if (dbis->debug > 2)
+    {
+      PerlIO_printf(DBILOGFP, "\tdbd_st_fetch result set details\n");
+      PerlIO_printf(DBILOGFP, "\timp_sth->result=%08lx\n",imp_sth->result);
+      PerlIO_printf(DBILOGFP, "\tmysql_num_fields=%llu\n",
+                    mysql_num_fields(imp_sth->result));
+      PerlIO_printf(DBILOGFP, "\tmysql_num_rows=%llu\n",
+                    mysql_num_rows(imp_sth->result));
+      PerlIO_printf(DBILOGFP, "\tmysql_affected_rows=%llu\n",
+                    mysql_affected_rows(&imp_dbh->mysql));
+      PerlIO_printf(DBILOGFP, "\tdbd_st_fetch for %08lx, currow= %d\n",
+                    (u_long) sth,imp_sth->currow);
+    }
+
+    if (!(cols= mysql_fetch_row(imp_sth->result)))
     {
       if (mysql_errno(&imp_dbh->mysql))
         do_error(sth, mysql_errno(&imp_dbh->mysql),
@@ -2948,10 +3266,20 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
       return Nullav;
     }
 
-    lengths = mysql_fetch_lengths(imp_sth->result);
-
-    av = DBIS->get_fbav(imp_sth);
-    num_fields = av_len(av)+1;
+    lengths= mysql_fetch_lengths(imp_sth->result);
+#if MYSQL_VERSION_ID >= MULTIPLE_RESULT_SET_VERSION
+    /* 
+      this check is for BUG# 15546. I would
+     like to investigate why it doesn't work, TODO
+     */ 
+    if (imp_sth->use_server_side_prepare)
+      av= my_get_fbav(imp_sth);
+    else
+      av= DBIS->get_fbav(imp_sth);
+#else
+    av= DBIS->get_fbav(imp_sth);
+#endif
+    num_fields=mysql_num_fields(imp_sth->result);
 
     for (i= 0;  i < num_fields; ++i)
     {
@@ -2973,7 +3301,7 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
     }
 
     if (dbis->debug >= 2)
-      PerlIO_printf(DBILOGFP, "    <- dbd_st_fetch, %d cols\n", num_fields);
+      PerlIO_printf(DBILOGFP, "\t<- dbd_st_fetch, %d cols\n", num_fields);
     return av;
 
 #if MYSQL_VERSION_ID  >= SERVER_PREPARE_VERSION
@@ -3054,7 +3382,7 @@ int dbd_st_finish(SV* sth, imp_sth_t* imp_sth) {
   }
 #endif
 
-  /* 
+  /*
     Cancel further fetches from this cursor.
     We don't close the cursor till DESTROY.
     The application may re execute it.
@@ -3168,11 +3496,9 @@ dbd_st_STORE_attrib(
   int retval= FALSE;
 
   if (dbis->debug >= 2)
-  {
     PerlIO_printf(DBILOGFP,
-                  "-> dbd_st_STORE_attrib for %08lx, key %s\n",
+                  "\t\t-> dbd_st_STORE_attrib for %08lx, key %s\n",
                   (u_long) sth, key);
-  }
 
   if (strEQ(key, "mysql_use_result"))
   {
@@ -3180,11 +3506,9 @@ dbd_st_STORE_attrib(
   }
 
   if (dbis->debug >= 2)
-  {
     PerlIO_printf(DBILOGFP,
-                  "<- dbd_st_STORE_attrib for %08lx, result %d\n",
+                  "\t\t<- dbd_st_STORE_attrib for %08lx, result %d\n",
                   (u_long) sth, retval);
-  }
 
   return retval;
 }
@@ -3397,13 +3721,14 @@ dbd_st_FETCH_internal(
         if (DBIc_NUM_PARAMS(imp_sth))
         {
             unsigned int n;
+            SV *sv;
             char key[100];
             I32 keylen;
             for (n= 0; n < DBIc_NUM_PARAMS(imp_sth); n++)
             {
                 keylen= sprintf(key, "%d", n);
-                hv_store(pvhv, key, keylen,
-                         newSVsv(imp_sth->params[n].value), 0);
+                hv_store(pvhv, key,
+                         keylen, newSVsv(imp_sth->params[n].value), 0);
             }
         }
         retsv= newRV_noinc((SV*)pvhv);
@@ -3463,12 +3788,12 @@ dbd_st_FETCH_internal(
       else if (strEQ(key, "mysql_use_result"))
         retsv= boolSV(imp_sth->use_mysql_use_result);
       break;
-    case 20:
-      if (strEQ(key, "mysql_server_prepare"))
+    case 22:
+      if (strEQ(key, "mysql_emulated_prepare"))
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
-        retsv= sv_2mortal(newSViv((IV) imp_sth->use_server_side_prepare));
+        retsv= imp_sth->use_server_side_prepare ? boolSV(1) : boolSV(0);
 #else
-      retsv= boolSV(0);
+        retsv= boolSV(0);
 #endif
       break;
     case 23:
@@ -3614,8 +3939,10 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
         case SQL_TINYINT:
           /* INT */
           buffer_type= MYSQL_TYPE_LONG;
-          if (dbis->debug)
-            PerlIO_printf(DBILOGFP, "   SCALAR type %d ->%s<- IS A INT NUMBER\n", sql_type, buffer);
+          if (dbis->debug >= 2)
+            PerlIO_printf(DBILOGFP,
+                          "   SCALAR type %d ->%s<- IS A INT NUMBER\n",
+                          sql_type, buffer);
           break;
 
         case SQL_DOUBLE:
@@ -3624,8 +3951,10 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
         case SQL_REAL:
           /* FLOAT */
           buffer_type= MYSQL_TYPE_DOUBLE;
-          if (dbis->debug)
-            PerlIO_printf(DBILOGFP, "   SCALAR type %d ->%s<- IS A FLOAT NUMBER\n", sql_type, buffer);
+          if (dbis->debug >= 2)
+            PerlIO_printf(DBILOGFP,
+                          "   SCALAR type %d ->%s<- IS A FLOAT NUMBER\n",
+                          sql_type, buffer);
           break;
 
         case SQL_CHAR:
@@ -3638,13 +3967,13 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
         case SQL_VARBINARY:
         case SQL_LONGVARBINARY:
           buffer_type= MYSQL_TYPE_STRING;
-          if (dbis->debug)
+          if (dbis->debug >= 2)
             PerlIO_printf(DBILOGFP, "   SCALAR type %d ->%s<- IS A STRING\n", sql_type, buffer);
           break;
 
         default:
           buffer_type= MYSQL_TYPE_STRING;
-          if (dbis->debug)
+          if (dbis->debug >= 2)
             PerlIO_printf(DBILOGFP, "   SCALAR type %d ->%s<- IS A STRING\n", sql_type, buffer);
           break;
       }
