@@ -9,7 +9,7 @@ use DynaLoader();
 use Carp ();
 @ISA = qw(DynaLoader);
 
-$VERSION = '3.0003_1';
+$VERSION = '3.0004';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -25,12 +25,12 @@ sub driver{
     $class .= "::dr";
 
     # not a 'my' since we use it above to prevent multiple drivers
-    $drh = DBI::_new_drh($class, { 'Name' => 'mysql',
-				   'Version' => $VERSION,
-				   'Err'    => \$DBD::mysql::err,
-				   'Errstr' => \$DBD::mysql::errstr,
-				   'Attribution' => 'DBD::mysql by Patrick Galbraith'
-				 });
+    $drh = DBI::_new_drh($class, 
+        { 'Name' => 'mysql',
+        'Version' => $VERSION,
+        'Err'    => \$DBD::mysql::err,
+        'Errstr' => \$DBD::mysql::errstr,
+        'Attribution' => 'DBD::mysql by Rudy Lippan and Patrick Galbraith' });
 
     $drh;
 }
@@ -590,7 +590,7 @@ statement handle with:
 This statement handle can be used for multiple things. First of all
 you can retreive a row of data:
 
-  my $row = $sth->fetchrow_hashref();
+  my $row = $sth->fetchow_hashref();
 
 If your table has columns ID and NAME, then $row will be hash ref with
 keys ID and NAME. See L<STATEMENT HANDLES> below for more details on
@@ -740,25 +740,22 @@ disallow LOCAL.)
 
 =item Prepared statement support (server side prepare)
 
-As of 3.0002_1, server side prepare statements are on by default (if your
-server is >= 4.1.3)
-
-To use driver emulated prepared statements, all you need to do is set the variable 
-mysql_emulated_prepare in the connect:
+To use server side prepared statements, all you need to do is set the variable 
+mysql_server_prepare in the connect:
 
 $dbh = DBI->connect(
-                    "DBI:mysql:database=test;host=localhost;mysql_emulated_prepare=1",
+                    "DBI:mysql:database=test;host=localhost:mysql_server_prepare=1",
                     "",
                     "",
                     { RaiseError => 1, AutoCommit => 1 }
                     );
 
-* Note: delimiter for this param is ';'
-
 To make sure that the 'make test' step tests whether server prepare works, you just
 need to export the env variable MYSQL_SERVER_PREPARE:
 
-export MYSQL_EMULATED_PREPARE=1
+export MYSQL_SERVER_PREPARE=1
+
+Test first without server side prepare, then with.
 
 
 =item mysql_embedded_options
@@ -1193,68 +1190,6 @@ indication of such loss.
 
 =back
 
-=over
-
-=head1 MULTIPLE RESULT SETS
-
-As of version 3.0002_5, DBD::mysql supports multiple result sets (Thanks
-to Guy Harrison!). This is the first release of this functionality, so 
-there may be issues. Please report bugs if you run into them!
-
-The basic usage of multiple result sets is
-
-  do 
-  {
-    while (@row= $sth->fetchrow_array())
-    {
-      do stuff;
-    }
-  } while ($sth->more_results)
-
-An example would be:
-
-  $dbh->do("drop procedure if exists someproc") or print $DBI::errstr;
-
-  $dbh->do("create procedure somproc() deterministic
-   begin
-   declare a,b,c,d int;
-   set a=1;
-   set b=2;
-   set c=3;
-   set d=4;
-   select a, b, c, d;
-   select d, c, b, a;
-   select b, a, c, d;
-   select c, b, d, a;
-  end") or print $DBI::errstr;
-
-  $sth=$dbh->prepare('call someproc()') || 
-  die $DBI::err.": ".$DBI::errstr;
-
-  $sth->execute || die DBI::err.": ".$DBI::errstr; $rowset=0;
-  do {
-    print "\nRowset ".++$i."\n---------------------------------------\n\n";
-    foreach $colno (0..$sth->{NUM_OF_FIELDS}) {
-      print $sth->{NAME}->[$colno]."\t";
-    }
-    print "\n";
-    while (@row= $sth->fetchrow_array())  {
-      foreach $field (0..$#row) {
-        print $row[$field]."\t";
-      }
-      print "\n";
-    }
-  } until (!$sth->more_results)
- 
-For more examples, please see the eg/ directory. This is where helpful
-DBD::mysql code snippits will be added in the future.
-
-=head2 Issues with Multiple result sets
-
-So far, the main issue is if your result sets are "jagged", meaning, the
-number of columns of your results vary. Varying numbers of columns could
-result in your script crashing. This is something that will be fixed soon.
-
 
 =head1 MULTITHREADING
 
@@ -1324,7 +1259,7 @@ Then enter the following commands (note - versions are just examples):
 
   cd ..
   gzip -cd Data-ShowTable-(version).tar.gz | tar xf -
-  cd Data-ShowTable-3.3
+  cd Data-ShowTable-(version)
   perl Makefile.PL
   make
   make install
@@ -1342,6 +1277,7 @@ Other questions are the directories with header files and libraries.
 For example, of your file F<mysql.h> is in F</usr/include/mysql/mysql.h>,
 then enter the header directory F</usr>, likewise for
 F</usr/lib/mysql/libmysqlclient.a> or F</usr/lib/libmysqlclient.so>.
+
 
 
 =head1 WIN32 INSTALLATION
@@ -1370,7 +1306,7 @@ have a C compiler, the file README.win32 from the Perl source
 distribution tells you where to obtain freely distributable C compilers
 like egcs or gcc. The Perl sources are available via CPAN search
 
-  http://search.cpan.org
+    http://search.cpan.org
 
 I recommend using the win32clients package for installing DBD::mysql
 under Win32, available for download on www.tcx.se. The following steps
@@ -1482,11 +1418,15 @@ in the PPM program.
 
 =head1 AUTHORS
 
-The current version of B<DBD::mysql> is almost completely written
-by Jochen Wiedmann, and is now being maintained by
-Patrick Galbraith (I<patg@mysql.com>). 
-The first version's author was Alligator Descartes, who was aided
-and abetted by Gary Shea, Andreas König and Tim Bunce amongst others.
+A good part of the current version of B<DBD::mysql> is written
+by Jochen Wiedmann, then was maintained by
+Rudy Lippan (I<rlippan@remotelinux.com>), and Prepared Statement
+code written by Alexey Stroganov and Patrick Galbraith, and now 
+maintained by Patrick Galbraith (I<patg@mysql.com>), with the
+help of various people in the community. The first version's author
+was Alligator Descartes (I<descarte@symbolstone.org>), who has been
+aided and abetted by Gary Shea, Andreas König and Tim Bunce
+amongst others.
 
 The B<Mysql> module was originally written by Andreas König
 <koenig@kulturbox.de>. The current version, mainly an emulation
@@ -1497,8 +1437,8 @@ layer, is from Jochen Wiedmann.
 
 
 This module is 
-Copyright (c) 2004-2006 Patrick Galbraith/MySQL, Large Portions
-Copyright (c) 2003-2005 Rudolf Lippan; Large Portions 
+Large Portions Copyright (c) 2004-2006 MySQL Patrick Galbraith, Alexey Stroganov,
+Large Portions Copyright (c) 2003-2005 Rudolf Lippan; Large Portions 
 Copyright (c) 1997-2003 Jochen Wiedmann, with code portions 
 Copyright (c)1994-1997 their original authors This module is
 released under the same license as Perl itself. See the Perl README
@@ -1511,33 +1451,37 @@ This module is maintained and supported on a mailing list,
 
     perl@lists.mysql.com
 
-To subscribe to this list, go to
+To subscribe to this list, send a mail to
 
-http://lists.mysql.com/perl?sub=1
+    perl-subscribe@lists.mysql.com
+
+or
+
+    perl-digest-subscribe@lists.mysql.com
 
 Mailing list archives are available at
 
-http://lists.mysql.com/perl
+    http://www.progressive-comp.com/Lists/?l=msql-mysql-modules
+
 
 Additionally you might try the dbi-user mailing list for questions about
 DBI and its modules in general. Subscribe via
 
-dbi-users-subscribe@perl.org
+    http://www.fugue.com/dbi
 
 Mailing list archives are at
 
-http://groups.google.com/group/perl.dbi.users?hl=en&lr=
+     http://www.rosat.mpe-garching.mpg.de/mailing-lists/PerlDB-Interest/
+     http://outside.organic.com/mail-archives/dbi-users/
+     http://www.coe.missouri.edu/~faq/lists/dbi.html
 
-Also, the main DBI site is at
-
-http://dbi.perl.org/
 
 =head1 ADDITIONAL DBI INFORMATION
 
 Additional information on the DBI project can be found on the World
 Wide Web at the following URL:
 
-    http://dbi.perl.org
+    http://www.symbolstone.org/technology/perl/DBI
 
 where documentation, pointers to the mailing lists and mailing list
 archives and pointers to the most current versions of the modules can
@@ -1548,16 +1492,6 @@ Information on the DBI interface itself can be gained by typing:
     perldoc DBI
 
 right now!
-
-
-=head1 BUG REPORTING, ENHANCEMENT/FEATURE REQUESTS
-
-Please report bugs, including all the information needed
-such as DBD::mysql version, MySQL version, OS type/version, etc
-to this link:
-
-http://bugs.mysql.com/
-
 
 =cut
 
