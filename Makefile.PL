@@ -39,7 +39,7 @@ Getopt::Long::GetOptions(
     "cflags=s",
     "libs=s",
     "verbose",
-    "ps-protocol",
+    "ps-protocol=s",
     "nocatchstderr",
     "ssl!",
     "nofoundrows!",
@@ -49,6 +49,9 @@ Getopt::Long::GetOptions(
     ) || die Usage();
 
 my $source = {};
+
+# ps-protocol is set to 1 by default in this dev release
+$opt->{'ps-protocol'}= 1 if (! exists $opt->{'ps-protocol'});
 
 if ($^O !~ /mswin32/i)
 {
@@ -78,7 +81,7 @@ MSG
       print <<MSG;
 
 Cannot find the file 'mysql_config'! Your execution PATH doesn't seem 
-to contain the path to mysql_config. Resorting to guessed values!
+not contain the path to mysql_config. Resorting to guessed values!
 MSG
     }
     $opt->{'mysql_config'} = "mysql_config";
@@ -182,6 +185,11 @@ MSG
 sleep 5;
 
 eval { require File::Spec };
+my $ps_dsn= "";
+if (exists $opt->{'ps-protocol'} && $opt->{'ps-protocol'} == 0) 
+{
+  $ps_dsn = "\$::test_dsn .= \";mysql_emulated_prepare=1\";\n"; 
+}
 my $fileName = $@ ?
   "t/mysql.mtest" : File::Spec->catfile("t", "mysql.mtest");
 (open(FILE, ">$fileName") &&
@@ -195,8 +203,8 @@ my $fileName = $@ ?
 	      "\$::test_dsn = \"DBI:mysql:\$::test_db\";\n" .
 	      "\$::test_dsn .= \";mysql_socket=\$::test_socket\" if \$::test_socket;\n" .
               "\$::test_dsn .= \":\$::test_host\" if \$::test_host;\n" .
-	      "\$::test_dsn .= \":\$::test_port\" if \$::test_port;\n" .
-              "\$::test_dsn .= \":mysql_server_prepare=1\" if \$opt->{'ps-protcol'} || \$ENV{'MYSQL_SERVER_PREPARE'};\n" .
+	      "\$::test_dsn .= \":\$::test_port\" if \$::test_port;\n".
+              $ps_dsn .
 	      "} 1;\n"))  &&
   close(FILE))  ||  die "Failed to create $fileName: $!";
 
@@ -291,9 +299,6 @@ if ($opt->{'embedded'})
                        't/insertid.t' => { filename => 'mysqlEmb/t/insertid.t',
                                                                     makedir => 'mysqlEmb/t'
                                                                   },
-                       't/00base.t' => { filename => 'mysqlEmb/t/00base.t',
-                                                                    makedir => 'mysqlEmb/t'
-                                                                  },
                        't/texecute.t' => { filename => 'mysqlEmb/t/texecute.t',
                                                                     makedir => 'mysqlEmb/t'
                                                                   },
@@ -303,6 +308,10 @@ if ($opt->{'embedded'})
                        't/param_values.t' => { filename => 'mysqlEmb/t/param_values.t',
                                                                     makedir => 'mysqlEmb/t'
                                                                   },
+                       't/00base.t' => { filename => 'mysqlEmb/t/00base.t',
+                                                                    makedir => 'mysqlEmb/t'
+                                                                  },
+
                        'myld' => { filename => 'mysqlEmb/myld',
                                    makedir => 'mysqlEmb'
                                  },
@@ -398,8 +407,9 @@ Possible options are:
   --nofoundrows          Change the behavoiur of \$sth->rows() so that it
   			 returns the number of rows physically modified 
 			 instead of the rows matched
-  --ps-protocol    	 Toggle the use of server-side prepare, requires 
-                         MySQL server version 4.1.3 if set to 1 
+  --ps-protocol=<1|0>    Toggle the use of driver emulated prepared statements
+                         prepare, requires MySQL server >= 4.1.3 for
+                         server side prepared statements, on by default 
   --force-embedded       Force to build embedded version of driver
   --ssl			 Enable SSL support
   --help                 Print this message and exit
@@ -435,6 +445,11 @@ sub Configure
 {
   my($opt, $source, $param) = @_;
 
+  if ($param eq 'ps-protocol')
+  {
+      $source->{$param}= ($opt->{$param} == 0) ? "User's choice" : 'default';
+      return;
+  }
   if (exists($opt->{$param}))
   {
     $source->{$param} = "User's choice";
@@ -497,7 +512,7 @@ sub Configure
     $source->{$param} = "default";
     $opt->{$param} = "";
   }
-  elsif($param eq 'ps-protocol' || $param eq 'force-embedded')
+  elsif($param eq 'force-embedded')
   {
     $source->{$param} = $opt->{$param} ? "default" : 'not set';
   }
