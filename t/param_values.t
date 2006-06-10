@@ -47,3 +47,4 @@ QUERY
   # Close the database connection
   Test($state or ($dbh->disconnect() or 1));
 }
+
