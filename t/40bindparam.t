@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 40bindparam.t 6305 2006-05-17 22:29:38Z capttofu $ 
+#   $Id: 40bindparam.t 6304 2006-05-17 21:23:10Z capttofu $ 
 #
 #   This is a skeleton test. For writing new tests, take this file
 #   and modify/extend it.
@@ -64,6 +64,8 @@ while (Testing()) {
     Test($state or $dbh = DBI->connect($test_dsn, $test_user, $test_password))
 	or ServerError();
 
+    #sleep 60;
+    Test($state or !$dbh->trace(2, "/tmp/trace.log"));
     #
     #   Find a possible new table name
     #
@@ -163,7 +165,6 @@ while (Testing()) {
 		    $name eq 'Andreas König'))
 	or printf("Query returned id = %s, name = %s, ref = %s, %d\n",
 		  $id, $name, $ref, scalar(@$ref));
-
     Test($state or (($ref = $sth->fetch)  &&  $id == 5  &&
 		    !defined($name)))
 	or printf("Query returned id = %s, name = %s, ref = %s, %d\n",
@@ -172,6 +173,7 @@ while (Testing()) {
     Test($state or (($ref = $sth->fetch)  &&  $id == 6  &&
 		   $name eq '?'))
 	or print("Query returned id = $id, name = $name, expected 6,?\n");
+
     if ($mdriver eq 'mysql' or $mdriver eq 'mysqlEmb') {
 	Test($state or (($ref = $sth->fetch)  &&  $id == 7  &&
 			$name eq '?'))
@@ -184,6 +186,6 @@ while (Testing()) {
     #
     #   Finally drop the test table.
     #
-    Test($state or $dbh->do("DROP TABLE $table"))
-	   or DbiError($dbh->err, $dbh->errstr);
+    #Test($state or $dbh->do("DROP TABLE $table"))
+#	  # or DbiError($dbh->err, $dbh->errstr);
 }
