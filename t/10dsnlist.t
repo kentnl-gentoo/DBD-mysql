@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 10dsnlist.t 1228 2004-09-04 01:23:38Z capttofu $ 
+#   $Id: 10dsnlist.t 1337 2005-07-01 01:42:02Z capttofu $ 
 #
 #   This test creates a database and drops it. Should be executed
 #   after listdsn.
@@ -61,7 +61,7 @@ while (Testing()) {
     #   Try different DSN's
     #
     my(@dsnList);
-    if (($mdriver eq 'mysql'  or  $mdriver eq 'mSQL' or $mdriver eq 'mysqlEmb')
+    if (($mdriver eq 'mysql' or $mdriver eq 'mysqlEmb')
 	and  $test_dsn eq "DBI:$mdriver:test") {
 	@dsnList = ("DBI:$mdriver:test:localhost",
 		    "DBI:$mdriver:test;localhost",

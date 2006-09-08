@@ -1,6 +1,6 @@
 # Hej, Emacs, give us -*- perl -*- mode here!
 #
-#   $Id: mysql.dbtest 5984 2006-04-29 20:02:26Z capttofu $
+#   $Id: mysql.dbtest 5985 2006-04-29 22:37:14Z capttofu $
 #
 # database specific definitions for a 'mysql' database
 
@@ -52,10 +52,6 @@ sub TableDefinition ($@) {
 
     #
     #   Should be acceptable for most ANSI conformant databases;
-    #
-    #   msql 1 uses a non-ANSI definition of the primary key: A
-    #   column definition has the attribute "PRIMARY KEY". On
-    #   the other hand, msql 2 uses the ANSI fashion ...
     #
     my($col, @keys, @colDefs, $keyDef);
 
