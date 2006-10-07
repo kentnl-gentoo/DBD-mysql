@@ -12,7 +12,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h 6856 2006-09-06 00:23:13Z capttofu $
+ *  $Id: dbdimp.h 7820 2006-09-10 12:52:09Z capttofu $
  */
 
 /*

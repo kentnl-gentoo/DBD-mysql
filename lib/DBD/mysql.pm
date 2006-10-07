@@ -9,7 +9,7 @@ use DynaLoader();
 use Carp ();
 @ISA = qw(DynaLoader);
 
-$VERSION = '3.0007_1';
+$VERSION = '3.0007_2';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -473,7 +473,7 @@ DBD::mysql - MySQL driver for the Perl5 Database Interface (DBI)
     @databases = DBI->data_sources("mysql");
        or
     @databases = DBI->data_sources("mysql",
-				   {"host" => $host, "port" => $port});
+      {"host" => $host, "port" => $port, "user" => $user, password => $pass});
 
     $sth = $dbh->prepare("SELECT * FROM foo WHERE bla");
        or
@@ -621,8 +621,8 @@ A C<database> must always be specified.
 
 =item port
 
-The hostname, if not specified or specified as '', will default to an
-MySQL daemon running on the local machine on the default port
+The hostname, if not specified or specified as '' or 'localhost', will
+default to an MySQL daemon running on the local machine using the default
 for the UNIX socket.
 
 Should the MySQL daemon be running on a non-standard port number,
@@ -630,6 +630,8 @@ you may explicitly state the port number to connect to in the C<hostname>
 argument, by concatenating the I<hostname> and I<port number> together
 separated by a colon ( C<:> ) character or by using the  C<port> argument.
 
+To connect to a MySQL server on localhost using TCP/IP, you must specify the
+hostname as 127.0.0.1 (with the optional port).
 
 =item mysql_client_found_rows
 
@@ -799,15 +801,10 @@ $testdsn="DBI:mysqlEmb:database=test;mysql_embedded_groups=embedded_server,commo
     @dbs = $dbh->func('_ListDBs');
 
 Returns a list of all databases managed by the MySQL daemon
-running on C<$hostname>, port C<$port>. This method
-is rarely needed for databases running on C<localhost>: You should
-use the portable method
+running on C<$hostname>, port C<$port>. This is a legacy
+method.  Instead, you should use the portable method
 
     @dbs = DBI->data_sources("mysql");
-
-whenever possible. It is a design problem of this method, that there's
-no way of supplying a host name or port number to C<data_sources>, that's
-the only reason why we still support C<ListDBs>. :-(
 
 =back
 
@@ -882,7 +879,7 @@ The DBD::mysql driver supports the following attributes of database
 handles (read only):
 
   $errno = $dbh->{'mysql_errno'};
-  $error = $dbh->{'mysql_error};
+  $error = $dbh->{'mysql_error'};
   $info = $dbh->{'mysql_hostinfo'};
   $info = $dbh->{'mysql_info'};
   $insertid = $dbh->{'mysql_insertid'};
@@ -962,11 +959,14 @@ stored in the database are utf8.  This feature defaults to off.
 
 When set, a data retrieved from a textual column type (char, varchar,
 etc) will have the UTF-8 flag turned on if necessary.  This enables
-character semantics on that string.
+character semantics on that string.  You will also need to ensure that
+your database / table / column is configured to use UTF8.  See Chapter
+10 of the mysql manual for details.
 
 Additionally, turning on this flag tells MySQL that incoming data should
 be treated as UTF-8.  This will only take effect if used as part of the
-call to connect().
+call to connect().  If you turn the flag on after connecting, you will
+need to issue the command C<SET NAMES utf8> to get the same effect.
 
 This option is experimental and may change in future versions.
 

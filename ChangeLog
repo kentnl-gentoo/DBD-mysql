@@ -1,8 +1,20 @@
+2006-10-07 Patrick Galbraith <patg@patg.net>, Jim Winstead <jimw@mysql.com>
+  (3.0007_2)
+  * Added UTF8 patch from Dominic Mitchell (Thanks!)
+  * Fixed declaration of "row" in mysql_st_internal_execute which caused compile
+    errors on some platforms
+  * Fix documentation for _ListDBs to remove incorrect information about
+    limitations of data_sources(). (RT #20843, patch by Ann Barcomb)
+  * Fix typo in example (missing quote). (RT #15086)
+  * Mention in POD that 'localhost' always means to connect via UNIX socket,
+    and 127.0.0.1 must be used for TCP/IP to localhost (RT #14942, reported by
+    Alessandro Ranellucci)
+  * Fix typos in Makefile.PL (RT#16178, reported by Gavin Shelley)
+
 2006-09-08 Jim Winstead <jimw@mysql.com>, Patrick Galbraith <patg@mysql.com>
 (3.0007_1) (3.0006/3.0006_1 is the same as 3.0005/3.0005_1)
   * Make sure to call dbd_st_finish when all rows from a statement handle
-    have been fetched. (Bug #20153, Bug# 21607, as rt.cpan.org ticket #s
-    20464, 21241) Jim Winstead
+    have been fetched. (Bug #20153, Bug #21607, RT #20464, RT #21241)
   * Patch from Steve Hay to fix bind_param to deal properly with insertion
     of a NULL into an INT or DOUBLE column using server-side prepare.
     Converted Steve's dbi.pl script to expose this problem to 40bindparam2
@@ -915,7 +927,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog 6855 2006-09-05 23:55:32Z jimw $
+$Id: ChangeLog 7838 2006-09-15 00:40:19Z jimw $
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 
