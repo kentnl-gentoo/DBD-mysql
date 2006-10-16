@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 40nulls.t 7820 2006-09-10 12:52:09Z capttofu $
+#   $Id: 40nulls.t 1103 2003-03-18 02:53:28Z rlippan $
 #
 #   This is a test for correctly handling NULL values.
 #
@@ -74,22 +74,25 @@ while (Testing()) {
 	                    . " ( NULL, 'NULL-valued id' )"))
            or DbiError($dbh->err, $dbh->errstr);
 
-    Test($state or $sth = $dbh->prepare("SELECT * FROM $table"
+    Test($state or $cursor = $dbh->prepare("SELECT * FROM $table"
 	                                   . " WHERE " . IsNull("id")))
            or DbiError($dbh->err, $dbh->errstr);
 
-    Test($state or $sth->execute)
+    Test($state or $cursor->execute)
            or DbiError($dbh->err, $dbh->errstr);
 
-    Test($state or ($rv = $sth->fetchrow_arrayref) or $dbdriver eq 'CSV')
+    Test($state or ($rv = $cursor->fetchrow_arrayref) or $dbdriver eq 'CSV')
            or DbiError($dbh->err, $dbh->errstr);
 
     Test($state or (!defined($$rv[0])  and  defined($$rv[1])) or
 	 $dbdriver eq 'CSV')
            or DbiError($dbh->err, $dbh->errstr);
 
-    Test($state or $sth->finish)
+    Test($state or $cursor->finish)
            or DbiError($dbh->err, $dbh->errstr);
+
+    Test($state or undef $cursor  ||  1);
+
 
     #
     #   Finally drop the test table.
@@ -97,5 +100,4 @@ while (Testing()) {
     Test($state or $dbh->do("DROP TABLE $table"))
 	   or DbiError($dbh->err, $dbh->errstr);
 
-    Test($state or undef $sth  ||  1);
 }

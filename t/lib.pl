@@ -1,6 +1,6 @@
 #   Hej, Emacs, give us -*- perl mode here!
 #
-#   $Id: lib.pl 6304 2006-05-17 21:23:10Z capttofu $
+#   $Id: lib.pl 6011 2006-05-03 22:20:21Z capttofu $
 #
 #   lib.pl is the file where database specific things should live,
 #   whereever possible. For example, you define certain constants
@@ -203,7 +203,7 @@ if (-f ($file = "t/$mdriver.mtest")  ||
 #   Print a DBI error message
 #
 sub DbiError ($$) {
-    my ($rc, $err) = @_;
+    my($rc, $err) = @_;
     $rc ||= 0;
     $err ||= '';
     print "Test $::numTests: DBI error $rc, $err\n";
