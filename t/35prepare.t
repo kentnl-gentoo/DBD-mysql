@@ -1,17 +1,15 @@
 #!/usr/bin/perl
 
 use strict;
-use vars qw($test_dsn $test_user $test_password $mdriver $state);
+use vars qw($test_dsn $test_user $test_password $mdriver $state $mdriver);
 use DBI;
 use Carp qw(croak);
 use Data::Dumper;
 
 $^W =1;
 
-
-use DBI;
-$mdriver = "";
 my ($row, $sth, $dbh);
+$mdriver ||= "";
 foreach my $file ("lib.pl", "t/lib.pl", "DBD-mysql/t/lib.pl") {
   do $file; if ($@) { print STDERR "Error while executing lib.pl: $@\n";
     exit 10;
@@ -39,8 +37,8 @@ while(Testing())
   { RaiseError => 1, AutoCommit => 1})) or ServerError() ;
 
   # don't want this during make test!
-  #Test($state or (1 || $dbh->trace("3", "/tmp/trace.log"))) or
-  # DbiError($dbh->err, $dbh->errstr);
+  Test($state or (1 || $dbh->trace("3", "/tmp/trace.log"))) or
+   DbiError($dbh->err, $dbh->errstr);
 
   Test($state or $table = FindNewTable($dbh)) or
     DbiError($dbh->err, $dbh->errstr); 
@@ -65,6 +63,9 @@ while(Testing())
 
   Test ($state or ($row->[0] eq "$table")) 
       or print "results not equal to '$table' \n";
+
+  Test($state or $sth->finish)
+    or DbiError($dbh->err, $dbh->errstr);
 
   Test($state or $sth=
     $dbh->do("INSERT INTO $table VALUES (1,'1st first value')")) or 
@@ -117,10 +118,32 @@ while(Testing())
   Test($state or $ret_ref = $sth->fetchall_arrayref()) or  
     DbiError($dbh->err, $dbh->errstr);
 
-  #
-  # drop table
-  #
-  Test($state or $dbh->do("DROP TABLE $table"))
-    or DbiError($dbh->err, $dbh->errstr);
+  Test($state or $sth=
+    $dbh->prepare("DROP TABLE IF EXISTS $table")) or
+    DbiError($dbh->err, $dbh->errstr);
 
+  Test($state or $sth->execute()) or 
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or $sth=
+    $dbh->prepare("DROP TABLE IF EXISTS t1")) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or $sth->execute()) or 
+    DbiError($dbh->err, $dbh->errstr);
+ 
+  # Bug #20153: Fetching all data from a statement handle does not mark it
+  # as finished
+  Test($state or $sth= $dbh->prepare("SELECT 1 FROM DUAL")) or
+    DbiError($dbh->err, $dbh->errstr);
+  Test($state or $sth->execute()) or 
+    DbiError($dbh->err, $dbh->errstr);
+  Test($state or $sth->fetchrow_arrayref()) or 
+    DbiError($dbh->err, $dbh->errstr);
+  Test($state or not $sth->fetchrow_arrayref()) or 
+    DbiError($dbh->err, $dbh->errstr);
+  # Install a handler so that a warning about unfreed resources gets caught
+  $SIG{__WARN__} = sub { die @_ };
+  Test($state or $dbh->disconnect()) or 
+    DbiError($dbh->err, $dbh->errstr);
 }
