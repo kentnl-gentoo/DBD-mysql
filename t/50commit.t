@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 50commit.t 1228 2004-09-04 01:23:38Z capttofu $ 
+#   $Id: 50commit.t 8435 2006-12-23 19:03:49Z capttofu $ 
 #
 #   This is testing the transaction support.
 #

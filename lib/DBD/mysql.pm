@@ -9,7 +9,7 @@ use DynaLoader();
 use Carp ();
 @ISA = qw(DynaLoader);
 
-$VERSION = '3.0008_1';
+$VERSION = '4.00';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -397,11 +397,13 @@ sub column_info {
 	}
 	elsif ($basetype =~ /date|time/) { # date/datetime/time/timestamp
 	    if ($basetype eq 'time' or $basetype eq 'date') {
-		$info->{DATA_TYPE}   = ($basetype eq 'time') ? SQL_TYPE_TIME() : SQL_TYPE_DATE();
+		#$info->{DATA_TYPE}   = ($basetype eq 'time') ? SQL_TYPE_TIME() : SQL_TYPE_DATE();
+                $info->{DATA_TYPE}   = ($basetype eq 'time') ? SQL_TIME() : SQL_DATE(); 
 		$info->{COLUMN_SIZE} = ($basetype eq 'time') ? 8 : 10;
 	    }
 	    else { # datetime/timestamp
-		$info->{DATA_TYPE}     = SQL_TYPE_TIMESTAMP();
+		#$info->{DATA_TYPE}     = SQL_TYPE_TIMESTAMP();
+		$info->{DATA_TYPE}     = SQL_TIMESTAMP();
 		$info->{SQL_DATA_TYPE} = SQL_DATETIME();
 	        $info->{SQL_DATETIME_SUB} = $info->{DATA_TYPE} - ($info->{SQL_DATA_TYPE} * 10);
 		$info->{COLUMN_SIZE}   = ($basetype eq 'datetime') ? 19 : $type_params[0] || 14;
@@ -622,10 +624,11 @@ A C<database> must always be specified.
 =item port
 
 The hostname, if not specified or specified as '' or 'localhost', will
-default to an MySQL daemon running on the local machine using the default
-for the UNIX socket.
+default to a MySQL server running on the local machine using the default for
+the UNIX socket. To connect to a MySQL server on the local machine via TCP,
+you must specify the loopback IP address (127.0.0.1) as the host.
 
-Should the MySQL daemon be running on a non-standard port number,
+Should the MySQL server be running on a non-standard port number,
 you may explicitly state the port number to connect to in the C<hostname>
 argument, by concatenating the I<hostname> and I<port number> together
 separated by a colon ( C<:> ) character or by using the  C<port> argument.
@@ -742,14 +745,17 @@ disallow LOCAL.)
 
 =item Prepared statement support (server side prepare)
 
-As of 3.0002_1, server side prepare statements are on by default (if your
-server is >= 4.1.3)
+As of 3.0002_1, server side prepare statements were on by default (if your
+server was >= 4.1.3). As of 3.0009, they were off by default again due to 
+issues with the prepared statement API (all other mysql connectors are
+set this way until C API issues are resolved). The requirement to use
+prepared statements still remains that you have a server >= 4.1.3
 
-To use driver emulated prepared statements, all you need to do is set the variable 
-mysql_emulated_prepare in the connect:
+To use server side prepared statements, all you need to do is set the variable 
+mysql_server_prepare in the connect:
 
 $dbh = DBI->connect(
-                    "DBI:mysql:database=test;host=localhost;mysql_emulated_prepare=1",
+                    "DBI:mysql:database=test;host=localhost;mysql_server_prepare=1",
                     "",
                     "",
                     { RaiseError => 1, AutoCommit => 1 }
@@ -757,10 +763,14 @@ $dbh = DBI->connect(
 
 * Note: delimiter for this param is ';'
 
+There are many benefits to using server side prepare statements, mostly if you are 
+performing many inserts because of that fact that a single statement is prepared 
+to accept multiple insert values.
+
 To make sure that the 'make test' step tests whether server prepare works, you just
 need to export the env variable MYSQL_SERVER_PREPARE:
 
-export MYSQL_EMULATED_PREPARE=1
+export MYSQL_SERVER_PREPARE=1
 
 
 =item mysql_embedded_options
@@ -800,7 +810,7 @@ $testdsn="DBI:mysqlEmb:database=test;mysql_embedded_groups=embedded_server,commo
     @dbs = $drh->func($hostname, $port, '_ListDBs');
     @dbs = $dbh->func('_ListDBs');
 
-Returns a list of all databases managed by the MySQL daemon
+Returns a list of all databases managed by the MySQL server
 running on C<$hostname>, port C<$port>. This is a legacy
 method.  Instead, you should use the portable method
 

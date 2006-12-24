@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 40listfields.t 6011 2006-05-03 22:20:21Z capttofu $
+#   $Id: 40listfields.t 8435 2006-12-23 19:03:49Z capttofu $
 #
 #   This is a test for statement attributes being present appropriately.
 #

@@ -54,13 +54,13 @@ $dbh->disconnect();
 
 if (! $test_procs)
 {
-  print "1..0 # Skip MySQL Server version doesn't support stored procedures\n";
+  print "1..0 # Skip MySQL Server version $row->[0] doesn't support stored procedures\n";
   exit(0);
 }
 
 while(Testing())
 {
-  my $table;
+  my ($table, $rows);
   Test($state or $dbh = DBI->connect($test_dsn, $test_user, $test_password,
   { RaiseError => 1, AutoCommit => 1})) or ServerError() ;
 
@@ -105,24 +105,81 @@ EOPROC
   Test($state or $sth->execute()) or 
     DbiError($dbh->err, $dbh->errstr);
 
-#
-#    my $proc_call = 'CALL testproc()';
-#    Test(($state && !$supported) or $sth = $dbh->prepare($proc_call)) or
-#    DbiError($dbh->err, $dbh->errstr);
-#
-#    Test($state or $sth->execute()) or 
-#      DbiError($dbh->err, $dbh->errstr);
-#
-#    my $proc_select = 'SELECT @a';
-#    Test($state or $sth = $dbh->prepare($proc_select)) or
-#    DbiError($dbh->err, $dbh->errstr);
-#
-#    Test($state or $sth->execute()) or 
-#      DbiError($dbh->err, $dbh->errstr);
+
+    my $proc_call = 'CALL testproc()';
+    Test($state or $sth = $dbh->prepare($proc_call)) or
+    DbiError($dbh->err, $dbh->errstr);
+
+    Test($state or $sth->execute()) or 
+      DbiError($dbh->err, $dbh->errstr);
+
+    my $proc_select = 'SELECT @a';
+    Test($state or $sth = $dbh->prepare($proc_select)) or
+    DbiError($dbh->err, $dbh->errstr);
+
+    Test($state or $sth->execute()) or 
+      DbiError($dbh->err, $dbh->errstr);
 
   Test($state or ($sth=$dbh->prepare("DROP PROCEDURE testproc"))) or
     DbiError($dbh->err, $dbh->errstr);
 
   Test($state or $sth->execute()) or 
     DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or $dbh->do("drop procedure if exists test_multi_sets")) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or $dbh->do("
+        create procedure test_multi_sets ()
+        deterministic
+        begin
+        select user() as first_col;
+        select user() as first_col, now() as second_col;
+        select user() as first_col, now() as second_col, now() as third_col;
+        end")) or
+    DbiError($dbh->err, $dbh->errstr);
+
+
+  Test($state or $sth = $dbh->prepare("call test_multi_sets()")) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or $rows = $sth->execute()) or 
+    DbiError($dbh->err, $dbh->errstr);
+
+  my $dataset;
+
+  Test($state or $dataset = $sth->fetchrow_arrayref()) or 
+    DbiError($dbh->err, $dbh->errstr);
+  
+  Test($state or ($dataset && @$dataset == 1)) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  my $more_results;
+
+  Test($state or $more_results =  $sth->more_results()) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or $dataset = $sth->fetchrow_arrayref()) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or ($dataset && @$dataset == 2)) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or $more_results =  $sth->more_results()) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or $dataset = $sth->fetchrow_arrayref()) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or ($dataset && @$dataset == 3)) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or !($more_results =  $sth->more_results())) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  $SIG{__WARN__} = sub { die @_ };
+
+  Test($state or $dbh->disconnect()) or 
+    DbiError($dbh->err, $dbh->errstr);
+
 }

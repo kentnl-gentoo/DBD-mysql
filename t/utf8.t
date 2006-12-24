@@ -9,9 +9,10 @@
 #
 #   Make -w happy
 #
-use vars qw($test_dsn $test_user $test_password $mdriver $verbose $state
-	    $dbdriver);
+use vars qw($test_dsn $test_utf8 $test_user $test_password $mdriver $verbose $state
+	    $dbdriver $row $dbh $sth);
 use vars qw($COL_NULLABLE $COL_KEY);
+$test_utf8 = 1;
 $test_dsn = '';
 $test_user = '';
 $test_password = '';
@@ -45,6 +46,34 @@ sub ServerError() {
     exit 10;
 }
 
+$dbh = DBI->connect($test_dsn, $test_user, $test_password,
+  { RaiseError => 1, AutoCommit => 1}) or ServerError() ;
+
+$sth= $dbh->prepare("select version()") or
+  DbiError($dbh->err, $dbh->errstr);
+
+$sth->execute() or 
+  DbiError($dbh->err, $dbh->errstr);
+
+$row= $sth->fetchrow_arrayref() or
+  DbiError($dbh->err, $dbh->errstr);
+
+# 
+# DROP/CREATE PROCEDURE will give syntax error 
+# for these versions
+#
+if ($row->[0] =~ /^4\.0/ || $row->[0] =~ /^3/)
+{
+  $test_utf8= 0;
+}
+$sth->finish();
+$dbh->disconnect();
+
+if (! $test_utf8)
+{
+  print "1..0 # Skip MySQL Server version $row->[0] doesn't support this particular utf8 test\n";
+  exit(0);
+}
 #
 #   Main loop; leave this untouched, put tests after creating
 #   the new table.

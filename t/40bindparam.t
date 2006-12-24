@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 40bindparam.t 7820 2006-09-10 12:52:09Z capttofu $ 
+#   $Id: 40bindparam.t 8435 2006-12-23 19:03:49Z capttofu $ 
 #
 #   This is a skeleton test. For writing new tests, take this file
 #   and modify/extend it.

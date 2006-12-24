@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 10dsnlist.t 7820 2006-09-10 12:52:09Z capttofu $ 
+#   $Id: 10dsnlist.t 8435 2006-12-23 19:03:49Z capttofu $ 
 #
 #   This test creates a database and drops it. Should be executed
 #   after listdsn.

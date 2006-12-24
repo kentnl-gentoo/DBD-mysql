@@ -39,7 +39,7 @@ Getopt::Long::GetOptions(
     "cflags=s",
     "libs=s",
     "verbose",
-    "ps-protocol=s",
+    "ps-protocol",
     "nocatchstderr",
     "ssl!",
     "nofoundrows!",
@@ -49,9 +49,6 @@ Getopt::Long::GetOptions(
     ) || die Usage();
 
 my $source = {};
-
-# ps-protocol is set to 1 by default in this dev release
-$opt->{'ps-protocol'}= 1 if (! exists $opt->{'ps-protocol'});
 
 if ($^O !~ /mswin32/i)
 {
@@ -186,9 +183,9 @@ sleep 5;
 
 eval { require File::Spec };
 my $ps_dsn= "";
-if (exists $opt->{'ps-protocol'} && $opt->{'ps-protocol'} == 0) 
+if (exists $opt->{'ps-protocol'}) 
 {
-  $ps_dsn = "\$::test_dsn .= \";mysql_emulated_prepare=1\";\n"; 
+  $ps_dsn = "\$::test_dsn .= \";mysql_server_prepare=1\";\n"; 
 }
 my $fileName = $@ ?
   "t/mysql.mtest" : File::Spec->catfile("t", "mysql.mtest");
@@ -410,9 +407,9 @@ Possible options are:
   --nofoundrows          Change the behavior of \$sth->rows() so that it
   			 returns the number of rows physically modified 
 			 instead of the rows matched
-  --ps-protocol=<1|0>    Toggle the use of driver emulated prepared statements
+  --ps-protocol          Toggle the use of driver emulated prepared statements
                          prepare, requires MySQL server >= 4.1.3 for
-                         server side prepared statements, on by default 
+                         server side prepared statements, off by default 
   --force-embedded       Force to build embedded version of driver
   --ssl			 Enable SSL support
   --help                 Print this message and exit
@@ -450,7 +447,7 @@ sub Configure
 
   if ($param eq 'ps-protocol')
   {
-      $source->{$param}= ($opt->{$param} == 0) ? "User's choice" : 'default';
+      $source->{$param}= ($opt->{$param}) ? "User's choice" : 'default';
       return;
   }
   if (exists($opt->{$param}))
