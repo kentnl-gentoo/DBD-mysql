@@ -1,3 +1,43 @@
+<unreleased> Jim Winstead <jimw@mysql.com> Patrick Galbraith <patg@grazr.com> (4.001)
+* Fix handling of unsigned integer values in result sets when using
+  server-side prepared statements (they were not retrieved at all).
+* Fix handling of signed integer values when using server-side prepared
+  statements (they were being forced to unsigned values).
+* Do not tell Perl that the contents of binary fields are UTF-8.
+  [rt.cpan.org #22123], original patch by Joost Diepenmaat
+* Fix double-free of bound parameters when freeing statements. (Bug #20559)
+* Make sure to handle "magical" values in a couple of places. (Bug #20104)
+* Update the hints about what to do when zlib is found missing while
+  linking. (Bug #13803, reported by Philip Stoev)
+* Explicitly initialize the MySQL client library to avoid possible race
+  conditions in a multithreaded application. (Bug #21792)
+* Fix warning when no connection attributes are passed to the connect
+  method (Bug #17323, reported by Phil Randal)
+* Removed redundant warnings when commit or rollback is called while
+  AutoCommit is enabled. [rt.cpan.org #15802], reported by Tyler MacDonald
+* Report correct type for decimal columns from MySQL 5.0 and later
+  [rt.cpan.org #18294], reported by Ray Zimmerman
+* Fix t/40bindparam.t to work when ANSI_QUOTES SQL_MODE is set.
+  [rt.cpan.org #21521], reported by David Wheeler
+* Return a statement handle with an error when column_info is called on
+  a table that does not exist. (Bug #23974, patch by Philip Stoev)
+* Fix handling of table names with characters that did not match /\w/ in
+  the column_info method. (Bug #22005, reported by Philip Stoev)
+* Fix handling of negative integers bound to a column marked as SQL_INTEGER.
+  [rt.cpan.org #18976], patch from Mike Schilli.
+* Add support for the primary_key_info method. [rt.cpan.org #8541]
+* Fixed Bundle::DBD::mysql to only include modules required for using
+  DBD::mysql, not the old Mysql package. [rt.cpan.org #24096]
+* Updated Makefile.PL to not include files in .svn directories
+* Fixed various compile warnings in mysql.xs (ISO C)
+* Cleaned up stored procedure examples, made strict
+* Fixed bug that blew away subsequent result sets if you fetched all rows, only in
+  result sets that had more than one row
+* Added test for bug #14979 http://rt.cpan.org/Ticket/Display.html?id=14979, which still
+  fails
+* Tested with ALL mysql versions, fixed 40types, 40bind_param tests to work with 4.0, 4.1
+* Fixed dbdimp.c to not test for MYSQL_DATA_TRUNCATED unless >= mysql 5.0 
+
 2006-12-22 Patrick Galbraith <patg@patg.net>, Alexey Stroganov (4.00)
 * Added Alexey Stroganov's patch which fixes varying number of columns in 
   multiple result sets. Added new test cases to 80procs.t based of his
@@ -956,7 +996,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog 8444 2006-12-24 14:38:29Z capttofu $
+$Id: ChangeLog 8518 2007-01-06 20:48:33Z capttofu $
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 

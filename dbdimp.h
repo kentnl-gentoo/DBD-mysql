@@ -12,7 +12,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h 8436 2006-12-23 21:36:44Z capttofu $
+ *  $Id: dbdimp.h 8513 2007-01-05 01:07:31Z jimw $
  */
 
 /*
@@ -187,9 +187,9 @@ typedef struct imp_sth_fbh_st {
     unsigned long  length;
     bool           is_null;
     char           *data;
-    int           charsetnr; 
-    double        ddata;
-    long          ldata;
+    int            charsetnr;
+    double         ddata;
+    long           ldata;
 } imp_sth_fbh_t;
 
 

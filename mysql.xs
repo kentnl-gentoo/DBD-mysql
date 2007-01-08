@@ -1,6 +1,6 @@
 /* Hej, Emacs, this is -*- C -*- mode!
 
-   $Id: mysql.xs 8436 2006-12-23 21:36:44Z capttofu $
+   $Id: mysql.xs 8519 2007-01-06 23:39:24Z jimw $
 
    Copyright (c) 2003      Rudolf Lippan
    Copyright (c) 1997-2003 Jochen Wiedmann
@@ -380,6 +380,9 @@ do(dbh, statement, attr=Nullsv, ...)
           col_type= (stmt->fields) ? stmt->fields[i].type : MYSQL_TYPE_STRING;
 
           switch (col_type) {
+#if MYSQL_VERSION_ID > 50003
+          case MYSQL_TYPE_NEWDECIMAL:
+#endif
           case MYSQL_TYPE_DECIMAL:
             param_type= SQL_DECIMAL;
             buffer_type= MYSQL_TYPE_DOUBLE;
@@ -447,9 +450,15 @@ do(dbh, statement, attr=Nullsv, ...)
             break;
 
           case MYSQL_TYPE_BLOB:
-            buffer_type= MYSQL_TYPE_STRING;
+            buffer_type= MYSQL_TYPE_BLOB;
             param_type= SQL_BINARY;
             break;
+
+          case MYSQL_TYPE_GEOMETRY:
+            buffer_type= MYSQL_TYPE_BLOB;
+            param_type= SQL_BINARY;
+            break;
+
 
           default:
             buffer_type= MYSQL_TYPE_STRING;
@@ -694,6 +703,8 @@ dbd_mysql_get_info(dbh, sql_info_type)
     SV* retsv=NULL;
     bool using_322=0;
 
+    if (SvMAGICAL(sql_info_type))
+        mg_get(sql_info_type);
 
     if (SvOK(sql_info_type))
     	type = SvIV(sql_info_type);
@@ -726,13 +737,13 @@ dbd_mysql_get_info(dbh, sql_info_type)
 	    break;
 	case SQL_MAXIMUM_TABLES_IN_SELECT:
 	    /* newSViv((sizeof(int) > 32) ? sizeof(int)-1 : 31 ); in general? */
-	    newSViv((sizeof(int) == 64 ) ? 63 : 31 );
+	    retsv= newSViv((sizeof(int) == 64 ) ? 63 : 31 );
 	    break;
 	case SQL_MAX_TABLE_NAME_LEN:
-	    newSViv(NAME_LEN);
+	    retsv= newSViv(NAME_LEN);
 	    break;
 	case SQL_SERVER_NAME:
-	    newSVpv(imp_dbh->mysql.host_info,strlen(imp_dbh->mysql.host_info));
+	    retsv= newSVpv(imp_dbh->mysql.host_info,strlen(imp_dbh->mysql.host_info));
 	    break;
     	default:
  		croak("Unknown SQL Info type: %i",dbh);

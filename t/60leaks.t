@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 60leaks.t 8435 2006-12-23 19:03:49Z capttofu $
+#   $Id: 60leaks.t 8489 2006-12-29 00:30:35Z jimw $
 #
 #   This is a skeleton test. For writing new tests, take this file
 #   and modify/extend it.
@@ -11,9 +11,14 @@ my $COUNT_PREPARE = 10000;  # Number of prepare/execute/finish iterations
 
 
 my $haveStorable;
+
+if (!$ENV{SLOW_TESTS}) {
+    print "1..0 # Skip \$ENV{SLOW_TESTS} is not set\n";
+    exit 0;
+}
 eval { require Proc::ProcessTable; };
-if ($@  ||  !$ENV{SLOW_TESTS}) {
-    print "1..0 # Skip \$ENV{SLOW_TESTS} is not set or Proc::ProcessTable not installed \n";
+if ($@) {
+    print "1..0 # Skip Proc::ProcessTable not installed \n";
     exit 0;
 }
 eval { require Storable };
