@@ -12,7 +12,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h 8513 2007-01-05 01:07:31Z jimw $
+ *  $Id: dbdimp.h 9183 2007-03-01 15:47:39Z capttofu $
  */
 
 /*
@@ -36,6 +36,12 @@
 #define NEW_DATATYPE_VERSION 50003
 #define SSL_VERIFY_VERSION 50023
 #define MYSQL_VERSION_5_0 50001
+/* This is to avoid the ugly #ifdef mess in dbdimp.c */
+#if MYSQL_VERSION_ID < SQL_STATE_VERSION
+#define mysql_sqlstate(svsock) (NULL)
+#endif
+
+
 
 /*
  *  The following are return codes passed in $h->err in case of

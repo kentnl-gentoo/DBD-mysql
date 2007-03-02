@@ -1,4 +1,32 @@
-<unreleased> Jim Winstead <jimw@mysql.com> Patrick Galbraith <patg@grazr.com> (4.001)
+2007-02-24 Patrick Galbraith <patg@grazr.com> Jim Winstead <jimw@mysql.com> (4.002)
+* Rewrote table_info method to support all arguments (previously it would
+  only ever return all of the tables in the current database, no matter what
+  was specified)
+* Fixed version to be a string, which was previously a float, which caused
+  problems for certain locales
+* Fixed bug #23974. $dbh->column_info now returns empty arrayref upon table not
+  existing.  Much thanks to Tim Bunce for help fixing the problem in mysql.pm
+  vs. dbdimp.c
+* Removed #ifdefs for do error (sqlstate being passed as last arg depending on
+  version)
+* Fixed insertid test to work with auto_increment_increment replication setup.
+* Patch from Tim Bunce fixing do() not set $dbh->{Statement} attribute,
+  which prevented DBD::Profile from giving correct results for calls to do()
+  and causing ShowErrorStatement to possibly report the wrong statement in the
+  error message 
+* Patch from Tim Bunce clearing out the sth attribute cache when switching
+  between result, sets which prevented the adjustedment of NUM_OF_FIELDS
+* Cleanup of several unused variables
+* Added support for wildcards in last argument of column_info().
+* Add mysql_is_auto_increment to results of column_info(). (Bug #26603,
+  original patch from Dave Rolsky)
+* Return the correct table type for both tables and views from the table_info()
+  method. (Bug #26603, original patch from Dave Rolsky)
+* Add implementation of foreign_key_info() (Bug #26604, original patch from
+  Dave Rolsky, and final implementation based on Connector/J code)
+
+
+2007-1-8 Jim Winstead <jimw@mysql.com> Patrick Galbraith <patg@grazr.com> (4.001)
 * Fix handling of unsigned integer values in result sets when using
   server-side prepared statements (they were not retrieved at all).
 * Fix handling of signed integer values when using server-side prepared
@@ -57,6 +85,10 @@
   when using with mod_perl
 
 2006-10-10 Patrick Galbraith <patg@patg.net> (3.0008_1)
+* Added patch for SSL Verify Certificate (Thanks Eric Chen!)
+* Added multiple fixes to dbd_st_prepare which fixed variable overwrite
+  and unset increment counter. Also improved loop which checks statements
+  for presence of "LIMIT" by using a pointer as opposed to char array
 * Added patch for SSL Verify Certificate (Thanks Eric Chen!)
 * Added multiple fixes to dbd_st_prepare which fixed variable overwrite
   and unset increment counter. Also improved loop which checks statements
@@ -996,7 +1028,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog 8518 2007-01-06 20:48:33Z capttofu $
+$Id: ChangeLog 9188 2007-03-01 21:13:52Z jimw $
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 
@@ -1252,10 +1284,6 @@ Original ChangeLog:
 
 24/11/95:13:01	Added 'NumRows' method to statement handles to return the
 		number of rows returned ( or affected ) by a statement.o
-
-		pre-release distributed to ANDK
-
-25/11/95:09:20	Real release released! No major problems reported.
 
 30/12/95:18:10	Altered mSQL.pm to allow for hostname:port style connections
 		to known remote port machines. Sets ENV var since the

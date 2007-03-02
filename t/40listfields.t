@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 40listfields.t 8487 2006-12-28 23:35:52Z jimw $
+#   $Id: 40listfields.t 9183 2007-03-01 15:47:39Z capttofu $
 #
 #   This is a test for statement attributes being present appropriately.
 #
@@ -75,14 +75,13 @@ while (Testing()) {
     Test($state or $dbh->column_info(undef,undef,$table,'%'));
 
     #
-    # Bug #23974: column_info does not return error when table does not exist
+    # Bug #23974: "column_info does not return error when table does not exist"
+    # DBI spec specifies that empty ref should be returned, not error 
     #
-    {
-     local $dbh->{PrintError}= 0;
-      Test($state or
-           ($sth= $dbh->column_info(undef,undef,"this_does_not_exist",'%')));
-      Test($sth and $sth->err());
-    }
+    Test($state or
+        ($sth= $dbh->column_info(undef,undef,"this_does_not_exist",'%')));
+
+    Test($sth and ! $sth->err());
 
     Test($state or $sth = $dbh->prepare("SELECT * FROM $table"))
 	   or DbiError($dbh->err, $dbh->errstr);

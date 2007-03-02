@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 20createdrop.t 8435 2006-12-23 19:03:49Z capttofu $
+#   $Id: 20createdrop.t 9183 2007-03-01 15:47:39Z capttofu $
 #
 #   This is a skeleton test. For writing new tests, take this file
 #   and modify/extend it.
@@ -71,6 +71,12 @@ while (Testing()) {
     #
     Test($state or $dbh->do("DROP TABLE $table"))
 	   or DbiError($dbh->err, $dbh->errstr);
+
+    #
+    #   ... check do() sets $dbh->{Statement}
+    #
+    Test($state or $dbh->{Statement} eq "DROP TABLE $table")
+	   or DbiError(1, "do() didn't set Statement attribute");
 
     #
     #   Finally disconnect.
