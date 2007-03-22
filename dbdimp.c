@@ -8,7 +8,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.c 9183 2007-03-01 15:47:39Z capttofu $
+ *  $Id: dbdimp.c 9279 2007-03-20 02:45:21Z capttofu $
  */
 
 
@@ -1558,6 +1558,16 @@ MYSQL *mysql_dr_connect(SV* dbh, MYSQL* sock, char* mysql_socket, char* host,
                           imp_dbh->use_mysql_use_result);
         }
 
+#if defined(CLIENT_MULTI_STATEMENTS)
+	if ((svp = hv_fetch(hv, "mysql_multi_statements", 22, FALSE)) && *svp)
+        {
+	  if (SvTRUE(*svp))
+	    client_flag |= CLIENT_MULTI_STATEMENTS;
+          else
+            client_flag &= ~CLIENT_MULTI_STATEMENTS;
+	}
+#endif
+
 #if MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
 	/* took out  client_flag |= CLIENT_PROTOCOL_41; */
 	/* because libmysql.c already sets this no matter what */
@@ -2792,6 +2802,7 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
       hv_delete((HV*)SvRV(sth), "mysql_table", 11, G_DISCARD);
       hv_delete((HV*)SvRV(sth), "mysql_type", 10, G_DISCARD);
       hv_delete((HV*)SvRV(sth), "mysql_type_name", 15, G_DISCARD);
+      hv_delete((HV*)SvRV(sth), "mysql_warning_count", 20, G_DISCARD);
 
       /* Adjust NUM_OF_FIELDS - which also adjusts the row buffer size */
       DBIc_NUM_FIELDS(imp_sth)= 0; /* for DBI <= 1.53 */
@@ -2883,19 +2894,16 @@ my_ulonglong mysql_st_internal_execute(
       bind_type_guessing=0;
   }
 
+  if (dbis->debug >= 2)
+    PerlIO_printf(DBILOGFP, "mysql_st_internal_execute MYSQL_VERSION_ID %d\n",
+                  MYSQL_VERSION_ID );
+
   salloc= parse_params(svsock,
                               sbuf,
                               &slen,
                               params,
                               num_params,
                               bind_type_guessing);
-
-  if (dbis->debug >= 2)
-    PerlIO_printf(DBILOGFP, "mysql_st_internal_execute\n");
-
-  if (dbis->debug >= 2)
-    PerlIO_printf(DBILOGFP, "mysql_st_internal_execute MYSQL_VERSION_ID %d\n",
-                  MYSQL_VERSION_ID );
 
   if (salloc)
   {
@@ -3203,6 +3211,8 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
       imp_sth->fetch_done= 0;
     }
   }
+
+  imp_sth->warning_count = mysql_warning_count(&imp_dbh->mysql);
 
   if (dbis->debug >= 2)
   {
@@ -3647,7 +3657,13 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
         sv_setpvn(sv, col, len);
 	/* UTF8 */
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
+
+#if MYSQL_VERSION_ID >= FIELD_CHARSETNR_VERSION 
+  /* see bottom of: http://www.mysql.org/doc/refman/5.0/en/c-api-datatypes.html */
+        if (imp_dbh->enable_utf8 && fields[i].charsetnr != 63)
+#else
 	if (imp_dbh->enable_utf8 && !(fields[i].flags & BINARY_FLAG))
+#endif
 	  sv_utf8_decode(sv);
 #endif
 	/* END OF UTF8 */
@@ -4144,6 +4160,10 @@ dbd_st_FETCH_internal(
         retsv= ST_FETCH_AV(AV_ATTRIB_MAX_LENGTH);
       else if (strEQ(key, "mysql_use_result"))
         retsv= boolSV(imp_sth->use_mysql_use_result);
+      break;
+    case 19:
+      if (strEQ(key, "mysql_warning_count"))
+        retsv= sv_2mortal(newSViv((IV) imp_sth->warning_count));
       break;
     case 20:
       if (strEQ(key, "mysql_server_prepare"))

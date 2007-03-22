@@ -1,7 +1,23 @@
-2007-3-1 Patrick Galbraith <patg@grazr.com> Jim Winstead <jimw@mysql.com> (4.002,4.003)
+2007-3-22 Patrick Galbraith <patg@grazr.com> Jim Winstead <jimw@mysql.com> (4.004)
+* Work around a bug in old 3.23 servers by specifying NOT NULL for fields used
+  as a primary key in tests. (Bug #20325, reported by Julian Ladisch)
+* Add support for mysql_warning_count statement handle attribute. (Bug #25457,
+  patch from Philip Stoev)
+* Add support for mysql_multi_statements connection option. (RT #12322, based
+  on patch from Doug Morris)
 * Had to bump to 4.003 do to print statement in mysql.pm that made it 
   into the dist. Even though you can delete a file on CPAN, you cannot 
   re-upload it if it's the same name. Mea Culpa.
+* UTF8-Flag not set with flag mysql_enable_utf8 and column collation utf8_bin patch,
+  Joost Diepenmaat, (RT #24738)
+* Fixed do_error definition (Scott Hildreth, Tim Bunce)
+* Conversion of test suite to Test::More
+
+2007-3-5 Patrick Galbraith <patg@grazr.com> Jim Winstead <jimw@mysql.com> (4.003)
+* Fix inclusion of non-primary keys in primary_key_info. (Bug #26786,
+  reported and patch by Dave Rolsky)
+
+2007-3-1 Patrick Galbraith <patg@grazr.com> Jim Winstead <jimw@mysql.com> (4.002)
 * Fix re-exec of Makefile.PL when forcing $ENV{LANG} to 'C'. (RT #25233,
   reported by Slaven Rezic)
 * Rewrote table_info method to support all arguments (previously it would
@@ -9,9 +25,9 @@
   was specified)
 * Fixed $DBD::mysql::VERSION to be a string instead of a float, which caused
   problems for certain locales
-* Fixed bug #23974. $dbh->column_info now returns empty arrayref upon table not
-  existing.  Much thanks to Tim Bunce for help fixing the problem in mysql.pm
-  vs. dbdimp.c
+* Fixed bug #23974. $dbh->column_info now returns handle with no rows upon 
+  table not existing.  Much thanks to Tim Bunce for help fixing the problem
+  in mysql.pm vs. dbdimp.c
 * Removed #ifdefs for do error (sqlstate being passed as last arg depending on
   version)
 * Fixed insertid test to work with auto_increment_increment replication setup.
@@ -1029,7 +1045,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog 9191 2007-03-01 23:28:29Z jimw $
+$Id: ChangeLog 9299 2007-03-22 22:14:29Z capttofu $
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 

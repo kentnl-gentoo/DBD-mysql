@@ -12,7 +12,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h 9183 2007-03-01 15:47:39Z capttofu $
+ *  $Id: dbdimp.h 9284 2007-03-20 13:47:18Z capttofu $
  */
 
 /*
@@ -29,6 +29,7 @@
  * statements as opposed to emulation in the driver
 */
 #define SQL_STATE_VERSION 40101
+#define FIELD_CHARSETNR_VERSION 40101 /* should equivalent to 4.1.0  */
 #define MULTIPLE_RESULT_SET_VERSION 40102
 #define SERVER_PREPARE_VERSION 40103
 #define LIMIT_PLACEHOLDER_VERSION 50100
@@ -237,6 +238,7 @@ struct imp_sth_st {
     long  long_buflen;    /* length for long/longraw (if >0)	    */
     bool  long_trunc_ok;  /* is truncating a long an error	    */
     my_ulonglong insertid; /* ID of auto insert                      */
+    int   warning_count;  /* Number of warnings after execute()     */
     imp_sth_ph_t* params; /* Pointer to parameter array             */
     AV* av_attr[AV_ATTRIB_LAST];/*  For caching array attributes        */
     int   use_mysql_use_result;  /*  TRUE if execute should use     */
@@ -282,11 +284,8 @@ struct imp_sth_st {
 #endif
 
 #include <dbd_xsh.h>
-#if MYSQL_VERSION_ID >= SQL_STATE_VERSION
 void    do_error (SV* h, int rc, const char *what, const char *sqlstate);
-#else
-void    do_error (SV* h, int rc, const char *what);
-#endif
+
 SV	*dbd_db_fieldlist (MYSQL_RES* res);
 
 void    dbd_preparse (imp_sth_t *imp_sth, SV *statement);
