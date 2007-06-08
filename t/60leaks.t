@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 60leaks.t 8489 2006-12-29 00:30:35Z jimw $
+#   $Id: 60leaks.t 9633 2007-06-08 12:54:26Z capttofu $
 #
 #   This is a skeleton test. For writing new tests, take this file
 #   and modify/extend it.
@@ -77,13 +77,11 @@ while (Testing()) {
 		      . "Check that '$test_dsn' references a valid database"
 		      . " name.\nDBI error message: $DBI::errstr");
 
-    #
-    #   Find a possible new table name
-    #
-    Test($state or $table = FindNewTable($dbh))
-	   or ErrMsgF("Cannot determine a legal table name: Error %s.\n",
-		      $dbh->errstr);
+    $table= 't1';
 
+    Test($state or $dbh->do("DROP TABLE IF EXISTS $table"))
+	   or ErrMsgF("Cannot DROP test table $table: %s.\n",
+		      $dbh->errstr);
     #
     #   Create a new table; EDIT THIS!
     #

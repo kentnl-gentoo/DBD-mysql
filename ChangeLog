@@ -1,3 +1,21 @@
+2007-3-22 Patrick Galbraith <patg@grazr.com> (4.005)
+
+* Fixed mysql_warning issue < 4.1 (reminers, patches, help from ROAM, (issue 25713)
+* makerealclean patch from ROAM (issue #25714)
+* sqlstate cleanup patch from ROAM
+* Replaced all references to dbis to use imp_xxh per DBI best practices
+* Fix to dbd_st_destroy - added back previously removed 'free everything' code which 
+  had been moved to dbd_st_finish, causing a crash upon freeing of bind values 
+  after all rows resulting from one execution of a query have been fetched. This meant
+  that next attempt to execute the prepared statement would segfault. This
+  work thanks to Rainer Weikusat!
+* Removed all 'FindNewTable' calls in all tests. Just use 't1' for all tests to 
+  simplify things. Plus, this is how MySQL internall tests.
+* Better 'skip test' logic in some tests that were still running when they shouldn't 
+  have been.
+
+
+
 2007-3-22 Patrick Galbraith <patg@grazr.com> Jim Winstead <jimw@mysql.com> (4.004)
 * Work around a bug in old 3.23 servers by specifying NOT NULL for fields used
   as a primary key in tests. (Bug #20325, reported by Julian Ladisch)
@@ -1045,7 +1063,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog 9299 2007-03-22 22:14:29Z capttofu $
+$Id: ChangeLog 9634 2007-06-08 12:57:29Z capttofu $
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 

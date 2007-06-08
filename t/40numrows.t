@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 40numrows.t 8435 2006-12-23 19:03:49Z capttofu $
+#   $Id: 40numrows.t 9633 2007-06-08 12:54:26Z capttofu $
 #
 #   This tests, whether the number of rows can be retrieved.
 #
@@ -60,12 +60,10 @@ while (Testing()) {
 					$test_password)))
 	or ServerError();
 
-    #
-    #   Find a possible new table name
-    #
-    Test($state or ($table = FindNewTable($dbh)))
-	   or DbiError($dbh->err, $dbh->errstr);
+    $table= 't1';
 
+    Test($state or $dbh->do("DROP TABLE IF EXISTS $table"))
+	   or DbiError($dbh->err, $dbh->errstr);
     #
     #   Create a new table; EDIT THIS!
     #

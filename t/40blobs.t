@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 40blobs.t 8435 2006-12-23 19:03:49Z capttofu $
+#   $Id: 40blobs.t 9633 2007-06-08 12:54:26Z capttofu $
 #
 #   This is a test for correct handling of BLOBS; namely $dbh->quote
 #   is expected to work correctly.
@@ -64,14 +64,12 @@ while (Testing()) {
     Test($state or $dbh = DBI->connect($test_dsn, $test_user, $test_password))
 	or ServerError();
 
-    #
-    #   Find a possible new table name
-    #
-    Test($state or $table = FindNewTable($dbh))
-	   or DbiError($dbh->error, $dbh->errstr);
-
     my($def);
+    my $table='t1';
     foreach $size (128) {
+  
+	Test($state or $dbh->do("DROP TABLE IF EXISTS $table"))
+	    or DbiError($dbh->err, $dbh->errstr);
 	#
 	#   Create a new table
 	#

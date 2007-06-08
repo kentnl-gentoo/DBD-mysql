@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 50chopblanks.t 8435 2006-12-23 19:03:49Z capttofu $
+#   $Id: 50chopblanks.t 9633 2007-06-08 12:54:26Z capttofu $
 #
 #   This driver should check whether 'ChopBlanks' works.
 #
@@ -58,13 +58,11 @@ while (Testing()) {
 					$test_password)))
 	   or ServerError();
 
-    #
-    #   Find a possible new table name
-    #
-    my $table = '';
-    Test($state or $table = FindNewTable($dbh))
-	   or ErrMsgF("Cannot determine a legal table name: Error %s.\n",
-		      $dbh->errstr);
+    my $table = 't1';
+	Test($state or $dbh->do("DROP TABLE IF EXISTS $table"))
+	    or ErrMsgF("Drop table $table failed", $dbh->errstr);
+
+
 
     #
     #   Create a new table; EDIT THIS!

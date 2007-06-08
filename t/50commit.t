@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 50commit.t 8435 2006-12-23 19:03:49Z capttofu $ 
+#   $Id: 50commit.t 9633 2007-06-08 12:54:26Z capttofu $ 
 #
 #   This is testing the transaction support.
 #
@@ -73,12 +73,10 @@ while (Testing()) {
 
     my $have_transactions = HaveTransactions($dbh);
 
-    #
-    #   Find a possible new table name
-    #
-    Test($state or $table = FindNewTable($dbh))
-	or ErrMsgF("Cannot determine a legal table name: Error %s.\n",
-		   $dbh->errstr);
+    $table= 't1';
+	  Test($state or $dbh->do("DROP TABLE IF EXISTS $table"))
+	    or ErrMsgF("Failed to drop table $table.\n",
+		       $dbh->err, $dbh->errstr);
 
     #
     #   Create a new table

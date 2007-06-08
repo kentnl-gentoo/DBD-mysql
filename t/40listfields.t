@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-#   $Id: 40listfields.t 9183 2007-03-01 15:47:39Z capttofu $
+#   $Id: 40listfields.t 9626 2007-06-01 02:44:03Z capttofu $
 #
 #   This is a test for statement attributes being present appropriately.
 #
@@ -56,6 +56,8 @@ while (Testing()) {
     #   Connect to the database
     Test($state or $dbh = DBI->connect($test_dsn, $test_user, $test_password))
 	or ServerError();
+
+    $dbh->{mysql_server_prepare}= 0;
 
     #
     # We use a hardcoded special table name to test for a regression of

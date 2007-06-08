@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-#   $Id: 70takeimp.t 8435 2006-12-23 19:03:49Z capttofu $
+#   $Id: 70takeimp.t 9633 2007-06-08 12:54:26Z capttofu $
 #
 #   This is a skeleton test. For writing new tests, take this file
 #   and modify/extend it.
@@ -148,9 +148,9 @@ sub read_write_test {
 
     #   Find a possible new table name
     #
-    my $table;
-    Test($state or $table = FindNewTable($dbh))
-	   or DbiError($dbh->err, $dbh->errstr);
+    my $table= 't1';
+    Test($state or $dbh->do("DROP TABLE IF EXISTS $table"))
+	or DbiError($dbh->err, $dbh->errstr);
 
     #
     #   Create a new table
