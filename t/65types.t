@@ -38,12 +38,14 @@ while(Testing())
     DBI->connect($test_dsn, $test_user, $test_password,
   { RaiseError => 1, AutoCommit => 1})) or ServerError() ;
 
-  $table= 't1'; 
+  Test($state or $table = FindNewTable($dbh)) or
+    DbiError($dbh->err, $dbh->errstr); 
+    
   Test($state or $dbh->do("drop table if exists $table")) or
     DbiError($dbh->err, $dbh->errstr); 
 
   Test($state or 
-    $dbh->do("create table $table (a int not null, primary key (a))")) or
+    $dbh->do("create table $table (a int, primary key (a))")) or
     DbiError($dbh->err, $dbh->errstr); 
 
   Test($state or 
@@ -73,4 +75,39 @@ while(Testing())
   Test($state or $sth->execute()) or 
     DbiError($dbh->err, $dbh->errstr);
 
+  Test($state or 
+    $dbh->do("create table $table (a int, b double, primary key (a))")) or
+    DbiError($dbh->err, $dbh->errstr); 
+
+  Test($state or 
+    $sth= $dbh->prepare("insert into $table values (?, ?)")) or
+    DbiError($dbh->err, $dbh->errstr); 
+
+  Test($state or
+    $sth->bind_param(1,"10000 ",DBI::SQL_INTEGER)) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or
+    $sth->bind_param(2,"1.22 ",DBI::SQL_DOUBLE)) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or
+    $sth->execute()) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or
+    $sth->bind_param(1,10001,DBI::SQL_INTEGER)) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or
+    $sth->bind_param(2,.3333333,DBI::SQL_DOUBLE)) or
+    DbiError($dbh->err, $dbh->errstr);
+  
+  Test ($state or
+    $sth->execute()) or
+    DbiError($dbh->err, $dbh->errstr);
+
+  Test($state or $sth=
+    $dbh->prepare("DROP TABLE $table")) or
+    DbiError($dbh->err, $dbh->errstr);
 }

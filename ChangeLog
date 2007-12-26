@@ -1,3 +1,9 @@
+2007-12-26 Patrick Galbraith <patg@grazr.com> (4.006)
+
+* Cleanups on OS X compile
+* Fixes to syntax errors on AIX
+* Removed test code that was leaving trace files around
+
 2007-3-22 Patrick Galbraith <patg@grazr.com> (4.005)
 
 * Fixed mysql_warning issue < 4.1 (reminers, patches, help from ROAM, (issue 25713)
@@ -1063,7 +1069,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog 9634 2007-06-08 12:57:29Z capttofu $
+$Id: ChangeLog 10459 2007-12-26 22:34:21Z capttofu $
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 

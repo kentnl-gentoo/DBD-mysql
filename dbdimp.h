@@ -12,7 +12,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h 9626 2007-06-01 02:44:03Z capttofu $
+ *  $Id: dbdimp.h 10412 2007-12-11 21:42:15Z capttofu $
  */
 
 /*
@@ -21,6 +21,7 @@
 #include <DBIXS.h>  /* installed by the DBI module                        */
 #include <mysql.h>  /* Comes with MySQL-devel */
 #include <mysqld_error.h>  /* Comes MySQL */
+
 #include <errmsg.h> /* Comes with MySQL-devel */
 
 /*

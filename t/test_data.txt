@@ -1,0 +1,145 @@
+!DOCTYPE html PUBLIC
+\"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n
+\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n<html
+xmlns=\"http://www.w3.org/1999/xhtml\" id=\"sixapart-standard\">\n<head>\n
+<meta http-equiv=\"Content-Type\" content=\"text/html;
+charset=<$MTPublishCharset$>\" />\n      <meta name=\"generator\"
+content=\"http://www.movabletype.org/\" />\n
+\n      <link rel=\"stylesheet\" href=\"<$MTBlogURL$>styles-site.css\"
+type=\"text/css\" />\n   <link rel=\"alternate\"
+type=\"application/atom+xml\" title=\"Atom\" href=\"<$MTBlogURL$>atom.xml\"
+/>\n        <link rel=\"alternate\" type=\"application/rss+xml\" title=\"RSS
+1.0\" href=\"<$MTBlogURL$>index.rdf\" />\n
+<link rel=\"alternate\" type=\"application/rss+xml\" title=\"RSS 2.0\"
+href=\"<$MTBlogURL$>index.xml\" />\n     \n      <title><$MTBlogName
+encode_html=\"1\"$></title>\n       \n      <link rel=\"EditURI\"
+type=\"application/rsd+xml\" title=\"RSD\" href=\"<$MTBlogURL$>rsd.xml\"
+/>\n     \n      <MTBlogIfCCLicense>\n
+<$MTCCLicenseRDF$>\n    </MTBlogIfCCLicense>\n</head>\n<body
+class=\"layout-two-column-right\">\n       <div id=\"container\">\n
+<div id=\"container-inner\" class=\"pkg\">\n            \n
+<div id=\"banner\">\n                           <div id=\"banner-inner\"
+class=\"pkg\">\n
+<h1 id=\"banner-header\"><a href=\"<$MTBlogURL$>\"
+accesskey=\"1\"><$MTBlogName encode_html=\"1\"$></a></h1>\n
+<h2 id=\"banner-description\"><$MTBlogDescription$></h2>\n
+</div>\n</div>\n                        \n                      <div
+id=\"pagebody\">\n
+<div id=\"pagebody-inner\" class=\"pkg\">\n
+<div id=\"alpha\">\n                                            <div
+id=\"alpha-inner\" class=\"pkg\">\n
+\n
+<MTEntries><$MTEntryTrackbackData$>\n
+\n                                                      <MTDateHeader><h2
+class=\"date-header\"><$MTEntryDate format=\"%x\"$></h2>\n
+</MTDateHeader>\n                                                       <div
+class=\"entry\" id=\"entry-<$MTEntryID$>\">\n
+<h3 class=\"entry-header\"><$MTEntryTitle$></h3>\n
+<div class=\"entry-content\">\n
+<div class=\"entry-body\">\n
+<$MTEntryBody$>\n
+<MTEntryIfExtended><p class=\"entry-more-link\">\n
+<a href=\"<$MTEntryPermalink$>#more\">Continue reading \"<$MTEntryTitle$>\"
+&raquo;</a>\n
+</p>\n             
+</MTEntryIfExtended>\n
+<p class=\"entry-footer\">\n
+<span class=\"post-footers\"><$MTEntryDate format=\"%X\"$></span> <span
+class=\"separator\">|</span> <a class=\"permalink\"
+href=\"<$MTEntryPermalink$>\">Permalink</a>\n
+<MTIfCommentsActive>\n
+ | <a href=\"<$MTEntryPermalink$>#comments\">Comments
+(<$MTEntryCommentCount$>)</a>\n
+</MTIfCommentsActive>\n
+<MTIfPingsActive>\n
+ | <a href=\"<$MTEntryPermalink$>#trackback\">TrackBacks
+(<$MTEntryTrackbackCount$>)</a>\n
+</MTIfPingsActive>\n
+</p>\n             
+</div>\n</div>\n   
+</div>\n
+</MTEntries>\n                                          </div>\n
+</div>\n                                        \n
+<div id=\"beta\">\n                                             <div
+id=\"beta-inner\" class=\"pkg\">\n
+<div class=\"module-search module\">\n
+<h2 class=\"module-header\">Search</h2>\n
+<div class=\"module-content\">\n
+<form method=\"get\" action=\"<$MTCGIPath$><$MTSearchScript$>\">\n
+<input type=\"hidden\" name=\"IncludeBlogs\" value=\"<$MTBlogID$>\" />\n
+<label for=\"search\" accesskey=\"4\">Search this site:</label><br />\n
+<input id=\"search\" name=\"search\" size=\"20\" /><br />\n
+<input type=\"submit\" value=\"Search\" />\n
+</form>\n          
+</div>\n</div>\n                                                        \n
+<MTIfArchiveTypeEnabled archive_type=\"Category\"><div
+class=\"module-categories module\">\n                                                            
+<h2 class=\"module-header\">Categories</h2>\n
+<div class=\"module-content\">\n
+<MTSubCategories>\n
+<MTSubCatIsFirst><ul class=\"module-list\"></MTSubCatIsFirst>\n
+<MTIfNonZero tag=\"MTCategoryCount\">\n
+<li class=\"module-list-item\"><a href=\"<$MTCategoryArchiveLink$>\" 
+title=\"<$MTCategoryDescription$>\"><MTCategoryLabel></a>\n
+<MTElse>\n
+<li class=\"module-list-item\"><MTCategoryLabel>\n
+</MTElse>\n
+</MTIfNonZero>\n
+<MTSubCatsRecurse>\n
+</li>\n
+<MTSubCatIsLast></ul></MTSubCatIsLast>\n
+</MTSubCategories>\n
+</div>\n                                                        </div>\n
+</MTIfArchiveTypeEnabled>\n
+\n                                                      
+<MTIfArchiveTypeEnabled archive_type=\"Monthly\">\n
+<div class=\"module-archives module\">\n
+<h2 class=\"module-header\"><a 
+href=\"<$MTBlogURL$>archives.html\">Archives</a></h2>\n                                                                  
+<div class=\"module-content\">\n
+<MTArchiveList archive_type=\"Monthly\">\n
+<MTArchiveListHeader>\n
+<ul class=\"module-list\">\n
+</MTArchiveListHeader>\n
+<li class=\"archive-list-item\"><a 
+href=\"<$MTArchiveLink$>\"><$MTArchiveTitle$></a></li>\n
+<MTArchiveListFooter>\n
+</ul>\n
+</MTArchiveListFooter>\n
+</MTArchiveList>\n
+</div>\n                                                                
+</div>\n</MTIfArchiveTypeEnabled>\n
+\n                                                      <div 
+class=\"module-archives module\">\n
+<h2 class=\"module-header\">Recent Posts</h2>\n
+<div class=\"module-content\">\n
+<ul class=\"module-list\">\n
+<MTEntries lastn=\"10\">\n
+<li class=\"module-list-item\"><a 
+href=\"<$MTEntryPermalink$>\"><$MTEntryTitle$></a></li>\n
+</MTEntries>\n
+</ul>\n                                                         </div>\n
+</div>\n                                                        \n
+<div class=\"module-syndicate module\">\n
+<div class=\"module-content\">\n
+<a href=\"<$MTBlogURL$>index.rdf\">Syndicate this site (XML)</a>\n
+</div>\n                                                        </div>\n
+\n                                                      
+<MTBlogIfCCLicense>\n
+<div class=\"module-creative-commons module\">\n
+<div class=\"module-content\">\n
+<a href=\"<$MTBlogCCLicenseURL$>\"><img alt=\"Creative Commons License\" 
+src=\"<$MTBlogCCLicenseImage$>\" /></a><br />\n
+This weblog is licensed under a <a href=\"<$MTBlogCCLicenseURL$>\">Creative 
+Commons License</a>.\n
+</div>\n                                                                
+</div>\n</MTBlogIfCCLicense>\n                                                  
+\n
+<div class=\"module-powered module\">\n
+<div class=\"module-content\">\n
+Powered by<br /><a href=\"http://www.movabletype.org\">Movable Type 
+<$MTVersion$></a>\n                                                         
+</div>\n
+</div>\n                                                </div>\n
+</div>\n                                </div>\n                        
+</div>\n</div>\n        </div>\n</body>\n</html>\n
