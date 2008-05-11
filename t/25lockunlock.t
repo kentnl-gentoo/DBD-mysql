@@ -1,119 +1,64 @@
-#!/usr/local/bin/perl
+#!perl -w
 #
 #   $Id: 30insertfetch.t 1228 2004-09-04 01:23:38Z capttofu $
 #
 #   This is a simple insert/fetch test.
 #
-$^W = 1;
+use Test::More;
+use DBI ();
+use strict;
+use lib 't', '.';
+require 'lib.pl';
 
 #
 #   Make -w happy
 #
-$test_dsn = '';
-$test_user = '';
-$test_password = '';
+use vars qw($table $test_dsn $test_user $test_password);
 
+my $dbh;
+eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
+                      { RaiseError => 1, PrintError => 1, AutoCommit => 0 });};
 
-#
-#   Include lib.pl
-#
-use DBI;
-$mdriver = "";
-foreach $file ("lib.pl", "t/lib.pl", "DBD-mysql/t/lib.pl") {
-    do $file; if ($@) { print STDERR "Error while executing lib.pl: $@\n";
-			   exit 10;
-		      }
-    if ($mdriver ne '') {
-	last;
-    }
+if ($@) {
+    plan skip_all => "Can't connect to database ERROR: $DBI::errstr. Can't continue test";
 }
 
-sub ServerError() {
-    print STDERR ("Cannot connect: ", $DBI::errstr, "\n",
-	"\tEither your server is not up and running or you have no\n",
-	"\tpermissions for acessing the DSN $test_dsn.\n",
-	"\tThis test requires a running server and write permissions.\n",
-	"\tPlease make sure your server is running and you have\n",
-	"\tpermissions, then retry.\n");
-    exit 10;
-}
+plan tests => 13;
 
-#
-#   Main loop; leave this untouched, put tests after creating
-#   the new table.
-#
-while (Testing()) {
-    #
-    #   Connect to the database
-    Test($state or $dbh = DBI->connect($test_dsn, $test_user, $test_password))
-	or ServerError();
-    #DBI->trace(2);
+my $create= <<EOT; 
+CREATE TABLE $table ( 
+    id int(4) NOT NULL default 0,
+    name varchar(64) NOT NULL default ''
+    )
+EOT
 
-    #
-    #   Find a possible new table name
-    #
-    Test($state or $table = FindNewTable($dbh))
-	   or DbiError($dbh->err, $dbh->errstr);
+ok $dbh->do("DROP TABLE IF EXISTS $table"), "drop table if exists $table";
 
-    #
-    #   Create a new table; EDIT THIS!
-    #
-    Test($state or ($def = TableDefinition($table,
-					  ["id",   "INTEGER",  4, 0],
-					  ["name", "CHAR",    64, 0]),
-		    $dbh->do($def)))
-	   or DbiError($dbh->err, $dbh->errstr);
+ok $dbh->do($create), "create table $table";
 
+ok $dbh->do("LOCK TABLES $table WRITE"), "lock table $table";
 
-    #
-    #  lock tables 
-    #
-    Test($state or $dbh->do("LOCK TABLES $table WRITE"))
-	   or DbiError($dbh->err, $dbh->errstr);
+ok $dbh->do("INSERT INTO $table VALUES(1, 'Alligator Descartes')"), "Insert ";
 
-    #
-    #   Insert a row into the test table.......
-    #
-    Test($state or $dbh->do("INSERT INTO $table"
-			    . " VALUES(1, 'Alligator Descartes')"))
-	   or DbiError($dbh->err, $dbh->errstr);
+ok $dbh->do("DELETE FROM $table WHERE id = 1"), "Delete"; 
 
-    #
-    #   ...and delete it........
-    #
-    Test($state or $dbh->do("DELETE FROM $table WHERE id = 1"))
-	   or DbiError($dbh->err, $dbh->errstr);
+my $sth;
+eval {$sth= $dbh->prepare("SELECT * FROM $table WHERE id = 1")};
 
-    #
-    #   Now, try SELECT'ing the row out. This should fail.
-    #
-    Test($state or $sth = $dbh->prepare("SELECT * FROM $table"
-					   . " WHERE id = 1"))
-	   or DbiError($dbh->err, $dbh->errstr);
+ok !$@, "Prepare of select";
 
-    Test($state or $sth->execute)
-	   or DbiError($sth->err, $sth->errstr);
+ok defined($sth), "Prepare of select";
 
-    my ($row, $errstr);
-    Test($state or (!defined($row = $sth->fetchrow_arrayref)  &&
-		    (!defined($errstr = $sth->errstr) ||
-		     $sth->errstr eq '')))
-	or DbiError($sth->err, $sth->errstr);
+ok  $sth->execute , "Execute";
 
-    Test($state or $dbh->do("UNLOCK TABLES"))
-	   or DbiError($dbh->err, $dbh->errstr);
+my ($row, $errstr);
+$errstr= '';
+$row = $sth->fetchrow_arrayref;
+$errstr= $sth->errstr;
+ok !defined($row), "Fetch should have failed";
+ok !defined($errstr), "Fetch should have failed";
 
-    Test($state or $sth->finish, "\$sth->finish failed")
-	   or DbiError($sth->err, $sth->errstr);
+ok $dbh->do("UNLOCK TABLES"), "Unlock tables";
 
-    Test($state or undef $sth || 1);
-
-
-    #
-    #   Finally drop the test table.
-    #
-    Test($state or $dbh->do("DROP TABLE $table"))
-	   or DbiError($dbh->err, $dbh->errstr);
-
-}
-
+ok $dbh->do("DROP TABLE $table"), "Drop table $table";
+ok $dbh->disconnect, "Disconnecting";

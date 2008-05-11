@@ -1,51 +1,35 @@
-#!/usr/local/bin/perl
+#!perl -w
 #
-#   $Id: 00base.t 1103 2003-03-18 02:53:28Z rlippan $
+#   $Id: 00base.t 11244 2008-05-11 15:13:10Z capttofu $
 #
 #   This is the base test, tries to install the drivers. Should be
 #   executed as the very first test.
 #
 
+use Test::More tests => 6;
 
 #
 #   Include lib.pl
 #
-$mdriver = "";
-foreach $file ("lib.pl", "t/lib.pl") {
-    do $file; if ($@) { print STDERR "Error while executing lib.pl: $@\n";
-			   exit 10;
-		      }
-    if ($mdriver ne '') {
-	last;
-    }
-}
-if ($verbose) { print "Driver is $mdriver\n"; }
+use vars qw($mdriver $table);
+use lib 't', '.';
+require 'lib.pl';
 
 # Base DBD Driver Test
-
-print "1..$tests\n";
-
-require DBI;
-print "ok 1\n";
-
-import DBI;
-print "ok 2\n";
-
-$switch = DBI->internal;
-(ref $switch eq 'DBI::dr') ? print "ok 3\n" : print "not ok 3\n";
-
-# This is a special case. install_driver should not normally be used.
-$drh = DBI->install_driver($mdriver);
-
-(ref $drh eq 'DBI::dr') ? print "ok 4\n" : print "not ok 4\n";
-
-if ($drh->{Version}) {
-    print "ok 5\n";
-    if ($verbose) {
-	print "Driver version is ", $drh->{Version}, "\n";
-    }
+BEGIN {
+    use_ok('DBI') or BAIL_OUT "Unable to load DBI";
+    use_ok('DBD::mysql') or BAIL_OUT "Unable to load DBD::mysql";
 }
 
-BEGIN { $tests = 5 }
-exit 0;
-# end.
+$switch = DBI->internal;
+cmp_ok ref $switch, 'eq', 'DBI::dr', 'Internal set';
+
+# This is a special case. install_driver should not normally be used.
+$drh= DBI->install_driver($mdriver);
+
+ok $drh, 'Install driver';
+
+cmp_ok ref $drh, 'eq', 'DBI::dr', 'DBI::dr set';
+
+ok $drh->{Version}, "Version $drh->{Version}"; 
+print "Driver version is ", $drh->{Version}, "\n";

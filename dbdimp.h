@@ -12,7 +12,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h 10412 2007-12-11 21:42:15Z capttofu $
+ *  $Id: dbdimp.h 11150 2008-04-28 23:36:14Z capttofu $
  */
 
 /*
@@ -141,7 +141,7 @@ struct imp_drh_st {
 struct imp_dbh_st {
     dbih_dbc_t com;         /*  MUST be first element in structure   */
 
-    MYSQL mysql;
+    MYSQL *pmysql;
     int has_transactions;   /*  boolean indicating support for
 			     *  transactions, currently always
 			     *  TRUE for MySQL and always FALSE
