@@ -1,6 +1,6 @@
 #!perl -w
 #
-#   $Id: 50commit.t 11244 2008-05-11 15:13:10Z capttofu $ 
+#   $Id: 50commit.t 11645 2008-08-15 11:36:38Z capttofu $ 
 #
 #   This is testing the transaction support.
 #
@@ -110,7 +110,7 @@ EOT
 
 }
 else {
-  plan tests => 11; 
+  plan tests => 13; 
 
   ok $dbh->do("DROP TABLE IF EXISTS $table"), "drop table if exists $table";
   my $create =<<EOT;

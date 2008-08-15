@@ -8,7 +8,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.c 11150 2008-04-28 23:36:14Z capttofu $
+ *  $Id: dbdimp.c 11649 2008-08-15 13:31:25Z capttofu $
  */
 
 
@@ -1562,6 +1562,7 @@ MYSQL *mysql_dr_connect(
                         imp_dbh->use_server_side_prepare);
 #endif
 
+        /* HELMUT */
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
         if ((svp = hv_fetch(hv, "mysql_enable_utf8", 17, FALSE)) && *svp) {
           /* Do not touch imp_dbh->enable_utf8 as we are called earlier
@@ -1709,7 +1710,8 @@ static int my_login(SV* dbh, imp_dbh_t *imp_dbh)
   char* mysql_socket;
   D_imp_xxh(dbh);
 
-#define TAKE_IMP_DATA_VERSION 1
+  /* TODO- resolve this so that it is set only if DBI is 1.607 */
+#define TAKE_IMP_DATA_VERSION 1 
 #if TAKE_IMP_DATA_VERSION
   if (DBIc_has(imp_dbh, DBIcf_IMPSET))
   { /* eg from take_imp_data() */
@@ -1800,6 +1802,7 @@ int dbd_db_login(SV* dbh, imp_dbh_t* imp_dbh, char* dbname, char* user,
  /* Safer we flip this to TRUE perl side if we detect a mod_perl env. */
   imp_dbh->auto_reconnect = FALSE;
 
+  /* HELMUT */
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
   imp_dbh->enable_utf8 = FALSE;  /* initialize mysql_enable_utf8 */
 #endif
@@ -2118,6 +2121,7 @@ dbd_db_STORE_attrib(
 
   else if (kl == 31 && strEQ(key,"mysql_unsafe_bind_type_guessing"))
 	imp_dbh->bind_type_guessing = SvIV(valuesv);
+  /*HELMUT */
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
   else if (kl == 17 && strEQ(key, "mysql_enable_utf8"))
     imp_dbh->enable_utf8 = bool_value;
@@ -2208,6 +2212,7 @@ SV* dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
       const char* msg = mysql_error(imp_dbh->pmysql);
       result= sv_2mortal(newSVpv(msg, strlen(msg)));
     }
+    /* HELMUT */
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
     else if (kl == strlen("enable_utf8") && strEQ(key, "enable_utf8"))
         result = sv_2mortal(newSViv(imp_dbh->enable_utf8));
@@ -2668,7 +2673,7 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
     /* No more pending result set(s)*/
     if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
       PerlIO_printf(DBILOGFP,
-		    "\n      <- dbs_st_more_rows no more results\n");
+		    "\n      <- dbs_st_more_results no more results\n");
     return 0;
   }
 
@@ -2699,6 +2704,8 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
 
   next_result_return_code= mysql_next_result(svsock);
 
+  imp_sth->warning_count = mysql_warning_count(imp_dbh->pmysql);
+
   /*
     mysql_next_result returns
       0 if there are more results
@@ -2709,6 +2716,7 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
   {
     do_error(sth, mysql_errno(svsock), mysql_error(svsock),
              mysql_sqlstate(svsock));
+
     return 0;
   }
   else
@@ -2721,10 +2729,12 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
       do_error(sth, mysql_errno(svsock), mysql_error(svsock), 
                mysql_sqlstate(svsock));
 
+    imp_sth->row_num= mysql_affected_rows(imp_dbh->pmysql);
+
     if (imp_sth->result == NULL)
     {
       /* No "real" rowset*/
-      return 0;
+      return 1;
     }
     else
     {
@@ -3137,7 +3147,13 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
   if (imp_sth->row_num+1 != (my_ulonglong)-1)
   {
     if (!imp_sth->result)
+    {
       imp_sth->insertid= mysql_insert_id(imp_dbh->pmysql);
+#if MYSQL_VERSION_ID >= MULTIPLE_RESULT_SET_VERSION
+      if (mysql_more_results(imp_dbh->pmysql))
+        DBIc_ACTIVE_on(imp_sth);
+#endif
+    }
     else
     {
       /** Store the result in the current statement handle */
@@ -3470,6 +3486,7 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBILOGFP, "\t\tst_fetch string data %s\n", fbh->data);
           sv_setpvn(sv, fbh->data, fbh->length);
+          /*HELMUT*/
 #ifdef sv_utf8_decode
           if(imp_dbh->enable_utf8)
               sv_utf8_decode(sv);
@@ -3585,6 +3602,7 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
         }
         sv_setpvn(sv, col, len);
 	/* UTF8 */
+        /*HELMUT*/
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
 
 #if MYSQL_VERSION_ID >= FIELD_CHARSETNR_VERSION 
@@ -3674,7 +3692,7 @@ int dbd_st_finish(SV* sth, imp_sth_t* imp_sth) {
     We don't close the cursor till DESTROY.
     The application may re execute it.
   */
-  if (imp_sth && imp_sth->result)
+  if (imp_sth && DBIc_ACTIVE(imp_sth))
   {
     /*
       Clean-up previous result set(s) for sth to prevent
@@ -4591,10 +4609,11 @@ int parse_number(char *string, STRLEN len, char **end)
 {
     int seen_neg;
     int seen_dec;
+    int seen_e;
+    int seen_plus;
     char *cp;
 
-    seen_neg= 0;
-    seen_dec= 0;
+    seen_neg= seen_dec= seen_e= seen_plus= 0;
 
     if (len <= 0) {
         len= strlen(string);
@@ -4610,17 +4629,14 @@ int parse_number(char *string, STRLEN len, char **end)
     {
         if ('-' == *cp)
         {
-            if (seen_neg)
+            if (seen_neg >= 2)
             {
-              /* second '-' */
+              /*
+                third '-'. number can contains two '-'.
+                because -1e-10 is valid number */
               break;
             }
-            else if (cp > string)
-            {
-              /* '-' after digit(s) */
-              break;
-            }
-            seen_neg= 1;
+            seen_neg += 1;
         }
         else if ('.' == *cp)
         {
@@ -4631,7 +4647,25 @@ int parse_number(char *string, STRLEN len, char **end)
             }
             seen_dec= 1;
         }
-        else if (!isdigit(*cp))
+        else if ('e' == *cp)
+        {
+            if (seen_e)
+            {
+                /* second 'e' */
+                break;
+            }
+            seen_e= 1;
+        }
+        else if ('+' == *cp)
+        {
+            if (seen_plus)
+            {
+                /* second '+' */
+                break;
+            }
+            seen_plus= 1;
+        }
+       else if (!isdigit(*cp))
         {
             break;
         }

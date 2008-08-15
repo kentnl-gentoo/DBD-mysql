@@ -1,7 +1,7 @@
 #!perl -w
 # vim: ft=perl
 #
-#   $Id: 40blobs.t 11244 2008-05-11 15:13:10Z capttofu $
+#   $Id: 40blobs.t 11650 2008-08-15 13:58:29Z capttofu $
 #
 #   This is a test for correct handling of BLOBS; namely $dbh->quote
 #   is expected to work correctly.
@@ -9,6 +9,7 @@
 
 
 use DBI ();
+use DBI::Const::GetInfoType;
 use Test::More;
 use vars qw($table $test_dsn $test_user $test_password);
 use lib '.', 't';
@@ -28,8 +29,14 @@ sub ShowBlob($) {
 }
 
 my $dbh;
+my $charset= 'DEFAULT CHARSET=utf8'; 
+
 eval {$dbh = DBI->connect($test_dsn, $test_user, $test_password,
   { RaiseError => 1, AutoCommit => 1}) or ServerError() ;};
+
+if ($dbh->get_info($GetInfoType{SQL_DBMS_VER}) lt "4.1") {
+    $charset= '';
+}
 
 if ($@) {
     plan skip_all => "ERROR: $DBI::errstr. Can't continue test";
@@ -43,7 +50,7 @@ ok $dbh->do("DROP TABLE IF EXISTS $table"), "Drop table if exists $table";
 my $create = <<EOT;
 CREATE TABLE $table (
     id INT(3) NOT NULL DEFAULT 0,
-    name BLOB ) DEFAULT CHARSET=utf8
+    name BLOB ) $charset 
 EOT
 
 ok ($dbh->do($create));

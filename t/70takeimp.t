@@ -2,7 +2,7 @@
 # vim: ft=perl
 
 #
-#   $Id: 70takeimp.t 11244 2008-05-11 15:13:10Z capttofu $
+#   $Id: 70takeimp.t 11645 2008-08-15 11:36:38Z capttofu $
 #
 #   This is a skeleton test. For writing new tests, take this file
 #   and modify/extend it.
@@ -34,6 +34,7 @@ if ($@) {
 unless ($dbh->can('take_imp_data')) {
     plan skip_all => "version of DBI $DBI::VERSION doesn't support this test. Can't continue test";
 }
+plan skip_all => "This test is disabled";
 plan tests => 21;
 
 pass("obtained driver handle");
