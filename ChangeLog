@@ -1,3 +1,7 @@
+2008-10-21 Patrick Galbraith <patg@patg.net> (4.009)
+* Fix to re-enable TAKE_IMP_DATA_VERSION. Still have to ensure DBI version 1.607 or higher
+* Fix to escaped single quotes throwing off bind param detection. Patch from Zhurs (zhurs@yandex.ru) Spasibo!
+
 2008-8-15 Patrick Galbraith <patg@patg.net> (4.008)
 * Multi statement patch, thanks to Chris Heath!
 * Disabled TAKE_IMP_DATA_VERSION because segfault with DBI < 1.607
@@ -1084,7 +1088,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog 11650 2008-08-15 13:58:29Z capttofu $
+$Id: ChangeLog 11993 2008-10-22 00:49:10Z capttofu $
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 

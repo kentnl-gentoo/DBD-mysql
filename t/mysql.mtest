@@ -7,7 +7,7 @@
          'testhost' => '',
          'nofoundrows' => 0,
          'testdb' => 'test',
-         'cflags' => '-I/usr/local/include/mysql -D_P1003_1B_VISIBLE -DSIGNAL_WITH_VIO_CLOSE -DSIGNALS_DONT_BREAK_READ -DIGNORE_SIGHUP_SIGQUIT  -DDONT_DECLARE_CXA_PURE_VIRTUAL',
+         'cflags' => '-I/usr/local/mysql/include/mysql -D_P1003_1B_VISIBLE -DSIGNAL_WITH_VIO_CLOSE -DSIGNALS_DONT_BREAK_READ -DIGNORE_SIGHUP_SIGQUIT  -DDONT_DECLARE_CXA_PURE_VIRTUAL',
          'testuser' => 'root',
          'testpassword' => '',
          'testsocket' => ''

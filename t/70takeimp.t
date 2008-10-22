@@ -2,7 +2,7 @@
 # vim: ft=perl
 
 #
-#   $Id: 70takeimp.t 11645 2008-08-15 11:36:38Z capttofu $
+#   $Id: 70takeimp.t 11993 2008-10-22 00:49:10Z capttofu $
 #
 #   This is a skeleton test. For writing new tests, take this file
 #   and modify/extend it.
@@ -30,11 +30,12 @@ eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
 if ($@) {
     plan skip_all => "Can't connect to database ERROR: $@. Can't continue test";
 }
-
+unless ($DBI::VERSION ge '1.607') {
+    plan skip_all => "version of DBI $DBI::VERSION doesn't support this test. Can't continue test";
+}
 unless ($dbh->can('take_imp_data')) {
     plan skip_all => "version of DBI $DBI::VERSION doesn't support this test. Can't continue test";
 }
-plan skip_all => "This test is disabled";
 plan tests => 21;
 
 pass("obtained driver handle");
@@ -75,8 +76,10 @@ is $drh->{Kids}, 0,
     is $warn, 4, 'we should have received 4 warnings';
 }
 
+print "here\n";
 my $dbh2 = DBI->connect($test_dsn, $test_user, $test_password,
     { dbi_imp_data => $imp_data });
+print "there\n";
 
 # XXX: how can we test that the same connection is used?
 my $id2 = connection_id($dbh2);

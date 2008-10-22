@@ -8,7 +8,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.c 11649 2008-08-15 13:31:25Z capttofu $
+ *  $Id: dbdimp.c 11993 2008-10-22 00:49:10Z capttofu $
  */
 
 
@@ -80,7 +80,7 @@ count_params(char *statement)
         while ((c = *ptr)  &&  c != end_token)
         {
           if (c == '\\')
-            if (! *ptr)
+            if (! *(++ptr))
               continue;
 
           ++ptr;
@@ -1711,7 +1711,7 @@ static int my_login(SV* dbh, imp_dbh_t *imp_dbh)
   D_imp_xxh(dbh);
 
   /* TODO- resolve this so that it is set only if DBI is 1.607 */
-#define TAKE_IMP_DATA_VERSION 1 
+#define TAKE_IMP_DATA_VERSION 1
 #if TAKE_IMP_DATA_VERSION
   if (DBIc_has(imp_dbh, DBIcf_IMPSET))
   { /* eg from take_imp_data() */
@@ -4409,7 +4409,11 @@ int mysql_db_reconnect(SV* h)
   memcpy (&save_socket, imp_dbh->pmysql,sizeof(save_socket));
   memset (imp_dbh->pmysql,0,sizeof(*(imp_dbh->pmysql)));
 
-  if (!my_login(h, imp_dbh))
+  /* we should disconnect the db handle before reconnecting, this will
+   * prevent my_login from thinking it's adopting an active child which
+   * would prevent the handle from actually reconnecting
+   */
+  if (!dbd_db_disconnect(h, imp_dbh) || !my_login(h, imp_dbh))
   {
     do_error(h, mysql_errno(imp_dbh->pmysql), mysql_error(imp_dbh->pmysql),
              mysql_sqlstate(imp_dbh->pmysql));
