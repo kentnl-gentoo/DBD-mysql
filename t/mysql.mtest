@@ -3,13 +3,13 @@
          'embedded' => '',
          'ssl' => 0,
          'nocatchstderr' => 0,
-         'libs' => '-L/usr/local/mysql/lib/mysql -lmysqlclient -lz -lm',
+         'libs' => '-rdynamic -L/usr/local/mysql/lib/mysql -lmysqlclient -lz -lcrypt -lnsl -lm',
          'testhost' => '',
          'nofoundrows' => 0,
          'testdb' => 'test',
-         'cflags' => '-I/usr/local/mysql/include/mysql -D_P1003_1B_VISIBLE -DSIGNAL_WITH_VIO_CLOSE -DSIGNALS_DONT_BREAK_READ -DIGNORE_SIGHUP_SIGQUIT  -DDONT_DECLARE_CXA_PURE_VIRTUAL',
+         'cflags' => '-I/usr/local/mysql/include/mysql -DUNIV_LINUX',
          'testuser' => 'root',
-         'testpassword' => '',
+         'testpassword' => 'root',
          'testsocket' => ''
        };
 $::test_host = $opt->{'testhost'};
