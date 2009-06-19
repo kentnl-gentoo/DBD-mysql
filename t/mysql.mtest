@@ -1,13 +1,14 @@
 { local $opt = {
          'mysql_config' => 'mysql_config',
+         'bind-type-guessing' => 1,
          'embedded' => '',
          'ssl' => 0,
          'nocatchstderr' => 0,
-         'libs' => '-rdynamic -L/usr/local/mysql/lib/mysql -lmysqlclient -lz -lcrypt -lnsl -lm',
+         'libs' => '-L/usr/local/mysql/lib/mysql -lmysqlclient -lz -lm',
          'testhost' => '',
          'nofoundrows' => 0,
+         'cflags' => '-I/usr/local/mysql/include/mysql -D_P1003_1B_VISIBLE -DSIGNAL_WITH_VIO_CLOSE -DSIGNALS_DONT_BREAK_READ -DIGNORE_SIGHUP_SIGQUIT  -DDONT_DECLARE_CXA_PURE_VIRTUAL',
          'testdb' => 'test',
-         'cflags' => '-I/usr/local/mysql/include/mysql -DUNIV_LINUX',
          'testuser' => 'root',
          'testpassword' => 'root',
          'testsocket' => ''
@@ -22,4 +23,5 @@ $::test_dsn = "DBI:mysql:$::test_db";
 $::test_dsn .= ";mysql_socket=$::test_socket" if $::test_socket;
 $::test_dsn .= ":$::test_host" if $::test_host;
 $::test_dsn .= ":$::test_port" if $::test_port;
+$::test_dsn .= ";mysql_bind_type_guessing=1";
 } 1;
