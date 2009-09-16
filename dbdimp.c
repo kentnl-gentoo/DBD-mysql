@@ -1502,6 +1502,16 @@ MYSQL *mysql_dr_connect(
           mysql_options(sock, MYSQL_OPT_CONNECT_TIMEOUT,
                         (const char *)&to);
         }
+        if ((svp = hv_fetch(hv, "mysql_init_command", 18, FALSE)) &&
+            *svp  &&  SvTRUE(*svp))
+        {
+          char* df = SvPV(*svp, lna);
+          if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+            PerlIO_printf(DBILOGFP,
+                          "imp_dbh->mysql_dr_connect: Setting" \
+                          " init command (%s).\n", df);
+          mysql_options(sock, MYSQL_INIT_COMMAND, df);
+        }
         if ((svp = hv_fetch(hv, "mysql_read_default_file", 23, FALSE)) &&
             *svp  &&  SvTRUE(*svp))
         {
@@ -4661,9 +4671,10 @@ static int parse_number(char *string, STRLEN len, char **end)
     int seen_dec;
     int seen_e;
     int seen_plus;
+    int seen_digit;
     char *cp;
 
-    seen_neg= seen_dec= seen_e= seen_plus= 0;
+    seen_neg= seen_dec= seen_e= seen_plus= seen_digit= 0;
 
     if (len <= 0) {
         len= strlen(string);
@@ -4717,6 +4728,7 @@ static int parse_number(char *string, STRLEN len, char **end)
       }
       else if (!isdigit(*cp))
       {
+        seen_digit= 1;
         break;
       }
     }
@@ -4724,7 +4736,7 @@ static int parse_number(char *string, STRLEN len, char **end)
     *end= cp;
 
     /* length 0 -> not a number */
-    if (len == 0 || cp - string < (int) len) {
+    if (len == 0 || cp - string < (int) len || seen_digit == 0) {
         return -1;
     }
 

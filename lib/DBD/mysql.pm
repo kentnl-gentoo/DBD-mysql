@@ -9,7 +9,7 @@ use DynaLoader();
 use Carp ();
 @ISA = qw(DynaLoader);
 
-$VERSION = '4.012';
+$VERSION = '4.013';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -945,6 +945,12 @@ and server will be compressed.
 If your DSN contains the option "mysql_connect_timeout=##", the connect
 request to the server will timeout if it has not been successful after
 the given number of seconds.
+
+=item mysql_init_command
+
+If your DSN contains the option "mysql_init_command_timeout=##", then
+this SQL statement is executed when conencting to the MySQL server.
+It is automatically re-executed if reconnection occurs.
 
 =item mysql_read_default_file
 

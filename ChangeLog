@@ -1,3 +1,12 @@
+2009-09-16 Patrick Galbraith <patg@patg.net> (4.013)
+
+* #49484: PATCH add support for MYSQL_INIT_COMMAND to 
+DBD::mysql - Thanks Peter John Edwards ?
+* #48242: 'mysql_bind_type_guessing' doesn't work correctly
+with minus sign - Thanks Serguei Trouchelle!
+* #45616: t/40blobs.t cannot pass without database access - 
+ServerError() not declared - Thanks ysth http://ysth.livejournal.com/
+
 2009-06-18 Patrick Galbraith <patg@patg.net> (4.012)
 
 * Patch to bind_type_guessing from Craigslist, 
