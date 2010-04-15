@@ -3,11 +3,11 @@
          'embedded' => '',
          'ssl' => 0,
          'nocatchstderr' => 0,
-         'libs' => '-Wl,-Bsymbolic-functions -L/usr/lib/mysql -lmysqlclient',
+         'libs' => '-L/usr/local/maria/lib/mysql -lmysqlclient -lz -lm',
          'testhost' => '',
          'nofoundrows' => 0,
          'testdb' => 'test',
-         'cflags' => '-I/usr/include/mysql -DBIG_JOINS=1 -fPIC',
+         'cflags' => '-I/usr/local/maria/include/mysql -D_P1003_1B_VISIBLE -DSIGNAL_WITH_VIO_CLOSE -DSIGNALS_DONT_BREAK_READ -DIGNORE_SIGHUP_SIGQUIT  -DDONT_DECLARE_CXA_PURE_VIRTUAL',
          'testuser' => 'root',
          'testpassword' => '',
          'testsocket' => ''

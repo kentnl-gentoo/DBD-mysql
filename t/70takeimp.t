@@ -2,7 +2,7 @@
 # vim: ft=perl
 
 #
-#   $Id: 70takeimp.t 11993 2008-10-22 00:49:10Z capttofu $
+#   $Id$
 #
 #   This is a skeleton test. For writing new tests, take this file
 #   and modify/extend it.

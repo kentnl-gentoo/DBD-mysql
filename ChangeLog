@@ -1,7 +1,16 @@
+2010-04-14 Patrick Galbraith <patg@patg.net> (4.014)
+* BUG 30033 Fixed handling of comments to allow comments that contain characters
+  that might otherwise cause placeholder detection to not work properly
+* BUG 53844, Fix for memory leak in stats. (Gregory Burmistrov)
+* BUG 49719, Fix for handling of NULLs in prepared statements (Gert Pache)
+* BUG 55627, Fix for testing failure due to strict mode (Yves) 
+* BUG 51784, Fix for mysqladmin on Windows in Makefile (Zeeshan Muhammad)
+* BUG 41630, Typo in Makefile
+* Had to define true and false in dbdimp.h. Didn't work out of the box on Linux
+
 2009-09-16 Patrick Galbraith <patg@patg.net> (4.013)
 
-* #49484: PATCH add support for MYSQL_INIT_COMMAND to 
-DBD::mysql - Thanks Peter John Edwards ?
+* #49484: PATCH add support for MYSQL_INIT_COMMAND - Peter John Edwards 
 * #48242: 'mysql_bind_type_guessing' doesn't work correctly
 with minus sign - Thanks Serguei Trouchelle!
 * #45616: t/40blobs.t cannot pass without database access - 
@@ -1129,7 +1138,7 @@ Fri Oct 24 01:29:08 1997  Jochen Wiedmann  <joe@ispsoft.de> (1.1816)
 	* lib/Msql/Statement.pm: Fixed use of Msql::TEXT_TYPE without
 	  checking whether we are running Msql 1.
 
-$Id: ChangeLog 12860 2009-06-19 01:52:29Z capttofu $
+$Id$
 
 DBD::mysql for DBI - Written by Jochen Wiedmann <joe@ispsoft.de>
 

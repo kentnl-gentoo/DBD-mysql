@@ -12,7 +12,7 @@
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
  *
- *  $Id: dbdimp.h 12860 2009-06-19 01:52:29Z capttofu $
+ *  $Id$
  */
 
 /*
@@ -48,6 +48,9 @@
 #if MYSQL_VERSION_ID < WARNING_COUNT_VERSION
 #define mysql_warning_count(svsock) 0
 #endif
+
+#define true 1
+#define false 0
 
 /*
  *  The following are return codes passed in $h->err in case of

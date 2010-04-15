@@ -1,6 +1,6 @@
 #!perl -w
 #
-#   $Id: 50commit.t 11645 2008-08-15 11:36:38Z capttofu $ 
+#   $Id$ 
 #
 #   This is testing the transaction support.
 #

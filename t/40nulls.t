@@ -1,7 +1,7 @@
 #!perl -w
 # vim: ft=perl
 #
-#   $Id: 40nulls.t 11244 2008-05-11 15:13:10Z capttofu $
+#   $Id$
 #
 #   This is a test for correctly handling NULL values.
 #

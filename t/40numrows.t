@@ -1,7 +1,7 @@
 #!perl -w
 # vim: ft=perl
 #
-#   $Id: 40numrows.t 11244 2008-05-11 15:13:10Z capttofu $
+#   $Id$
 #
 #   This tests, whether the number of rows can be retrieved.
 #

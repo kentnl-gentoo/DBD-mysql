@@ -63,15 +63,103 @@ typedef struct sql_type_info_s
 static int
 count_params(char *statement)
 {
-  char* ptr = statement;
-  int num_params = 0;
+  bool comment_end= false;
+  char* ptr= statement;
+  int num_params= 0;
+  int comment_length= 0;
   char c;
+
   if (dbis->debug >= 2)
     PerlIO_printf(DBILOGFP, ">count_params statement %s\n", statement);
 
   while ( (c = *ptr++) )
   {
     switch (c) {
+      /* so, this is a -- comment, so let's burn up characters */
+    case '-':
+      {
+        comment_length= 1;
+        /* let's see if the next one is a dash */
+        c = *ptr++;
+
+        if  (c == '-') {
+          /* if two dashes, ignore everything until newline */
+          while (c = *ptr)
+          {
+            if (dbis->debug >= 2)
+              PerlIO_printf(DBILOGFP, "%c\n", c);
+            ptr++;
+            comment_length++;
+            if (c == '\n')
+            {
+              comment_end= true;
+              break;
+            }
+          }
+          /*
+            so, if there was an end to the comment, increment by one more
+            to go past the new line
+
+            if not comment_end, the comment never ended and we need to iterate
+            back to the beginning of where we started and let the database 
+            handle whatever is in the statement
+          */
+          if (comment_end)
+            ptr++;
+          else
+            ptr-= comment_length;
+        }
+        /* otherwise, only one dash/hyphen, backtrack by one */
+        else
+          ptr--;
+        break;
+      }
+    /* c-type comments */
+    case '/':
+      {
+        c = *ptr++;
+        /* let's check if the next one is an asterisk */
+        if  (c == '*')
+        {
+          comment_length= 0;
+          comment_end= false;
+          /* ignore everything until closing comment */
+          while (c= *ptr)
+          {
+            ptr++;
+            comment_length++;
+
+            if (c == '*')
+            {
+              c = *ptr++;
+              /* alas, end of comment */
+              if (c == '/')
+              {
+                ptr++;
+                comment_end= true;
+                break;
+              }
+              /*
+                nope, just an asterisk, not so fast, not end of comment, go
+                back one
+              */
+              else
+                ptr--;
+            }
+          }
+          /*
+            if the end of the comment was never found, we have to backtrack
+            to whereever we first started skipping over the possible comment.
+            This means we will pass the statement to the database to see its own
+            fate and issue the error
+          */
+          if (!comment_end)
+            ptr -= comment_length;
+        }
+        else
+          ptr--;
+        break;
+      }
     case '`':
     case '"':
     case '\'':
@@ -412,13 +500,14 @@ static char *parse_params(
                           int num_params,
                           bool bind_type_guessing)
 {
-
+  bool comment_end= false;
   char *salloc, *statement_ptr;
   char *statement_ptr_end, *ptr, *valbuf;
   char *cp, *end;
   int alen, i;
   int slen= *slen_ptr;
   int limit_flag= 0;
+  int comment_length=0;
   STRLEN vallen;
   imp_sth_ph_t *ph;
 
@@ -498,6 +587,73 @@ static char *parse_params(
     }
     switch (*statement_ptr)
     {
+      /* comment detection. Anything goes in a comment */
+      case '-':
+      {
+        comment_length= 1;
+        comment_end= false;
+        *ptr++ = *statement_ptr++;
+        if  (*statement_ptr == '-')
+        {
+          /* ignore everything until newline */
+          while (*statement_ptr)
+          {
+            comment_length++;
+            *ptr++ = *statement_ptr++;
+            if (*statement_ptr == '\n')
+            {
+              comment_end= true;
+              break;
+            }
+          }
+          /* if comment end found, iterate past the \n */
+          if (comment_end)
+          {
+            *ptr++ = *statement_ptr++;
+          }
+          /* otherwise, go back to where we started, no end found */
+          else
+          {
+            statement_ptr -= comment_length;
+            ptr -= comment_length;
+          }
+        }
+        break;
+      }
+      /* c-type comments */
+      case '/':
+      {
+        comment_length= 1;
+        comment_end= false;
+        *ptr++ = *statement_ptr++;
+        if  (*statement_ptr == '*')
+        {
+          /* use up characters everything until newline */
+          while (*statement_ptr)
+          {
+            *ptr++ = *statement_ptr++;
+            comment_length++;
+            if (!strncmp(statement_ptr, "*/", 2))
+            {
+              comment_length += 2;
+              comment_end= true;
+              break;
+            }
+          }
+          /* iterate past the comment end */
+          if (comment_end)
+          {
+            *ptr++ = *statement_ptr++;
+            *ptr++ = *statement_ptr++;
+          }
+          else
+          {
+            statement_ptr -= comment_length;
+            ptr -= comment_length;
+          }
+        }
+        break;
+      }
       case '`':
       case '\'':
       case '"':
@@ -1482,6 +1638,17 @@ MYSQL *mysql_dr_connect(
         SV** svp;
         STRLEN lna;
 
+        /* thanks to Peter John Edwards for mysql_init_command */ 
+        if ((svp = hv_fetch(hv, "mysql_init_command", 18, FALSE)) &&
+            *svp && SvTRUE(*svp))
+        {
+          char* df = SvPV(*svp, lna);
+          if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+            PerlIO_printf(DBILOGFP,
+                           "imp_dbh->mysql_dr_connect: Setting" \
+                           " init command (%s).\n", df);
+          mysql_options(sock, MYSQL_INIT_COMMAND, df);
+        }
         if ((svp = hv_fetch(hv, "mysql_compression", 17, FALSE))  &&
             *svp && SvTRUE(*svp))
         {
@@ -1501,16 +1668,6 @@ MYSQL *mysql_dr_connect(
                           " connect timeout (%d).\n",to);
           mysql_options(sock, MYSQL_OPT_CONNECT_TIMEOUT,
                         (const char *)&to);
-        }
-        if ((svp = hv_fetch(hv, "mysql_init_command", 18, FALSE)) &&
-            *svp  &&  SvTRUE(*svp))
-        {
-          char* df = SvPV(*svp, lna);
-          if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
-            PerlIO_printf(DBILOGFP,
-                          "imp_dbh->mysql_dr_connect: Setting" \
-                          " init command (%s).\n", df);
-          mysql_options(sock, MYSQL_INIT_COMMAND, df);
         }
         if ((svp = hv_fetch(hv, "mysql_read_default_file", 23, FALSE)) &&
             *svp  &&  SvTRUE(*svp))
@@ -2281,7 +2438,7 @@ SV* dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
                0
               );
 
-      result= (newRV_noinc((SV*)hv));
+      result= sv_2mortal((newRV_noinc((SV*)hv)));
     }
 
   case 'h':
@@ -3169,7 +3326,6 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
                "Error happened while tried to clean up stmt", NULL);
       return 0;
     }
-
     imp_sth->row_num= mysql_st_internal_execute41(
                                                   sth,
                                                   DBIc_NUM_PARAMS(imp_sth),
@@ -4268,6 +4424,11 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
   int buffer_length= slen;
   unsigned int buffer_type= 0;
 #endif
+
+  if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+    PerlIO_printf(DBILOGFP,
+                  "   Called: dbd_bind_ph\n");
+
   attribs= attribs;
   maxlen= maxlen;
 
@@ -4310,22 +4471,41 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
   if (imp_sth->use_server_side_prepare)
   {
-    if (SvOK(imp_sth->params[idx].value) && imp_sth->params[idx].value)
-    {
-      buffer_is_null= 0;
-
       switch(sql_type) {
-
-        case SQL_NUMERIC:
-        case SQL_INTEGER:
-        case SQL_SMALLINT:
-        case SQL_BIGINT:
-        case SQL_TINYINT:
+      case SQL_NUMERIC:
+      case SQL_INTEGER:
+      case SQL_SMALLINT:
+      case SQL_BIGINT:
+      case SQL_TINYINT:
+          buffer_type= MYSQL_TYPE_LONG;
+          break;
+      case SQL_DOUBLE:
+      case SQL_DECIMAL: 
+      case SQL_FLOAT: 
+      case SQL_REAL:
+          buffer_type= MYSQL_TYPE_DOUBLE;
+          break;
+      case SQL_CHAR: 
+      case SQL_VARCHAR: 
+      case SQL_DATE: 
+      case SQL_TIME: 
+      case SQL_TIMESTAMP: 
+      case SQL_LONGVARCHAR: 
+      case SQL_BINARY: 
+      case SQL_VARBINARY: 
+      case SQL_LONGVARBINARY:
+          buffer_type= MYSQL_TYPE_BLOB;
+          break;
+      default:
+          buffer_type= MYSQL_TYPE_STRING;
+    }
+    buffer_is_null = !(SvOK(imp_sth->params[idx].value) && imp_sth->params[idx].value);
+    if (! buffer_is_null) {
+      switch(buffer_type) {
+        case MYSQL_TYPE_LONG:
           /* INT */
           if (!SvIOK(imp_sth->params[idx].value) && DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBILOGFP, "\t\tTRY TO BIND AN INT NUMBER\n");
-
-          buffer_type= MYSQL_TYPE_LONG;
           buffer_length = sizeof imp_sth->fbind[idx].numeric_val.lval;
           imp_sth->fbind[idx].numeric_val.lval= SvIV(imp_sth->params[idx].value);
           buffer=(void*)&(imp_sth->fbind[idx].numeric_val.lval);
@@ -4335,39 +4515,32 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
                           sql_type, (long) (*buffer));
           break;
 
-        case SQL_DOUBLE:
-        case SQL_DECIMAL:
-        case SQL_FLOAT:
-        case SQL_REAL:
+        case MYSQL_TYPE_DOUBLE:
           if (!SvNOK(imp_sth->params[idx].value) && DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBILOGFP, "\t\tTRY TO BIND A FLOAT NUMBER\n");
-
-          buffer_type= MYSQL_TYPE_DOUBLE;
           buffer_length = sizeof imp_sth->fbind[idx].numeric_val.dval;
           imp_sth->fbind[idx].numeric_val.dval= SvNV(imp_sth->params[idx].value);
           buffer=(char*)&(imp_sth->fbind[idx].numeric_val.dval);
-
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBILOGFP,
                           "   SCALAR type %d ->%f<- IS A FLOAT NUMBER\n",
                           sql_type, (double)(*buffer));
           break;
 
-        case SQL_CHAR:
-        case SQL_VARCHAR:
-        case SQL_DATE:
-        case SQL_TIME:
-        case SQL_TIMESTAMP:
-        case SQL_LONGVARCHAR:
-        case SQL_BINARY:
-        case SQL_VARBINARY:
-        case SQL_LONGVARBINARY:
-          buffer_type= MYSQL_TYPE_BLOB;
+        case MYSQL_TYPE_BLOB:
+          if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+            PerlIO_printf(DBILOGFP,
+                          "   SCALAR type BLOB\n");
+          break;
+
+        case MYSQL_TYPE_STRING:
+          if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+            PerlIO_printf(DBILOGFP,
+                          "   SCALAR type STRING %d, buffertype=%d\n", sql_type, buffer_type);
           break;
 
         default:
-          buffer_type= MYSQL_TYPE_STRING;
-          break;
+          croak("Bug in DBD::Mysql file dbdimp.c#dbd_bind_ph: do not know how to handle unknown buffer type.");
       }
 
       if (buffer_type == MYSQL_TYPE_STRING || buffer_type == MYSQL_TYPE_BLOB)
@@ -4382,14 +4555,25 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
     }
     else
     {
+      /*case: buffer_is_null != 0*/
       buffer= NULL;
-      buffer_is_null= 1;
-      buffer_type= MYSQL_TYPE_NULL;
+      if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+        PerlIO_printf(DBILOGFP,
+                      "   SCALAR NULL VALUE: buffer type is: %d\n", buffer_type);
     }
 
     /* Type of column was changed. Force to rebind */
-    if (imp_sth->bind[idx].buffer_type != buffer_type)
+    if (imp_sth->bind[idx].buffer_type != buffer_type) {
+      /* Note: this looks like being another bug:
+       * if type of parameter N changes, then a bind is triggered
+       * with an only partially filled bind structure ??
+       */
+      if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+          PerlIO_printf(DBILOGFP,
+                        "   FORCE REBIND: buffer type changed from %d to %d, sql-type=%d\n",
+                        imp_sth->bind[idx].buffer_type, buffer_type, sql_type);
       imp_sth->has_been_bound = 0;
+    }
 
     /* prepare has not been called */
     if (imp_sth->has_been_bound == 0)

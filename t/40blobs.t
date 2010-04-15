@@ -1,7 +1,7 @@
 #!perl -w
 # vim: ft=perl
 #
-#   $Id: 40blobs.t 11650 2008-08-15 13:58:29Z capttofu $
+#   $Id$
 #
 #   This is a test for correct handling of BLOBS; namely $dbh->quote
 #   is expected to work correctly.
@@ -34,16 +34,14 @@ my $charset= 'DEFAULT CHARSET=utf8';
 eval {$dbh = DBI->connect($test_dsn, $test_user, $test_password,
   { RaiseError => 1, AutoCommit => 1}) or ServerError() ;};
 
+if ($dbh->get_info($GetInfoType{SQL_DBMS_VER}) lt "4.1") {
+    $charset= '';
+}
 
 if ($@) {
     plan skip_all => "ERROR: $DBI::errstr. Can't continue test";
 }
-
 plan tests => 14;
-
-if ($dbh->get_info($GetInfoType{SQL_DBMS_VER}) lt "4.1") {
-    $charset= '';
-}
 
 my $size= 128;
 

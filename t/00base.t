@@ -1,6 +1,6 @@
 #!perl -w
 #
-#   $Id: 00base.t 11244 2008-05-11 15:13:10Z capttofu $
+#   $Id$
 #
 #   This is the base test, tries to install the drivers. Should be
 #   executed as the very first test.

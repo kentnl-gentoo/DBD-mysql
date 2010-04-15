@@ -1,6 +1,6 @@
 #!perl -w
 #
-#   $Id: 40bindparam.t 11650 2008-08-15 13:58:29Z capttofu $ 
+#   $Id$ 
 #
 
 

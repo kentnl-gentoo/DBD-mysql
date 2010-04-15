@@ -13,7 +13,11 @@ require 'lib.pl';
 
 my $dbh;
 eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
-    { RaiseError => 1, PrintError => 1, AutoCommit => 0, mysql_init_command => 'SET SESSION wait_timeout=7' });};
+        {   RaiseError => 1, 
+            PrintError => 1, 
+            AutoCommit => 0,
+            mysql_init_command => 'SET SESSION wait_timeout=7' });};
+
 if ($@) {
     plan skip_all => "ERROR: $DBI::errstr. Can't continue test";
 }
@@ -32,3 +36,4 @@ is($fetchrow[1],'7','session variable is 7');
 $sth->finish();
 
 $dbh->disconnect();
+
