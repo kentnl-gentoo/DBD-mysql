@@ -9,7 +9,7 @@ use DynaLoader();
 use Carp ();
 @ISA = qw(DynaLoader);
 
-$VERSION = '4.014';
+$VERSION = '4.015';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -1295,6 +1295,16 @@ successfully run the full test suite with this option turned on,
 the name can now be simply C<mysql_bind_type_guessing>. 
 
 See bug: https://rt.cpan.org/Ticket/Display.html?id=43822
+
+=item mysql_bind_comment_placeholders
+
+This attribute causes the driver (emulated prepare statements) 
+will cause any placeholders in comments to be bound. This is 
+not correct prepared statement behavior, but some developers
+have come to depend on this behavior, so I have made it available 
+in 4.015
+
+See bug: https://rt.cpan.org/Ticket/Display.html?id=
 
 C<mysql_bind_type_guessing> can be turned on via 
 
