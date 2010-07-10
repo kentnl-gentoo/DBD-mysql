@@ -8,8 +8,8 @@
          'nofoundrows' => 0,
          'testdb' => 'test',
          'cflags' => '-I/usr/local/maria/include/mysql -g  -g -D_P1003_1B_VISIBLE -DSIGNAL_WITH_VIO_CLOSE -DSIGNALS_DONT_BREAK_READ -DIGNORE_SIGHUP_SIGQUIT  -DDONT_DECLARE_CXA_PURE_VIRTUAL',
-         'testuser' => 'patg',
-         'testpassword' => 'patg',
+         'testuser' => 'root',
+         'testpassword' => '',
          'testsocket' => ''
        };
 $::test_host = $opt->{'testhost'};
