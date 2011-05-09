@@ -16,7 +16,7 @@ my $dbh;
 eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
                       { RaiseError            => 1,
                         PrintError            => 1,
-                        AutoCommit            => 0,
+                        AutoCommit            => 1,
                         mysql_server_prepare  => 0 });};
 
 if ($@) {
@@ -55,7 +55,7 @@ SKIP: {
                                       REFERENCES parent(id) ON DELETE SET NULL)
               ENGINE=INNODB}));
 
-  $sth= $dbh->foreign_key_info(undef, undef, "parent", undef, undef, "child");
+  $sth= $dbh->foreign_key_info(undef, undef, 'parent', undef, undef, 'child');
   my ($info)= $sth->fetchall_arrayref({});
 
   is($info->[0]->{PKTABLE_NAME}, "parent");
@@ -63,7 +63,7 @@ SKIP: {
   is($info->[0]->{FKTABLE_NAME}, "child");
   is($info->[0]->{FKCOLUMN_NAME}, "parent_id");
 
-  $sth= $dbh->foreign_key_info(undef, undef, "parent", undef, undef, undef);
+  $sth= $dbh->foreign_key_info(undef, 'test', 'parent', undef, undef, undef);
   ($info)= $sth->fetchall_arrayref({});
 
   is($info->[0]->{PKTABLE_NAME}, "parent");
@@ -71,7 +71,7 @@ SKIP: {
   is($info->[0]->{FKTABLE_NAME}, "child");
   is($info->[0]->{FKCOLUMN_NAME}, "parent_id");
 
-  $sth= $dbh->foreign_key_info(undef, undef, undef, undef, undef, "child");
+  $sth= $dbh->foreign_key_info(undef, undef, undef, undef, 'test', 'child');
   ($info)= $sth->fetchall_arrayref({});
 
   is($info->[0]->{PKTABLE_NAME}, "parent");

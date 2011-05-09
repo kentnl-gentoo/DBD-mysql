@@ -24,6 +24,17 @@
 typedef short WORD;
 #endif
 
+#if MYSQL_ASYNC
+#  include <poll.h>
+#  define ASYNC_CHECK_RETURN(h, value)\
+    if(imp_dbh->async_query_in_flight) {\
+        do_error(h, 2000, "Calling a synchronous function on an asynchronous handle", "HY000");\
+        return (value);\
+    }
+#else
+#  define ASYNC_CHECK_RETURN(h, value)
+#endif
+
 static int parse_number(char *string, STRLEN len, char **end);
 
 DBISTATE_DECLARE;
@@ -91,7 +102,7 @@ count_params(char *statement, bool bind_comment_placeholders)
 
               if  (c == '-') {
                   /* if two dashes, ignore everything until newline */
-                  while (c = *ptr)
+                  while ((c = *ptr))
                   {
                       if (dbis->debug >= 2)
                           PerlIO_printf(DBILOGFP, "%c\n", c);
@@ -134,7 +145,7 @@ count_params(char *statement, bool bind_comment_placeholders)
                   comment_length= 0;
                   comment_end= false;
                   /* ignore everything until closing comment */
-                  while (c= *ptr)
+                  while ((c= *ptr))
                   {
                       ptr++;
                       comment_length++;
@@ -1887,6 +1898,12 @@ MYSQL *mysql_dr_connect(
         imp_dbh->use_server_side_prepare = FALSE;
 #endif
 
+#if MYSQL_ASYNC
+      if(imp_dbh) {
+          imp_dbh->async_query_in_flight = NULL;
+      }
+#endif
+
       /*
         we turn off Mysql's auto reconnect and handle re-connecting ourselves
         so that we can keep track of when this happens.
@@ -2068,6 +2085,8 @@ dbd_db_commit(SV* dbh, imp_dbh_t* imp_dbh)
   if (DBIc_has(imp_dbh, DBIcf_AutoCommit))
     return FALSE;
 
+  ASYNC_CHECK_RETURN(dbh, FALSE);
+
   if (imp_dbh->has_transactions)
   {
 #if MYSQL_VERSION_ID < SERVER_PREPARE_VERSION
@@ -2095,6 +2114,8 @@ dbd_db_rollback(SV* dbh, imp_dbh_t* imp_dbh) {
   /* croak, if not in AutoCommit mode */
   if (DBIc_has(imp_dbh, DBIcf_AutoCommit))
     return FALSE;
+
+  ASYNC_CHECK_RETURN(dbh, FALSE);
 
   if (imp_dbh->has_transactions)
   {
@@ -2444,7 +2465,7 @@ SV* dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
     {
       const char* clientinfo = mysql_get_client_info();
       result= clientinfo ?
-        sv_2mortal(newSVpv(clientinfo, strlen(clientinfo))) : &sv_undef;
+        sv_2mortal(newSVpv(clientinfo, strlen(clientinfo))) : &PL_sv_undef;
     }
     else if (kl == 13 && strEQ(key, "clientversion"))
     {
@@ -2562,7 +2583,7 @@ SV* dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
 }
 
 
-/*
+/* 
  **************************************************************************
  *
  *  Name:    dbd_st_prepare
@@ -2610,6 +2631,19 @@ dbd_st_prepare(
     svp= DBD_ATTRIB_GET_SVP(attribs, "mysql_server_prepare", 20);
     imp_sth->use_server_side_prepare = (svp) ?
       SvTRUE(*svp) : imp_dbh->use_server_side_prepare;
+
+    svp = DBD_ATTRIB_GET_SVP(attribs, "async", 5);
+
+    if(svp && SvTRUE(*svp)) {
+#if MYSQL_ASYNC
+        imp_sth->is_async = TRUE;
+        imp_sth->use_server_side_prepare = FALSE;
+#else
+        do_error(sth, 2000,
+                 "Async support was not built into this version of DBD::mysql", "HY000");
+        return 0;
+#endif
+    }
   }
 
   imp_sth->fetch_done= 0;
@@ -3072,6 +3106,9 @@ my_ulonglong mysql_st_internal_execute(
   char *salloc;
   int htype;
   int errno;
+#if MYSQL_ASYNC
+  bool async = FALSE;
+#endif
   my_ulonglong rows= 0;
   /* thank you DBI.c for this info! */
   D_imp_xxh(h);
@@ -3095,6 +3132,9 @@ my_ulonglong mysql_st_internal_execute(
       bind_type_guessing= imp_dbh->bind_type_guessing;
       bind_comment_placeholders= bind_comment_placeholders;
     }
+#if MYSQL_ASYNC
+    async = (bool) (imp_dbh->async_query_in_flight != NULL);
+#endif
   }
   /* h is a sth */
   else
@@ -3107,6 +3147,14 @@ my_ulonglong mysql_st_internal_execute(
       bind_type_guessing= imp_dbh->bind_type_guessing;
       bind_comment_placeholders= imp_dbh->bind_comment_placeholders;
     }
+#if MYSQL_ASYNC
+    async = imp_sth->is_async;
+    if(async) {
+        imp_dbh->async_query_in_flight = imp_sth;
+    } else {
+        imp_dbh->async_query_in_flight = NULL;
+    }
+#endif
   }
 
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
@@ -3171,32 +3219,49 @@ my_ulonglong mysql_st_internal_execute(
     return 0;
   }
 
-  if ((mysql_real_query(svsock, sbuf, slen))  &&
-      (!mysql_db_reconnect(h)  ||
-       (mysql_real_query(svsock, sbuf, slen))))
-  {
-    Safefree(salloc);
+#if MYSQL_ASYNC
+  if(async) {
+    if((mysql_send_query(svsock, sbuf, slen)) &&
+       (!mysql_db_reconnect(h) ||
+        (mysql_send_query(svsock, sbuf, slen))))
+    {
+        rows = -2;
+    } else {
+        rows = 0;
+    }
+  } else {
+#endif
+      if ((mysql_real_query(svsock, sbuf, slen))  &&
+          (!mysql_db_reconnect(h)  ||
+           (mysql_real_query(svsock, sbuf, slen))))
+      {
+        rows = -2;
+      } else {
+          /** Store the result from the Query */
+          *result= use_mysql_use_result ?
+            mysql_use_result(svsock) : mysql_store_result(svsock);
+
+          if (mysql_errno(svsock))
+            do_error(h, mysql_errno(svsock), mysql_error(svsock)
+                     ,mysql_sqlstate(svsock));
+
+          if (!*result)
+            rows= mysql_affected_rows(svsock);
+          else
+            rows= mysql_num_rows(*result);
+      }
+#if MYSQL_ASYNC
+  }
+  Safefree(salloc);
+
+  if(rows == -2) {
     do_error(h, mysql_errno(svsock), mysql_error(svsock), 
              mysql_sqlstate(svsock));
     if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
       PerlIO_printf(DBILOGFP, "IGNORING ERROR errno %d\n", errno);
-    return -2;
+    rows = -2;
   }
-  Safefree(salloc);
-
-  /** Store the result from the Query */
-  *result= use_mysql_use_result ?
-    mysql_use_result(svsock) : mysql_store_result(svsock);
-
-  if (mysql_errno(svsock))
-    do_error(h, mysql_errno(svsock), mysql_error(svsock)
-             ,mysql_sqlstate(svsock));
-
-  if (!*result)
-    rows= mysql_affected_rows(svsock);
-  else
-    rows= mysql_num_rows(*result);
-
+#endif
   return(rows);
 }
 
@@ -3295,7 +3360,7 @@ my_ulonglong mysql_st_internal_execute41(
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
     PerlIO_printf(DBILOGFP,
                   "\t<- mysql_internal_execute_41 returning %d rows\n",
-                  rows);
+                  (int) rows);
   return(rows);
 
 error:
@@ -3348,6 +3413,8 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
   dTHR;
 #endif
 
+  ASYNC_CHECK_RETURN(sth, -2);
+
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
     PerlIO_printf(DBILOGFP,
       " -> dbd_st_execute for %08lx\n", (u_long) sth);
@@ -3391,7 +3458,7 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
                                                   &imp_sth->has_been_bound
                                                  );
   }
-  else
+  else {
 #endif
     imp_sth->row_num= mysql_st_internal_execute(
                                                 sth,
@@ -3403,6 +3470,13 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
                                                 imp_dbh->pmysql,
                                                 imp_sth->use_mysql_use_result
                                                );
+#if MYSQL_ASYNC
+    if(imp_dbh->async_query_in_flight) {
+        DBIc_ACTIVE_on(imp_sth);
+        return 0;
+    }
+#endif
+  }
 
   if (imp_sth->row_num+1 != (my_ulonglong)-1)
   {
@@ -3514,10 +3588,10 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
       if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
       {
         PerlIO_printf(DBILOGFP,"\t\ti %d col_type %d fbh->length %d\n",
-                      i, col_type, fbh->length);
+                      i, col_type, (int) fbh->length);
         PerlIO_printf(DBILOGFP,
                       "\t\tfields[i].length %d fields[i].type %d fields[i].charsetnr %d\n",
-                      fields[i].length, fields[i].type,
+                      (int) fields[i].length, fields[i].type,
                       fields[i].charsetnr);
       }
       fbh->charsetnr = fields[i].charsetnr;
@@ -3599,6 +3673,14 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
   MYSQL_FIELD *fields;
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
     PerlIO_printf(DBILOGFP, "\t-> dbd_st_fetch\n");
+
+#if MYSQL_ASYNC
+  if(imp_dbh->async_query_in_flight) {
+      if(mysql_db_async_result(sth, &imp_sth->result) <= 0) {
+        return Nullav;
+      }
+  }
+#endif
 
 #if MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
   if (imp_sth->use_server_side_prepare)
@@ -3735,7 +3817,7 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
         case MYSQL_TYPE_LONG:
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBILOGFP, "\t\tst_fetch int data %d, unsigned? %d\n",
-                          fbh->ldata, buffer->is_unsigned);
+                          (int) fbh->ldata, buffer->is_unsigned);
           if (buffer->is_unsigned)
             sv_setuv(sv, fbh->ldata);
           else
@@ -3777,9 +3859,9 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
     if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
     {
       PerlIO_printf(DBILOGFP, "\tdbd_st_fetch result set details\n");
-      PerlIO_printf(DBILOGFP, "\timp_sth->result=%08lx\n",imp_sth->result);
+      PerlIO_printf(DBILOGFP, "\timp_sth->result=%08lx\n",(long unsigned int) imp_sth->result);
       PerlIO_printf(DBILOGFP, "\tmysql_num_fields=%llu\n",
-                    mysql_num_fields(imp_sth->result));
+                    (long long unsigned int) mysql_num_fields(imp_sth->result));
       PerlIO_printf(DBILOGFP, "\tmysql_num_rows=%llu\n",
                     mysql_num_rows(imp_sth->result));
       PerlIO_printf(DBILOGFP, "\tmysql_affected_rows=%llu\n",
@@ -3925,6 +4007,13 @@ int dbd_st_finish(SV* sth, imp_sth_t* imp_sth) {
 
 #if defined (dTHR)
   dTHR;
+#endif
+
+#if MYSQL_ASYNC
+  D_imp_dbh_from_sth;
+  if(imp_dbh->async_query_in_flight) {
+    mysql_db_async_result(sth, &imp_sth->result);
+  }
 #endif
 
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
@@ -4362,7 +4451,7 @@ dbd_st_FETCH_internal(
       {
         /* We cannot return an IV, because the insertid is a long.  */
         if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
-          PerlIO_printf(DBILOGFP, "INSERT ID %d\n", imp_sth->insertid);
+          PerlIO_printf(DBILOGFP, "INSERT ID %d\n", (int) imp_sth->insertid);
 
         return sv_2mortal(my_ulonglong2str(imp_sth->insertid));
       }
@@ -4481,6 +4570,9 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
   unsigned int buffer_type= 0;
 #endif
 
+  D_imp_dbh_from_sth;
+  ASYNC_CHECK_RETURN(sth, FALSE);
+
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
     PerlIO_printf(DBILOGFP,
                   "   Called: dbd_bind_ph\n");
@@ -4568,7 +4660,7 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBILOGFP,
                           "   SCALAR type %d ->%ld<- IS A INT NUMBER\n",
-                          sql_type, (long) (*buffer));
+                          (int) sql_type, (long) (*buffer));
           break;
 
         case MYSQL_TYPE_DOUBLE:
@@ -4580,7 +4672,7 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBILOGFP,
                           "   SCALAR type %d ->%f<- IS A FLOAT NUMBER\n",
-                          sql_type, (double)(*buffer));
+                          (int) sql_type, (double)(*buffer));
           break;
 
         case MYSQL_TYPE_BLOB:
@@ -4592,7 +4684,7 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
         case MYSQL_TYPE_STRING:
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBILOGFP,
-                          "   SCALAR type STRING %d, buffertype=%d\n", sql_type, buffer_type);
+                          "   SCALAR type STRING %d, buffertype=%d\n", (int) sql_type, buffer_type);
           break;
 
         default:
@@ -4606,7 +4698,7 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
         if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
           PerlIO_printf(DBILOGFP,
                         " SCALAR type %d ->length %d<- IS A STRING or BLOB\n",
-                        sql_type, buffer_length);
+                        (int) sql_type, buffer_length);
       }
     }
     else
@@ -4627,7 +4719,7 @@ int dbd_bind_ph (SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
       if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
           PerlIO_printf(DBILOGFP,
                         "   FORCE REBIND: buffer type changed from %d to %d, sql-type=%d\n",
-                        imp_sth->bind[idx].buffer_type, buffer_type, sql_type);
+                        (int) imp_sth->bind[idx].buffer_type, buffer_type, (int) sql_type);
       imp_sth->has_been_bound = 0;
     }
 
@@ -4900,7 +4992,128 @@ SV *mysql_db_last_insert_id(SV *dbh, imp_dbh_t *imp_dbh,
   table= table;
   field= field;
   attr= attr;
+
+  ASYNC_CHECK_RETURN(dbh, &PL_sv_undef);
   return sv_2mortal(my_ulonglong2str(mysql_insert_id(imp_dbh->pmysql)));
+}
+#endif
+
+#if MYSQL_ASYNC
+int mysql_db_async_result(SV* h, MYSQL_RES** resp)
+{
+    D_imp_xxh(h);
+    imp_dbh_t* dbh;
+    MYSQL* svsock = NULL;
+    MYSQL_RES* _res;
+    int retval = 0;
+    int htype;
+
+    if(! resp) {
+        resp = &_res;
+    }
+
+    htype = DBIc_TYPE(imp_xxh);
+
+    if(htype == DBIt_DB) {
+        D_imp_dbh(h);
+        dbh = imp_dbh;
+    } else {
+        D_imp_sth(h);
+        D_imp_dbh_from_sth;
+        dbh = imp_dbh;
+    }
+
+    if(! dbh->async_query_in_flight) {
+        do_error(h, 2000, "Gathering asynchronous results for a synchronous handle", "HY000");
+        return -1;
+    }
+    if(dbh->async_query_in_flight != imp_xxh) {
+        do_error(h, 2000, "Gathering async_query_in_flight results for the wrong handle", "HY000");
+        return -1;
+    }
+    dbh->async_query_in_flight = NULL;
+
+    svsock= dbh->pmysql;
+    retval= mysql_read_query_result(svsock);
+    if(! retval) {
+      *resp= mysql_store_result(svsock);
+
+      if (mysql_errno(svsock))
+        do_error(h, mysql_errno(svsock), mysql_error(svsock), mysql_sqlstate(svsock));
+      if (!*resp)
+        retval= mysql_affected_rows(svsock);
+      else {
+        retval= mysql_num_rows(*resp);
+        if(resp == &_res) {
+            mysql_free_result(*resp);
+        }
+      }
+      if(htype == DBIt_ST) {
+        D_imp_sth(h);
+        D_imp_dbh_from_sth;
+
+        if(retval+1 != (my_ulonglong)-1) {
+            if(! *resp) {
+                imp_sth->insertid= mysql_insert_id(svsock);
+#if MYSQL_VERSION_ID >= MULTIPLE_RESULT_SET_VERSION
+                if (! mysql_more_results(svsock))
+                    DBIc_ACTIVE_off(imp_sth);
+#endif
+            } else {
+                DBIc_NUM_FIELDS(imp_sth)= mysql_num_fields(imp_sth->result);
+                imp_sth->done_desc= 0;
+                imp_sth->fetch_done= 0;
+            }
+        }
+        imp_sth->warning_count = mysql_warning_count(imp_dbh->pmysql);
+      }
+    } else {
+        do_error(h, mysql_errno(svsock), mysql_error(svsock),
+                 mysql_sqlstate(svsock));
+        return -1;
+    }
+    return retval;
+}
+
+int mysql_db_async_ready(SV* h)
+{
+    D_imp_xxh(h);
+    imp_dbh_t* dbh;
+    int htype;
+
+    htype = DBIc_TYPE(imp_xxh);
+    
+    if(htype == DBIt_DB) {
+        D_imp_dbh(h);
+        dbh = imp_dbh;
+    } else {
+        D_imp_sth(h);
+        D_imp_dbh_from_sth;
+        dbh = imp_dbh;
+    }
+
+    if(dbh->async_query_in_flight) {
+        if(dbh->async_query_in_flight == imp_xxh) {
+            struct pollfd fds;
+            int retval;
+
+            fds.fd = dbh->pmysql->net.fd;
+            fds.events = POLLIN;
+
+            retval = poll(&fds, 1, 0);
+
+            if(retval < 0) {
+                do_error(h, errno, strerror(errno), "HY000");
+            }
+            return retval;
+        } else {
+            do_error(h, 2000, "Calling mysql_async_ready on the wrong handle", "HY000");
+            return -1;
+        }
+    } else {
+        do_error(h, 2000, "Handle is not in asynchronous mode", "HY000");
+        return -1;
+    }
 }
 #endif
 
