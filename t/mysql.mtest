@@ -3,13 +3,13 @@
          'embedded' => '',
          'ssl' => 0,
          'nocatchstderr' => 0,
-         'libs' => '-rdynamic -L/usr/local/mysql/lib/mysql -lmysqlclient -lz -lcrypt -lnsl -lm',
-         'testhost' => '127.0.0.1',
+         'libs' => '-L/usr/local/mysql/lib/mysql -lmysqlclient -lz -lm',
+         'testhost' => '',
          'nofoundrows' => 0,
          'testdb' => 'test',
-         'cflags' => '-I/usr/local/mysql/include/mysql  -g -DUNIV_LINUX -DUNIV_LINUX',
-         'testuser' => 'ec2-user',
-         'testpassword' => 's3kr1t',
+         'cflags' => '-I/usr/local/mysql/include/mysql -g -Wextra -Wwrite-strings -m64 -D_P1003_1B_VISIBLE -DSIGNAL_WITH_VIO_CLOSE -DSIGNALS_DONT_BREAK_READ -DIGNORE_SIGHUP_SIGQUIT  -DDONT_DECLARE_CXA_PURE_VIRTUAL',
+         'testuser' => 'root',
+         'testpassword' => '',
          'testsocket' => ''
        };
 $::test_host = $opt->{'testhost'};

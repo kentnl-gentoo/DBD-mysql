@@ -3351,6 +3351,9 @@ my_ulonglong mysql_st_internal_execute41(
   */
   else
   {
+    /* mysql_stmt_store_result to update MYSQL_FIELD->max_length */
+    my_bool on = 1;
+    mysql_stmt_attr_set(stmt, STMT_ATTR_UPDATE_MAX_LENGTH, &on);
     /* Get the total rows affected and return */
     if (mysql_stmt_store_result(stmt))
       goto error;
@@ -3443,12 +3446,6 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
 
   if (imp_sth->use_server_side_prepare && ! imp_sth->use_mysql_use_result)
   {
-    if (DBIc_ACTIVE(imp_sth) && !(mysql_st_clean_cursor(sth, imp_sth)))
-    {
-      do_error(sth, JW_ERR_SEQUENCE,
-               "Error happened while tried to clean up stmt", NULL);
-      return 0;
-    }
     imp_sth->row_num= mysql_st_internal_execute41(
                                                   sth,
                                                   DBIc_NUM_PARAMS(imp_sth),
@@ -3590,20 +3587,23 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
         PerlIO_printf(DBILOGFP,"\t\ti %d col_type %d fbh->length %d\n",
                       i, col_type, (int) fbh->length);
         PerlIO_printf(DBILOGFP,
-                      "\t\tfields[i].length %d fields[i].type %d fields[i].charsetnr %d\n",
-                      (int) fields[i].length, fields[i].type,
+                      "\t\tfields[i].length %lu fields[i].max_length %lu fields[i].type %d fields[i].charsetnr %d\n",
+                      (long unsigned int) fields[i].length, (long unsigned int) fields[i].max_length, fields[i].type,
                       fields[i].charsetnr);
       }
       fbh->charsetnr = fields[i].charsetnr;
+#if MYSQL_VERSION_ID < FIELD_CHARSETNR_VERSION 
+      fbh->flags     = fields[i].flags;
+#endif
 
       buffer->buffer_type= mysql_to_perl_type(col_type);
       if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
         PerlIO_printf(DBILOGFP, "\t\tmysql_to_perl_type returned %d\n",
                       col_type);
-      buffer->buffer_length= fields[i].length;
+      buffer->buffer_length= fields[i].max_length ? fields[i].max_length : fields[i].length;
       buffer->length= &(fbh->length);
       buffer->is_null= &(fbh->is_null);
-      Newz(908, fbh->data, fields[i].length, char);
+      Newz(908, fbh->data, buffer->buffer_length, char);
 
       switch (buffer->buffer_type) {
       case MYSQL_TYPE_DOUBLE:
@@ -3824,24 +3824,43 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
             sv_setiv(sv, fbh->ldata);
           break;
 
-        case MYSQL_TYPE_STRING:
-          if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
-            PerlIO_printf(DBILOGFP, "\t\tst_fetch string data %s\n", fbh->data);
-          sv_setpvn(sv, fbh->data, fbh->length);
-          /*HELMUT*/
-#ifdef sv_utf8_decode
-          if(imp_dbh->enable_utf8)
-              sv_utf8_decode(sv);
-#endif
-          break;
-
         default:
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBILOGFP, "\t\tERROR IN st_fetch_string");
-          sv_setpvn(sv, fbh->data, fbh->length);
+          STRLEN len= fbh->length;
+	/* ChopBlanks */
+          if (ChopBlanks)
+          {
+#if MYSQL_VERSION_ID >= FIELD_CHARSETNR_VERSION
+  /* see bottom of: http://www.mysql.org/doc/refman/5.0/en/c-api-datatypes.html */
+        if (fbh->charsetnr != 63)
+#else
+	if (!(fbh->flags & BINARY_FLAG))
+#endif
+            while (len && fbh->data[len-1] == ' ')
+            {	--len; }
+          }
+	/* END OF ChopBlanks */
+
+          sv_setpvn(sv, fbh->data, len);
+
+	/* UTF8 */
+        /*HELMUT*/
+#if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
+
+#if MYSQL_VERSION_ID >= FIELD_CHARSETNR_VERSION 
+  /* see bottom of: http://www.mysql.org/doc/refman/5.0/en/c-api-datatypes.html */
+        if (imp_dbh->enable_utf8 && fbh->charsetnr != 63)
+#else
+	if (imp_dbh->enable_utf8 && !(fbh->flags & BINARY_FLAG))
+#endif
+	  sv_utf8_decode(sv);
+#endif
+	/* END OF UTF8 */
           break;
 
         }
+
       }
     }
 
