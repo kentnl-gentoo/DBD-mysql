@@ -15,6 +15,8 @@
  *  $Id$
  */
 
+#define PERL_NO_GET_CONTEXT
+
 /*
  *  Header files we use
  */
@@ -335,6 +337,10 @@ my_ulonglong mysql_st_internal_execute41(SV *,
 
 
 int mysql_st_clean_cursor(SV*, imp_sth_t*);
+#endif
+
+#if MYSQL_VERSION_ID >= MULTIPLE_RESULT_SET_VERSION
+int mysql_st_next_results(SV*, imp_sth_t*);
 #endif
 
 #if defined(DBD_MYSQL_EMBEDDED)

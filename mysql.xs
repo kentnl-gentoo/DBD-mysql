@@ -301,10 +301,10 @@ do(dbh, statement, attr=Nullsv, ...)
     svp   = DBD_ATTRIB_GET_SVP(attr, "async", 5);
     async = (svp) ? *svp : &PL_sv_no;
   }
-  if (dbis->debug >= 2)
-    PerlIO_printf(DBILOGFP,
+  if (DBIc_DBISTATE(imp_dbh)->debug >= 2)
+    PerlIO_printf(DBIc_LOGPIO(imp_dbh),
                   "mysql.xs do() use_server_side_prepare %d, async %d\n",
-                  use_server_side_prepare, async);
+                  use_server_side_prepare, SvTRUE(async));
 
   hv_store((HV*)SvRV(dbh), "Statement", 9, SvREFCNT_inc(statement), 0);
 
@@ -554,8 +554,9 @@ do(dbh, statement, attr=Nullsv, ...)
           }
           if (next_result_rc > 0)
           {
-            if (dbis->debug >= 2)
-              PerlIO_printf(DBILOGFP, "\t<- do() ERROR: %s\n",
+            if (DBIc_DBISTATE(imp_dbh)->debug >= 2)
+              PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                            "\t<- do() ERROR: %s\n",
                             mysql_error(imp_dbh->pmysql));
 
               do_error(dbh, mysql_errno(imp_dbh->pmysql),
@@ -896,7 +897,7 @@ dbd_mysql_get_info(dbh, sql_info_type)
 	case SQL_IDENTIFIER_QUOTE_CHAR:
 	    /*XXX What about a DB started in ANSI mode? */
 	    /* Swiped from MyODBC's get_info.c */
-	    using_322=is_prefix(mysql_get_server_info(imp_dbh->pmysql),"3.22");
+	    using_322 = ((strncmp(mysql_get_server_info(imp_dbh->pmysql),"3.22",4) == 0) ? 1 : 0 );
 	    retsv = newSVpv(!using_322 ? "`" : " ", 1);
 	    break;
 	case SQL_MAXIMUM_STATEMENT_LENGTH:
