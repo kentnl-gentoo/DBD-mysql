@@ -1517,10 +1517,10 @@ MYSQL *mysql_dr_connect(
                         MYSQL* sock,
                         char* mysql_socket,
                         char* host,
-			char* port,
+			                  char* port,
                         char* user,
                         char* password,
-			char* dbname,
+			                  char* dbname,
                         imp_dbh_t *imp_dbh)
 {
   int portNr;
@@ -2029,7 +2029,7 @@ int dbd_db_login(SV* dbh, imp_dbh_t* imp_dbh, char* dbname, char* user,
 #ifdef dTHR
   dTHR;
 #endif
-  dTHX;
+  dTHX; 
   D_imp_xxh(dbh);
 
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
@@ -2170,9 +2170,9 @@ int dbd_db_disconnect(SV* dbh, imp_dbh_t* imp_dbh)
   /* since most errors imply already disconnected.    */
   DBIc_ACTIVE_off(imp_dbh);
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
-      PerlIO_printf(DBIc_LOGPIO(imp_xxh), "imp_dbh->pmysql: %lx\n",
-        (long) imp_dbh->pmysql);
-      mysql_close(imp_dbh->pmysql );
+    PerlIO_printf(DBIc_LOGPIO(imp_xxh), "imp_dbh->pmysql: %lx\n",
+		              (long) imp_dbh->pmysql);
+  mysql_close(imp_dbh->pmysql );
 
   /* We don't free imp_dbh since a reference still exists    */
   /* The DESTROY method is the only one to 'free' memory.    */
@@ -2194,7 +2194,7 @@ int dbd_db_disconnect(SV* dbh, imp_dbh_t* imp_dbh)
  *
  **************************************************************************/
 
-int dbd_discon_all(SV *drh, imp_drh_t *imp_drh) {
+int dbd_discon_all (SV *drh, imp_drh_t *imp_drh) {
 #if defined(dTHR)
   dTHR;
 #endif
@@ -2313,7 +2313,7 @@ dbd_db_STORE_attrib(
   {
     if (imp_dbh->has_transactions)
     {
-      int oldval = DBIc_has(imp_dbh,DBIcf_AutoCommit);
+      bool oldval = DBIc_has(imp_dbh,DBIcf_AutoCommit) ? 1 : 0;
 
       if (bool_value == oldval)
         return TRUE;
@@ -3296,6 +3296,8 @@ my_ulonglong mysql_st_internal_execute41(
                                          int *has_been_bound
                                         )
 {
+  int i;
+  enum enum_field_types enum_type;
   dTHX;
   int execute_retval;
   my_ulonglong rows=0;
@@ -3353,9 +3355,16 @@ my_ulonglong mysql_st_internal_execute41(
   */
   else
   {
-    /* mysql_stmt_store_result to update MYSQL_FIELD->max_length */
-    my_bool on = 1;
-    mysql_stmt_attr_set(stmt, STMT_ATTR_UPDATE_MAX_LENGTH, &on);
+    for (i = mysql_stmt_field_count(stmt) - 1; i >=0; --i) {
+        enum_type = mysql_to_perl_type(stmt->fields[i].type);
+        if (enum_type != MYSQL_TYPE_DOUBLE && enum_type != MYSQL_TYPE_LONG)
+        {
+            /* mysql_stmt_store_result to update MYSQL_FIELD->max_length */
+            my_bool on = 1;
+            mysql_stmt_attr_set(stmt, STMT_ATTR_UPDATE_MAX_LENGTH, &on);
+            break;
+        }
+    }
     /* Get the total rows affected and return */
     if (mysql_stmt_store_result(stmt))
       goto error;
@@ -3604,27 +3613,25 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
       if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
         PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tmysql_to_perl_type returned %d\n",
                       col_type);
-      buffer->buffer_length= fields[i].max_length ? fields[i].max_length : fields[i].length;
       buffer->length= &(fbh->length);
       buffer->is_null= &(fbh->is_null);
-      Newz(908, fbh->data, buffer->buffer_length, char);
 
       switch (buffer->buffer_type) {
       case MYSQL_TYPE_DOUBLE:
+        buffer->buffer_length= sizeof(fbh->ddata);
         buffer->buffer= (char*) &fbh->ddata;
         break;
 
       case MYSQL_TYPE_LONG:
+        buffer->buffer_length= sizeof(fbh->ldata);
         buffer->buffer= (char*) &fbh->ldata;
         buffer->is_unsigned= (fields[i].flags & UNSIGNED_FLAG) ? 1 : 0;
         break;
 
-      case MYSQL_TYPE_STRING:
-        buffer->buffer= (char *) fbh->data;
-
       default:
+        buffer->buffer_length= fields[i].max_length ? fields[i].max_length : 1;
+        Newz(908, fbh->data, buffer->buffer_length, char);
         buffer->buffer= (char *) fbh->data;
-
       }
     }
 
@@ -4196,7 +4203,7 @@ dbd_st_STORE_attrib(
                     SV *valuesv
                    )
 {
-  dTHX; 
+  dTHX;
   STRLEN(kl);
   char *key= SvPV(keysv, kl);
   int retval= FALSE;
@@ -5047,8 +5054,8 @@ int mysql_db_async_result(SV* h, MYSQL_RES** resp)
   if(! resp) {
       resp = &_res;
   }
-
   htype = DBIc_TYPE(imp_xxh);
+
 
   if(htype == DBIt_DB) {
       D_imp_dbh(h);
@@ -5081,7 +5088,7 @@ int mysql_db_async_result(SV* h, MYSQL_RES** resp)
     else {
       retval= mysql_num_rows(*resp);
       if(resp == &_res) {
-          mysql_free_result(*resp);
+        mysql_free_result(*resp);
       }
     }
     if(htype == DBIt_ST) {
@@ -5089,26 +5096,26 @@ int mysql_db_async_result(SV* h, MYSQL_RES** resp)
       D_imp_dbh_from_sth;
 
       if(retval+1 != (my_ulonglong)-1) {
-          if(! *resp) {
-              imp_sth->insertid= mysql_insert_id(svsock);
+        if(! *resp) {
+          imp_sth->insertid= mysql_insert_id(svsock);
 #if MYSQL_VERSION_ID >= MULTIPLE_RESULT_SET_VERSION
-              if (! mysql_more_results(svsock))
-                  DBIc_ACTIVE_off(imp_sth);
+          if(! mysql_more_results(svsock))
+            DBIc_ACTIVE_off(imp_sth);
 #endif
-          } else {
-              DBIc_NUM_FIELDS(imp_sth)= mysql_num_fields(imp_sth->result);
-              imp_sth->done_desc= 0;
-              imp_sth->fetch_done= 0;
-          }
+        } else {
+          DBIc_NUM_FIELDS(imp_sth)= mysql_num_fields(imp_sth->result);
+          imp_sth->done_desc= 0;
+          imp_sth->fetch_done= 0;
+        }
       }
       imp_sth->warning_count = mysql_warning_count(imp_dbh->pmysql);
     }
   } else {
-      do_error(h, mysql_errno(svsock), mysql_error(svsock),
-               mysql_sqlstate(svsock));
-      return -1;
+     do_error(h, mysql_errno(svsock), mysql_error(svsock),
+              mysql_sqlstate(svsock));
+     return -1;
   }
-  return retval;
+ return retval;
 }
 
 int mysql_db_async_ready(SV* h)

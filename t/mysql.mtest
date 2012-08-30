@@ -8,9 +8,9 @@
          'testhost' => '',
          'nofoundrows' => 0,
          'testdb' => 'test',
-         'cflags' => '-I/usr/include -fPIC -g -static-libgcc -fno-omit-frame-pointer -DPERCONA_INNODB_VERSION=rel25.2   -fPIC -g -static-libgcc -fno-omit-frame-pointer -fno-strict-aliasing -DMY_PTHREAD_FASTMUTEX=1',
-         'testuser' => 'root',
-         'testpassword' => 'patg',
+         'cflags' => '-I/usr/include -g -fstack-protector --param=ssp-buffer-size=4 -Wformat-security -fPIC -g -static-libgcc -fno-omit-frame-pointer -DPERCONA_INNODB_VERSION=rel27.1  -fPIC -g -static-libgcc -fno-omit-frame-pointer -fno-strict-aliasing -DMY_PTHREAD_FASTMUTEX=1',
+         'testuser' => 'dbaas',
+         'testpassword' => 'dbaas-pass',
          'testsocket' => ''
        };
 $::test_host = $opt->{'testhost'};
