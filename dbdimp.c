@@ -1704,6 +1704,28 @@ MYSQL *mysql_dr_connect(
           mysql_options(sock, MYSQL_OPT_CONNECT_TIMEOUT,
                         (const char *)&to);
         }
+        if ((svp = hv_fetch(hv, "mysql_write_timeout", 19, FALSE))
+            &&  *svp  &&  SvTRUE(*svp))
+        {
+          int to = SvIV(*svp);
+          if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+            PerlIO_printf(DBIc_LOGPIO(imp_xxh),
+                          "imp_dbh->mysql_dr_connect: Setting" \
+                          " write timeout (%d).\n",to);
+          mysql_options(sock, MYSQL_OPT_WRITE_TIMEOUT,
+                        (const char *)&to);
+        }
+        if ((svp = hv_fetch(hv, "mysql_read_timeout", 18, FALSE))
+            &&  *svp  &&  SvTRUE(*svp))
+        {
+          int to = SvIV(*svp);
+          if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+            PerlIO_printf(DBIc_LOGPIO(imp_xxh),
+                          "imp_dbh->mysql_dr_connect: Setting" \
+                          " read timeout (%d).\n",to);
+          mysql_options(sock, MYSQL_OPT_READ_TIMEOUT,
+                        (const char *)&to);
+        }
         if ((svp = hv_fetch(hv, "mysql_read_default_file", 23, FALSE)) &&
             *svp  &&  SvTRUE(*svp))
         {
@@ -3009,6 +3031,10 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
 
     return 0;
   }
+  else if(next_result_return_code == -1)                                                                                                                  
+  {                                                                                                                                                       
+    return 0;                                                                                                                                             
+  }  
   else
   {
     /* Store the result from the Query */
@@ -3016,14 +3042,20 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
      mysql_use_result(svsock) : mysql_store_result(svsock);
 
     if (mysql_errno(svsock))
+    {
       do_error(sth, mysql_errno(svsock), mysql_error(svsock), 
                mysql_sqlstate(svsock));
+      return 0;
+    }
 
     imp_sth->row_num= mysql_affected_rows(imp_dbh->pmysql);
 
     if (imp_sth->result == NULL)
     {
       /* No "real" rowset*/
+      DBIc_NUM_FIELDS(imp_sth)= 0; /* for DBI <= 1.53 */
+      DBIS->set_attr_k(sth, sv_2mortal(newSVpvn("NUM_OF_FIELDS",13)), 0,
+			               sv_2mortal(newSViv(0)));
       return 1;
     }
     else
@@ -3791,6 +3823,7 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
         )
     {
       SV *sv= AvARRAY(av)[i]; /* Note: we (re)use the SV in the AV	*/
+      STRLEN len;
 
       /* This is wrong, null is not being set correctly
        * This is not the way to determine length (this would break blobs!)
@@ -3811,6 +3844,10 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
           Renew(fbh->data, fbh->length, char);
           buffer->buffer_length= fbh->length;
           buffer->buffer= (char *) fbh->data;
+
+          if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+            PerlIO_printf(DBIc_LOGPIO(imp_xxh),"\t\tbuffer->buffer: %s\n", (char *) buffer->buffer);
+
           /*TODO: Use offset instead of 0 to fetch only remain part of data*/
           if (mysql_stmt_fetch_column(imp_sth->stmt, buffer , i, 0))
             do_error(sth, mysql_stmt_errno(imp_sth->stmt),
@@ -3835,12 +3872,13 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
             sv_setuv(sv, fbh->ldata);
           else
             sv_setiv(sv, fbh->ldata);
+
           break;
 
         default:
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tERROR IN st_fetch_string");
-          STRLEN len= fbh->length;
+          len= fbh->length;
 	/* ChopBlanks */
           if (ChopBlanks)
           {
