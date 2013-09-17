@@ -3285,6 +3285,8 @@ my_ulonglong mysql_st_internal_execute(
       }
 #if MYSQL_ASYNC
   }
+#endif
+
   Safefree(salloc);
 
   if(rows == -2) {
@@ -3294,7 +3296,6 @@ my_ulonglong mysql_st_internal_execute(
       PerlIO_printf(DBIc_LOGPIO(imp_xxh), "IGNORING ERROR errno %d\n", errno);
     rows = -2;
   }
-#endif
   return(rows);
 }
 
@@ -3534,7 +3535,8 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
       /** Store the result in the current statement handle */
       DBIc_NUM_FIELDS(imp_sth)= mysql_num_fields(imp_sth->result);
       DBIc_ACTIVE_on(imp_sth);
-      imp_sth->done_desc= 0;
+      if (!imp_sth->use_server_side_prepare)
+        imp_sth->done_desc= 0;
       imp_sth->fetch_done= 0;
     }
   }
@@ -3879,19 +3881,17 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tERROR IN st_fetch_string");
           len= fbh->length;
-	/* ChopBlanks */
+	  /* ChopBlanks server-side prepared statement */
           if (ChopBlanks)
           {
-#if MYSQL_VERSION_ID >= FIELD_CHARSETNR_VERSION
-  /* see bottom of: http://www.mysql.org/doc/refman/5.0/en/c-api-datatypes.html */
-        if (fbh->charsetnr != 63)
-#else
-	if (!(fbh->flags & BINARY_FLAG))
-#endif
-            while (len && fbh->data[len-1] == ' ')
-            {	--len; }
+            /* 
+              see bottom of:
+              http://www.mysql.org/doc/refman/5.0/en/c-api-datatypes.html
+            */
+            if (fbh->charsetnr != 63)
+              while (len && fbh->data[len-1] == ' ') { --len; }
           }
-	/* END OF ChopBlanks */
+	  /* END OF ChopBlanks */
 
           sv_setpvn(sv, fbh->data, len);
 
@@ -4017,12 +4017,8 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
         /*HELMUT*/
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
 
-#if MYSQL_VERSION_ID >= FIELD_CHARSETNR_VERSION 
   /* see bottom of: http://www.mysql.org/doc/refman/5.0/en/c-api-datatypes.html */
         if (imp_dbh->enable_utf8 && fields[i].charsetnr != 63)
-#else
-	if (imp_dbh->enable_utf8 && !(fields[i].flags & BINARY_FLAG))
-#endif
 	  sv_utf8_decode(sv);
 #endif
 	/* END OF UTF8 */

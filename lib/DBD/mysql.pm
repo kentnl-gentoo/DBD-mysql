@@ -10,7 +10,7 @@ use DynaLoader();
 use Carp ();
 @ISA = qw(DynaLoader);
 
-$VERSION = '4.023';
+$VERSION = '4.024';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -477,7 +477,7 @@ sub column_info {
       mysql_is_auto_increment => ($row->{extra} =~ /auto_increment/i ? 1 : 0),
     };
     #
-	  # This code won't deal with a pathalogical case where a value
+	  # This code won't deal with a pathological case where a value
 	  # contains a single quote followed by a comma, and doesn't unescape
 	  # any escaped values. But who would use those in an enum or set?
     #
@@ -812,6 +812,8 @@ __END__
 
 =pod
 
+=encoding utf8
+
 =head1 NAME
 
 DBD::mysql - MySQL driver for the Perl5 Database Interface (DBI)
@@ -899,7 +901,7 @@ database. In other words: DBD::mysql is an interface between the Perl
 programming language and the MySQL programming API that comes with
 the MySQL relational database management system. Most functions
 provided by this programming API are supported. Some rarely used
-functions are missing, mainly because noone ever requested
+functions are missing, mainly because no-one ever requested
 them. :-)
 
 In what follows we first discuss the use of DBD::mysql,
@@ -920,21 +922,21 @@ method like so:
   $dbh = DBI->connect("DBI:mysql:database=$db;host=$host",
 		      $user, $password, {RaiseError => 1});
 
-Once you have connected to a database, you can can execute SQL
+Once you have connected to a database, you can execute SQL
 statements with:
 
   my $query = sprintf("INSERT INTO foo VALUES (%d, %s)",
 		      $number, $dbh->quote("name"));
   $dbh->do($query);
 
-See L<DBI(3)> for details on the quote and do methods. An alternative
+See L<DBI> for details on the quote and do methods. An alternative
 approach is
 
   $dbh->do("INSERT INTO foo VALUES (?, ?)", undef,
 	   $number, $name);
 
 in which case the quote method is executed automatically. See also
-the bind_param method in L<DBI(3)>. See L<DATABASE HANDLES> below
+the bind_param method in L<DBI>. See L<DATABASE HANDLES> below
 for more details on database handles.
 
 If you want to retrieve results, you need to create a so-called
@@ -944,7 +946,7 @@ statement handle with:
   $sth->execute();
 
 This statement handle can be used for multiple things. First of all
-you can retreive a row of data:
+you can retrieve a row of data:
 
   my $row = $sth->fetchrow_hashref();
 
@@ -1117,7 +1119,7 @@ disallow LOCAL.)
 
 =item mysql_multi_statements
 
-As of MySQL 4.1, support for multiple statements seperated by a semicolon
+As of MySQL 4.1, support for multiple statements separated by a semicolon
 (;) may be enabled by using this option. Enabling this option may cause
 problems if server-side prepared statements are also enabled.
 
@@ -1311,12 +1313,13 @@ handles (read/write):
  $bool_value = $dbh->{mysql_auto_reconnect};
  $dbh->{mysql_auto_reconnect} = $AutoReconnect ? 1 : 0;
 
+=over
 
 =item mysql_auto_reconnect
 
 This attribute determines whether DBD::mysql will automatically reconnect
 to mysql if the connection be lost. This feature defaults to off; however,
-if either the GATEWAY_INTERFACE or MOD_PERL envionment variable is set,
+if either the GATEWAY_INTERFACE or MOD_PERL environment variable is set,
 DBD::mysql will turn mysql_auto_reconnect on.  Setting mysql_auto_reconnect
 to on is not advised if 'lock tables' is used because if DBD::mysql reconnect
 to mysql all table locks will be lost.  This attribute is ignored when
@@ -1334,8 +1337,8 @@ to 0.
 
 This attribute forces the driver to use mysql_use_result rather than
 mysql_store_result. The former is faster and less memory consuming, but
-tends to block other processes. (That's why mysql_store_result is the
-default.)
+tends to block other processes. mysql_store_result is the default due to that
+fact storing the result is expected behavior with most applications.
 
 It is possible to set the default value of the C<mysql_use_result> attribute
 for the $dbh using several ways:
@@ -1459,7 +1462,7 @@ C<mysql_no_autocommit_cmd> can be turned on via
 
   $dbh->{mysql_no_autocommit_cmd} = 1;
 
-
+=back
 
 =head1 STATEMENT HANDLES
 
@@ -1468,7 +1471,7 @@ of attributes. You access these by using, for example,
 
   my $numFields = $sth->{'NUM_OF_FIELDS'};
 
-Note, that most attributes are valid only after a successfull I<execute>.
+Note, that most attributes are valid only after a successful I<execute>.
 An C<undef> value will returned in that case. The most important exception
 is the C<mysql_use_result> attribute: This forces the driver to use
 mysql_use_result rather than mysql_store_result. The former is faster
@@ -1610,7 +1613,7 @@ A reference to an array of table names, useful in a I<JOIN> result.
 A reference to an array of column types. The engine's native column
 types are mapped to portable types like DBI::SQL_INTEGER() or
 DBI::SQL_VARCHAR(), as good as possible. Not all native types have
-a meaningfull equivalent, for example DBD::mysql::FIELD_TYPE_INTERVAL
+a meaningful equivalent, for example DBD::mysql::FIELD_TYPE_INTERVAL
 is mapped to DBI::SQL_VARCHAR().
 If you need the native column types, use I<mysql_type>. See below.
 
@@ -1722,8 +1725,6 @@ indication of such loss.
 
 =back
 
-=over
-
 =head1 MULTIPLE RESULT SETS
 
 As of version 3.0002_5, DBD::mysql supports multiple result sets (Thanks
@@ -1744,7 +1745,7 @@ An example would be:
 
   $dbh->do("drop procedure if exists someproc") or print $DBI::errstr;
 
-  $dbh->do("create procedure somproc() deterministic
+  $dbh->do("create procedure someproc() deterministic
    begin
    declare a,b,c,d int;
    set a=1;
@@ -1776,7 +1777,7 @@ An example would be:
   } until (!$sth->more_results)
 
 For more examples, please see the eg/ directory. This is where helpful
-DBD::mysql code snippits will be added in the future.
+DBD::mysql code snippets will be added in the future.
 
 =head2 Issues with Multiple result sets
 
@@ -1806,7 +1807,7 @@ the manual.
 You can make a single asynchronous query per MySQL connection; this allows
 you to submit a long-running query to the server and have an event loop
 inform you when it's ready.  An asynchronous query is started by either
-setting the 'async' attribute to a truthy value in the L<DBI/do> method,
+setting the 'async' attribute to a true value in the L<DBI/do> method,
 or in the L<DBI/prepare> method.  Statements created with 'async' set to
 true in prepare always run their queries asynchronously when L<DBI/execute>
 is called.  The driver also offers three additional methods:
@@ -2079,7 +2080,7 @@ Tim Bunce.
 The current incarnation of B<DBD::mysql> was written by Jochen Wiedmann,
 then numerous changes and bug-fixes were added by Rudy Lippan. Next,
 prepared statement support was added by Patrick Galbraith and
-Alexy Stroganov (who also soley added embedded server
+Alexy Stroganov (who also soleley added embedded server
 support).
 
 For the past seven years DBD::mysql has been maintained by
@@ -2091,9 +2092,9 @@ easier.
 =head1 CONTRIBUTIONS
 
 Anyone who desires to contribute to this project is encouraged to do so.
-Currently, the sourcecode for this project can be found at Github:
+Currently, the source code for this project can be found at Github:
 
-git://github.com/CaptTofu/DBD-mysql.git
+L<https://github.com/perl5-dbi/DBD-mysql/>
 
 Either fork this repository and produce a branch with your changeset that
 the maintainer can merge to his tree, or create a diff with git. The maintainer
@@ -2118,7 +2119,7 @@ for details.
 
 This module is maintained and supported on a mailing list, dbi-users.
 
-To subscribe to this list, send and email to 
+To subscribe to this list, send and email to
 
 dbi-users-subscribe@perl.org
 
@@ -2132,7 +2133,7 @@ http://dbi.perl.org/
 
 And source:
 
-git://github.com/CaptTofu/DBD-mysql.git
+https://github.com/perl5-dbi/DBD-mysql/
 
 =head1 ADDITIONAL DBI INFORMATION
 
@@ -2151,7 +2152,7 @@ Information on the DBI interface itself can be gained by typing:
 
 Information on the DBD::mysql specifically can be gained by typing:
 
-    perldoc DBD::mysql 
+    perldoc DBD::mysql
 
 
 
@@ -2163,9 +2164,9 @@ to this link:
 
 http://rt.cpan.org
 
-Note: until recently, MySQL/Sun/Oracle responded to bugs and assisted in 
-fixing bugs which many thanks should be given for their help! 
-This driver is outside the realm of the numerous components they support, and the 
+Note: until recently, MySQL/Sun/Oracle responded to bugs and assisted in
+fixing bugs which many thanks should be given for their help!
+This driver is outside the realm of the numerous components they support, and the
 maintainer and community solely support DBD::mysql
 
 =cut
