@@ -7,8 +7,6 @@
  *
  *  You may distribute this under the terms of either the GNU General Public
  *  License or the Artistic License, as specified in the Perl README file.
- *
- *  $Id: dbdimp.c 12860 2009-06-19 01:52:29Z capttofu $
  */
 
 
@@ -1938,6 +1936,13 @@ MYSQL *mysql_dr_connect(
       */
       result->reconnect=0;
     }
+    else {
+      /* 
+         sock was allocated with mysql_init() 
+         fixes: https://rt.cpan.org/Ticket/Display.html?id=86153
+      */
+      Safefree(sock);
+    }
     return result;
   }
 }
@@ -2591,6 +2596,11 @@ SV* dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
   case 't':
     if (kl == 9  &&  strEQ(key, "thread_id"))
       result= sv_2mortal(newSViv(mysql_thread_id(imp_dbh->pmysql)));
+    break;
+
+  case 'w':
+    if (kl == 13 && strEQ(key, "warning_count"))
+      result= sv_2mortal(newSViv(mysql_warning_count(imp_dbh->pmysql)));
     break;
   }
 

@@ -1,14 +1,10 @@
-#   Hej, Emacs, give us -*- perl mode here!
-#
-#   $Id$
-#
-#   lib.pl is the file where database specific things should live,
-#   whereever possible. For example, you define certain constants
-#   here and the like.
-#
-# All this code is subject to being GUTTED soon
-#
+#!/usr/bin/perl
+
 use strict;
+use warnings;
+
+use Test::More;
+use DBI::Const::GetInfoType;
 use vars qw($table $mdriver $dbdriver $childPid $test_dsn $test_user $test_password);
 $table= 't1';
 
@@ -88,6 +84,7 @@ if (-f ($file = "t/$mdriver.mtest")  ||
     # Note the use of the pairing {} in order to get local, but static,
     # variables.
     my (@stateStack, $count, $off, $skip_all_reason, $skip_n_reason, @skip_n);
+    $::numTests = 0;
 
     $count = 0;
     @skip_n = ();
@@ -280,5 +277,59 @@ sub SQL_INTEGER { 4 };
 sub ErrMsg (@) { print (@_); }
 sub ErrMsgF (@) { printf (@_); }
 
+=item CheckRoutinePerms()
+
+Check if the current user of the DBH has permissions to create/drop procedures
+
+    if (!CheckRoutinePerms($dbh)) {
+        plan skip_all =>
+            "Your test user does not have ALTER_ROUTINE privileges.";
+    }
+
+=cut
+
+sub CheckRoutinePerms {
+    my $dbh = shift @_;
+
+    # check for necessary privs
+    local $dbh->{PrintError} = 0;
+    eval { $dbh->do('DROP PROCEDURE IF EXISTS testproc') };
+    return if $@ =~ qr/alter routine command denied to user/;
+
+    return 1;
+};
+
+=item MinimumVersion()
+
+Check to see if the database where the test run against is
+of a certain minimum version
+
+    if (!MinimumVersion($dbh, '5.0')) {
+        plan skip_all =>
+            "You must have MySQL version 5.0 and greater for this test to run";
+    }
+
+=cut
+
+sub MinimumVersion {
+    my $dbh = shift @_;
+    my $version = shift @_;
+
+    my ($major, $minor) = split (/\./, $version);
+
+    if ( $dbh->get_info($GetInfoType{SQL_DBMS_VER}) =~ /(^\d+)\.(\d+)\./ ) {
+
+        # major version higher than requested
+        return 1 if $1 > $major;
+
+        # major version too low
+        return if $1 < $major;
+
+        # check minor version
+        return 1 if $2 >= $minor;
+    }
+
+    return;
+}
 
 1;

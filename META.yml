@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               DBD-mysql
-version:            4.024
+version:            4.025
 abstract:           A MySQL driver for the Perl5 Database Interface (DBI)
 author:
     - Patrick Galbraith <patg@patg.net>
@@ -14,7 +14,7 @@ build_requires:
 requires:
     Data::Dumper:  0
     DBI:           1.08
-    perl:          5.005
+    perl:          5.008001
 resources:
     repository:  https://github.com/perl5-dbi/DBD-mysql
 no_index:

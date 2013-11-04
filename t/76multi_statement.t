@@ -1,7 +1,8 @@
-#!perl -w
-# vim: ft=perl
+#!/usr/bin/perl
 
 use strict;
+use warnings;
+
 use Test::More;
 use DBI;
 use DBI::Const::GetInfoType;
@@ -19,7 +20,7 @@ eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
 if ($@) {
     plan skip_all => "ERROR: $@. Can't continue test";
 }
-plan tests => 25; 
+plan tests => 25;
 
 ok (defined $dbh, "Connected to database with multi statement support");
 
@@ -29,8 +30,8 @@ SKIP: {
   my $v= $dbh->get_info($GetInfoType{SQL_DBMS_VER});
   diag "Testing multicall against SQL_DBMS_VER: $v";
   skip "Server doesn't support multi statements", 24
-  if $v lt "4.1";
-   
+  if !MinimumVersion($dbh, '4.1');
+
   ok($dbh->do("SET SQL_MODE=''"),"init connection SQL_MODE non strict");
 
   ok($dbh->do("DROP TABLE IF EXISTS $table"), "clean up");

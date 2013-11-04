@@ -1,10 +1,7 @@
-#!perl -w
-#
-#   $Id$
-#
-#   This is the base test, tries to install the drivers. Should be
-#   executed as the very first test.
-#
+#!/usr/bin/perl
+
+use strict;
+use warnings;
 
 use Test::More tests => 6;
 
@@ -21,15 +18,15 @@ BEGIN {
     use_ok('DBD::mysql') or BAIL_OUT "Unable to load DBD::mysql";
 }
 
-$switch = DBI->internal;
+my $switch = DBI->internal;
 cmp_ok ref $switch, 'eq', 'DBI::dr', 'Internal set';
 
 # This is a special case. install_driver should not normally be used.
-$drh= DBI->install_driver($mdriver);
+my $drh= DBI->install_driver($mdriver);
 
 ok $drh, 'Install driver';
 
 cmp_ok ref $drh, 'eq', 'DBI::dr', 'DBI::dr set';
 
-ok $drh->{Version}, "Version $drh->{Version}"; 
+ok $drh->{Version}, "Version $drh->{Version}";
 print "Driver version is ", $drh->{Version}, "\n";

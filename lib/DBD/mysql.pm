@@ -1,24 +1,25 @@
-#   -*- cperl -*-
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+require 5.008_001; # just as DBI
 
 package DBD::mysql;
-use 5.005; #$! is used
-use strict;
-use vars qw(@ISA $VERSION $err $errstr $drh);
 
 use DBI ();
 use DynaLoader();
 use Carp ();
-@ISA = qw(DynaLoader);
-
-$VERSION = '4.024';
+our @ISA = qw(DynaLoader);
+our $VERSION = '4.025';
 
 bootstrap DBD::mysql $VERSION;
 
 
-$err = 0;	# holds error code   for DBI::err
-$errstr = "";	# holds error string for DBI::errstr
-$drh = undef;	# holds driver handle once initialised
+our $err = 0;	# holds error code   for DBI::err
+our $errstr = "";	# holds error string for DBI::errstr
+our $drh = undef;	# holds driver handle once initialised
 
+my $methods_are_installed = 0;
 sub driver{
     return $drh if $drh;
     my($class, $attr) = @_;
@@ -33,11 +34,15 @@ sub driver{
 				   'Attribution' => 'DBD::mysql by Patrick Galbraith'
 				 });
 
-    DBD::mysql::db->install_method('mysql_fd');
-    DBD::mysql::db->install_method('mysql_async_result');
-    DBD::mysql::db->install_method('mysql_async_ready');
-    DBD::mysql::st->install_method('mysql_async_result');
-    DBD::mysql::st->install_method('mysql_async_ready');
+    if (!$methods_are_installed) {
+	DBD::mysql::db->install_method('mysql_fd');
+	DBD::mysql::db->install_method('mysql_async_result');
+	DBD::mysql::db->install_method('mysql_async_ready');
+	DBD::mysql::st->install_method('mysql_async_result');
+	DBD::mysql::st->install_method('mysql_async_ready');
+
+	$methods_are_installed++;
+    }
 
     $drh;
 }
@@ -1031,9 +1036,9 @@ the given number of seconds.
 
 =item mysql_init_command
 
- If your DSN contains the option "mysql_init_command_timeout=##", then
- this SQL statement is executed when connecting to the MySQL server.
- It is automatically re-executed if reconnection occurs.
+If your DSN contains the option "mysql_init_command=##", then
+this SQL statement is executed when connecting to the MySQL server.
+It is automatically re-executed if reconnection occurs.
 
 =item mysql_read_default_file
 
@@ -1501,13 +1506,13 @@ header of table names together with all rows:
       die "Error:" . $sth->errstr . "\n";
   }
   my $names = $sth->{'NAME'};
-  my $numFields = $sth->{'NUM_OF_FIELDS'};
-  for (my $i = 0;  $i < $numFields;  $i++) {
+  my $numFields = $sth->{'NUM_OF_FIELDS'} - 1;
+  for my $i ( 0..$numFields ) {
       printf("%s%s", $i ? "," : "", $$names[$i]);
   }
   print "\n";
   while (my $ref = $sth->fetchrow_arrayref) {
-      for (my $i = 0;  $i < $numFields;  $i++) {
+      for my $i ( 0..$numFields ) {
 	  printf("%s%s", $i ? "," : "", $$ref[$i]);
       }
       print "\n";
@@ -1632,6 +1637,7 @@ Whenever possible, the ANSI SQL name is preferred.
 =item mysql_warning_count
 
 The number of warnings generated during execution of the SQL statement.
+This attribute is available on both statement handles and database handles.
 
 =back
 
@@ -1764,7 +1770,7 @@ An example would be:
   $sth->execute || die DBI::err.": ".$DBI::errstr; $rowset=0;
   do {
     print "\nRowset ".++$i."\n---------------------------------------\n\n";
-    foreach $colno (0..$sth->{NUM_OF_FIELDS}) {
+    foreach $colno (0..$sth->{NUM_OF_FIELDS}-1) {
       print $sth->{NAME}->[$colno]."\t";
     }
     print "\n";
@@ -1869,32 +1875,27 @@ If you are using precompiled binaries, then it may be possible to
 use just selected RPM's like MySQL-client and MySQL-devel or something
 similar, depending on the distribution.
 
-First you need to install the DBI module. For using I<dbimon>, a
-simple DBI shell it is recommended to install Data::ShowTable another
-Perl module.
-
 I recommend trying automatic installation via the CPAN module. Try
 
-  perl -MCPAN -e shell
+  cpan
 
 If you are using the CPAN module for the first time, it will prompt
 you a lot of questions. If you finally receive the CPAN prompt, enter
 
-  install Bundle::DBD::mysql
+  install DBD::mysql
 
 =head2 Manual Installation
 
 If this fails (which may be the case for a number of reasons, for
 example because you are behind a firewall or don't have network
 access), you need to do a manual installation. First of all you
-need to fetch the modules from CPAN search
+need to fetch the modules from CPAN
 
-   http://search.cpan.org/
+   L<https://metacpan.org>
 
 The following modules are required
 
   DBI
-  Data::ShowTable
   DBD::mysql
 
 Then enter the following commands (note - versions are just examples):
@@ -1904,13 +1905,6 @@ Then enter the following commands (note - versions are just examples):
   perl Makefile.PL
   make
   make test
-  make install
-
-  cd ..
-  gzip -cd Data-ShowTable-(version).tar.gz | tar xf -
-  cd Data-ShowTable-3.3
-  perl Makefile.PL
-  make
   make install
 
   cd ..
@@ -1927,12 +1921,29 @@ For example, of your file F<mysql.h> is in F</usr/include/mysql/mysql.h>,
 then enter the header directory F</usr>, likewise for
 F</usr/lib/mysql/libmysqlclient.a> or F</usr/lib/libmysqlclient.so>.
 
+=head1 MARIADB NATIVE CLIENT INSTALLATION
+
+The MariaDB native client is another option for connecting to a MySQL 
+database licensed LGPL 2.1. To build DBD::mysql against this client, you
+will first need to build the client. Generally, this is done with
+the following:
+
+  cd path/to/src/mariadb-native-client
+  cmake -G "Unix Makefiles'
+  make
+  sudo make install
+
+Once the client is built and installed, you can build DBD::mysql against
+it:
+
+  perl Makefile.PL --testuser=xxx --testpassword=xxx --testsocket=/path/to//mysqld.sock --mysql_config=/usr/local/bin/mariadb_config 
+  make
+  make test
+  make install
 
 =head1 WIN32 INSTALLATION
 
 If you are using ActivePerl, you may use ppm to install DBD-mysql.
-For Perl 5.6, upgrade to Build 623 or later, then it is sufficient
-to run
 
   ppm install DBI
   ppm install DBD::mysql
@@ -1942,47 +1953,12 @@ variable http_proxy, for example like this:
 
   set http_proxy=http://myproxy.com:8080/
 
-As of this writing, DBD::mysql is missing in the ActivePerl 5.8.0
-repository. However, Randy Kobes has kindly donated an own
-distribution and the following might succeed:
-
-  ppm install http://theoryx5.uwinnipeg.ca/ppms/DBD-mysql.ppd
-
-Otherwise you definitely *need* a C compiler. And it *must* be the same
-compiler that was being used for compiling Perl itself. If you don't
-have a C compiler, the file README.win32 from the Perl source
-distribution tells you where to obtain freely distributable C compilers
-like egcs or gcc. The Perl sources are available via CPAN search
-
-  http://search.cpan.org
 
 I recommend using the win32clients package for installing DBD::mysql
 under Win32, available for download on www.tcx.se. The following steps
 have been required for me:
 
 =over
-
-=item -
-
-The current Perl versions (5.6, as of this writing) do have a problem
-with detecting the C libraries. I recommend to apply the following
-patch:
-
-  *** c:\Perl\lib\ExtUtils\Liblist.pm.orig Sat Apr 15 20:03:40 2000
-  --- c:\Perl\lib\ExtUtils\Liblist.pm      Sat Apr 15 20:03:45 2000
-  ***************
-  *** 230,235 ****
-  --- 230,239 ----
-      # add "$Config{installarchlib}/CORE" to default search path
-      push @libpath, "$Config{installarchlib}/CORE";
-
-  +     if ($VC  and  exists($ENV{LIB})  and  defined($ENV{LIB})) {
-  +       push(@libpath, split(/;/, $ENV{LIB}));
-  +     }
-  +
-      foreach (Text::ParseWords::quotewords('\s+', 0, $potential_libs)){
-
-        $thislib = $_;
 
 =item -
 
@@ -2003,7 +1979,7 @@ example F<C:\src\siteperl>
 
 =item -
 
-Open a DOS shell and change directory to F<C:\src\siteperl>.
+Open a CMD.exe shell and change directory to F<C:\src\siteperl>.
 
 =item -
 
@@ -2012,7 +1988,7 @@ sure that you have a clean build tree by running
 
   nmake realclean
 
-If you don't have VC++, replace nmake with your flavour of make. If
+If you don't have VC++, replace nmake with your flavor of make. If
 error messages are reported in this step, you may safely ignore them.
 
 =item -
@@ -2042,39 +2018,17 @@ Continued in the usual way:
 
 =back
 
-If you want to create a PPM package for the ActiveState Perl version, then
-modify the above steps as follows: Run
-
-  perl Makefile.PL NAME=DBD-mysql BINARY_LOCATION=DBD-mysql.tar.gz
-  nmake ppd
-  nmake
-
-Once that is done, use tar and gzip (for example those from the CygWin32
-distribution) to create an archive:
-
-  mkdir x86
-  tar cf x86/DBD-mysql.tar blib
-  gzip x86/DBD-mysql.tar
-
-Put the files x86/DBD-mysql.tar.gz and DBD-mysql.ppd onto some WWW server
-and install them by typing
-
-  install http://your.server.name/your/directory/DBD-mysql.ppd
-
-in the PPM program.
-
-
 =head1 AUTHORS
 
 Originally, there was a non-DBI driver, Mysql, which was much like
 PHP drivers such as mysql and mysqli. The B<Mysql> module was
-originally written by Andreas K�nig <koenig@kulturbox.de> who still, to this
+originally written by Andreas König <koenig@kulturbox.de> who still, to this
 day, contributes patches to DBD::mysql. An emulated version of Mysql was
 provided to DBD::mysql from Jochen Wiedmann, but eventually deprecated as it
 was another bundle of code to maintain.
 
 The first incarnation of DBD::mysql was developed by Alligator Descartes,
-who was also aided and abetted by Gary Shea, Andreas K�nig and
+who was also aided and abetted by Gary Shea, Andreas König and
 Tim Bunce.
 
 The current incarnation of B<DBD::mysql> was written by Jochen Wiedmann,
@@ -2083,10 +2037,10 @@ prepared statement support was added by Patrick Galbraith and
 Alexy Stroganov (who also soleley added embedded server
 support).
 
-For the past seven years DBD::mysql has been maintained by
-Patrick Galbraith (I<patg@patg.net>) along with the entire community
-of Perl developers who keep sending patches and making Patrick's job
-easier.
+For the past nine years DBD::mysql has been maintained by
+Patrick Galbraith (I<patg@patg.net>), and recently with the great help of
+Michiel Beijen (I<michiel.beijen@gmail.com>),  along with the entire community
+of Perl developers who keep sending patches to help continue improving DBD::mysql 
 
 
 =head1 CONTRIBUTIONS
@@ -2104,43 +2058,58 @@ many features and fixes from DBD::mysql have come from the community.
 
 =head1 COPYRIGHT
 
-
 This module is
-Large Portions Copyright (c) 2004-2010 Patrick Galbraith
+
+=over
+
+=item *
+
+Large Portions Copyright (c) 2004-2013 Patrick Galbraith
+
+=item *
+
 Large Portions Copyright (c) 2004-2006 Alexey Stroganov
+
+=item *
+
 Large Portions Copyright (c) 2003-2005 Rudolf Lippan
+
+=item *
+
 Large Portions Copyright (c) 1997-2003 Jochen Wiedmann, with code portions
-Copyright (c)1994-1997 their original authors This module is
-released under the same license as Perl itself. See the Perl README
-for details.
+
+=item *
+
+Copyright (c)1994-1997 their original authors
+
+=back
+
+
+=head1 LICENSE
+
+This module is released under the same license as Perl itself. See
+L<http://www.perl.com/perl/misc/Artistic.html> for details.
 
 
 =head1 MAILING LIST SUPPORT
 
 This module is maintained and supported on a mailing list, dbi-users.
 
-To subscribe to this list, send and email to
+To subscribe to this list, send an email to
 
 dbi-users-subscribe@perl.org
 
 Mailing list archives are at
 
-http://groups.google.com/group/perl.dbi.users?hl=en&lr=
+L<http://groups.google.com/group/perl.dbi.users?hl=en&lr=>
 
-Also, the main DBI site is at
-
-http://dbi.perl.org/
-
-And source:
-
-https://github.com/perl5-dbi/DBD-mysql/
 
 =head1 ADDITIONAL DBI INFORMATION
 
 Additional information on the DBI project can be found on the World
 Wide Web at the following URL:
 
-    http://dbi.perl.org
+L<http://dbi.perl.org>
 
 where documentation, pointers to the mailing lists and mailing list
 archives and pointers to the most current versions of the modules can
@@ -2150,10 +2119,11 @@ Information on the DBI interface itself can be gained by typing:
 
     perldoc DBI
 
-Information on the DBD::mysql specifically can be gained by typing:
+Information on DBD::mysql specifically can be gained by typing:
 
     perldoc DBD::mysql
 
+(this will display the document you're currently reading)
 
 
 =head1 BUG REPORTING, ENHANCEMENT/FEATURE REQUESTS
@@ -2162,7 +2132,7 @@ Please report bugs, including all the information needed
 such as DBD::mysql version, MySQL version, OS type/version, etc
 to this link:
 
-http://rt.cpan.org
+L<https://rt.cpan.org/Dist/Display.html?Name=DBD-mysql>
 
 Note: until recently, MySQL/Sun/Oracle responded to bugs and assisted in
 fixing bugs which many thanks should be given for their help!
