@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               DBD-mysql
-version:            4.025
+version:            4.026
 abstract:           A MySQL driver for the Perl5 Database Interface (DBI)
 author:
     - Patrick Galbraith <patg@patg.net>
