@@ -1,7 +1,9 @@
 /*
  *  DBD::mysql - DBI driver for the mysql database
  *
- *  Copyright (c) 2005-2009 Patrick Galbraith
+ *  Copyright (c) 2004-2014 Patrick Galbraith
+ *  Copyright (c) 2013-2014 Michiel Beijen 
+ *  Copyright (c) 2004-2007 Alexey Stroganov 
  *  Copyright (c) 2003-2005  Rudolf Lippan
  *  Copyright (c) 1997-2003  Jochen Wiedmann
  *
@@ -3673,7 +3675,7 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
         PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tmysql_to_perl_type returned %d\n",
                       col_type);
       buffer->length= &(fbh->length);
-      buffer->is_null= &(fbh->is_null);
+      buffer->is_null= (char*) &(fbh->is_null);
 
       switch (buffer->buffer_type) {
       case MYSQL_TYPE_DOUBLE:

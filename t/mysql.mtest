@@ -1,17 +1,17 @@
 { local $opt = {
-         'mysql_config' => 'mysql_config',
+         'mysql_config' => '/usr/local/mysql-5.6.16-osx10.7-x86_64/bin/mysql_config',
          'embedded' => '',
-         'ssl' => 1,
+         'ssl' => 0,
          'ldflags' => '',
          'nocatchstderr' => 0,
-         'libs' => '-L/usr/lib -lmysqlclient -lpthread -lm -lrt -lssl -lcrypto -ldl',
+         'libs' => '-L/usr/local/mysql-5.6.16-osx10.7-x86_64/lib -lmysqlclient',
          'testhost' => '',
          'nofoundrows' => 0,
          'testport' => '',
-         'cflags' => '-I/usr/include -g -fstack-protector --param=ssp-buffer-size=4 -Wformat-security -fPIC -g -static-libgcc -fno-omit-frame-pointer -DPERCONA_INNODB_VERSION=rel61.0  -fPIC -g -fabi-version=2 -fno-omit-frame-pointer -fno-strict-aliasing -DMY_PTHREAD_FASTMUTEX=1',
+         'cflags' => '-I/usr/local/mysql-5.6.16-osx10.7-x86_64/include  -Os -g -fno-strict-aliasing -arch x86_64',
          'testdb' => 'test',
-         'testuser' => 'root',
-         'testpassword' => 'd!ngd0ng',
+         'testuser' => 'patg',
+         'testpassword' => '',
          'testsocket' => ''
        };
 $::test_host = $opt->{'testhost'};
