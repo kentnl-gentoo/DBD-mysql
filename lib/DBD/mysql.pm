@@ -10,7 +10,7 @@ use DBI;
 use DynaLoader();
 use Carp;
 our @ISA = qw(DynaLoader);
-our $VERSION = '4.027';
+our $VERSION = '4.028';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -58,7 +58,7 @@ sub _OdbcParse($$$) {
 	return;
     }
     while (length($dsn)) {
-	if ($dsn =~ /([^:;]*)[:;](.*)/) {
+	if ($dsn =~ /([^:;]*\[.*]|[^:;]*)[:;](.*)/) {
 	    $val = $1;
 	    $dsn = $2;
 	} else {
