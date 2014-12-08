@@ -1,27 +1,27 @@
----
-abstract: 'A MySQL driver for the Perl5 Database Interface (DBI)'
+--- #YAML:1.0
+name:               DBD-mysql
+version:            4.029
+abstract:           A MySQL driver for the Perl5 Database Interface (DBI)
 author:
-  - 'Patrick Galbraith <patg@patg.net>'
-build_requires:
-  Test::Deep: 0
-  Test::More: 0
+    - Patrick Galbraith <patg@patg.net>
+license:            perl
+distribution_type:  module
 configure_requires:
-  DBI: 1.08
-dynamic_config: 1
-generated_by: 'ExtUtils::MakeMaker version 6.66, CPAN::Meta::Converter version 2.120921'
-license: perl
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.4.html
-  version: 1.4
-name: DBD-mysql
-no_index:
-  directory:
-    - t
-    - inc
+    DBI:  1.08
+build_requires:
+    Test::Deep:  0
+    Test::More:  0
 requires:
-  DBI: 1.08
-  Data::Dumper: 0
-  perl: 5.008001
+    Data::Dumper:  0
+    DBI:           1.08
+    perl:          5.008001
 resources:
-  repository: https://github.com/perl5-dbi/DBD-mysql
-version: 4.028
+    repository:  https://github.com/perl5-dbi/DBD-mysql
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.57_05
+meta-spec:
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4
