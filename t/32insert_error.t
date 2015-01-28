@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 
@@ -8,28 +6,28 @@ use Test::More;
 use lib '.', 't';
 require 'lib.pl';
 
-use vars qw($table $test_dsn $test_user $test_password);
+use vars qw($test_dsn $test_user $test_password);
 
 my $dbh;
 eval {$dbh = DBI->connect($test_dsn, $test_user, $test_password,
   { RaiseError => 1, AutoCommit => 1})};
 
 if ($@) {
-    plan skip_all => "ERROR: $@. Can't continue test";
+    plan skip_all => "no database connection";
 }
 plan tests => 9;
 
-ok $dbh->do("DROP TABLE IF EXISTS $table");
+ok $dbh->do("DROP TABLE IF EXISTS dbd_mysql_t32");
 
 my $create = <<EOT;
-CREATE TABLE $table (
+CREATE TABLE dbd_mysql_t32 (
     id INT(3) PRIMARY KEY NOT NULL,
     name VARCHAR(64))
 EOT
 
 ok $dbh->do($create);
 
-my $query = "INSERT INTO $table (id, name) VALUES (?,?)";
+my $query = "INSERT INTO dbd_mysql_t32 (id, name) VALUES (?,?)";
 ok (my $sth = $dbh->prepare($query));
 
 ok $sth->execute(1, "Jocken");
@@ -43,6 +41,6 @@ ok $sth->execute(2, "Jochen");
 
 ok $sth->finish;
 
-ok $dbh->do("DROP TABLE $table");
+ok $dbh->do("DROP TABLE dbd_mysql_t32");
 
 ok $dbh->disconnect();

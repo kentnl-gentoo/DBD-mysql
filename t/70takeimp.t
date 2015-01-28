@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 
@@ -8,7 +6,7 @@ use DBI;
 use lib 't', '.';
 require 'lib.pl';
 $|= 1;
-use vars qw($table $test_dsn $test_user $test_password);
+use vars qw($test_dsn $test_user $test_password);
 
 my $drh;
 eval {$drh = DBI->install_driver('mysql')};
@@ -22,7 +20,7 @@ eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
                       { RaiseError => 1, PrintError => 1, AutoCommit => 0 })};
 
 if ($@) {
-    plan skip_all => "Can't connect to database ERROR: $@. Can't continue test";
+    plan skip_all => "no database connection";
 }
 unless ($DBI::VERSION ge '1.607') {
     plan skip_all => "version of DBI $DBI::VERSION doesn't support this test. Can't continue test";
@@ -104,17 +102,16 @@ sub read_write_test {
 
     # now the actual test:
 
-    my $table= 't1';
-    ok $dbh->do("DROP TABLE IF EXISTS $table");
+    ok $dbh->do("DROP TABLE IF EXISTS dbd_mysql_t70takeimp");
 
     my $create= <<EOT;
-CREATE TABLE $table (
+CREATE TABLE dbd_mysql_t70takeimp (
         id int(4) NOT NULL default 0,
         name varchar(64) NOT NULL default '' );
 EOT
 
     ok $dbh->do($create);
 
-    ok $dbh->do("DROP TABLE $table");
+    ok $dbh->do("DROP TABLE dbd_mysql_t70takeimp");
 }
 

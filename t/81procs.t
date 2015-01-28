@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 
@@ -8,7 +6,7 @@ require 'lib.pl';
 use DBI;
 use Test::More;
 use Carp qw(croak);
-use vars qw($table $test_dsn $test_user $test_password);
+use vars qw($test_dsn $test_user $test_password);
 
 my ($row, $vers, $test_procs, $dbh, $sth);
 eval {$dbh = DBI->connect($test_dsn, $test_user, $test_password,
@@ -16,9 +14,8 @@ eval {$dbh = DBI->connect($test_dsn, $test_user, $test_password,
 
 if ($@) {
     plan skip_all =>
-        "ERROR: $DBI::errstr. Can't continue test";
+        "no database connection";
 }
-
 
 #
 # DROP/CREATE PROCEDURE will give syntax error
@@ -41,7 +38,7 @@ $dbh->disconnect();
 ok ($dbh = DBI->connect($test_dsn, $test_user, $test_password,
   { RaiseError => 1, AutoCommit => 1}));
 
-ok $dbh->do("DROP TABLE IF EXISTS $table");
+ok $dbh->do("DROP TABLE IF EXISTS dbd_mysql_t81procs");
 
 my $drop_proc= "DROP PROCEDURE IF EXISTS testproc";
 

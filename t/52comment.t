@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 
@@ -9,7 +7,7 @@ use Test::More;
 use lib 't', '.';
 require 'lib.pl';
 
-use vars qw($test_dsn $test_user $test_password $table);
+use vars qw($test_dsn $test_user $test_password);
 
 my $dbh;
 eval { $dbh= DBI->connect($test_dsn, $test_user, $test_password,
@@ -20,14 +18,14 @@ eval { $dbh= DBI->connect($test_dsn, $test_user, $test_password,
      };
 if ($@) {
     plan skip_all => 
-        "ERROR: $DBI::errstr. Can't continue test";
+    plan skip_all => "no database connection";
 }
 plan tests => 30; 
 
-ok $dbh->do("DROP TABLE IF EXISTS $table"), "drop table if exists $table";
+ok $dbh->do("DROP TABLE IF EXISTS dbd_mysql_t52comment"), "drop table if exists dbd_mysql_t52comment";
 
 my $create= <<"EOTABLE";
-create table $table (
+create table dbd_mysql_t52comment (
     id bigint unsigned not null default 0
     )
 EOTABLE
@@ -35,7 +33,7 @@ EOTABLE
 
 ok $dbh->do($create), "creating table";
 
-my $statement= "insert into $table (id) values (?)";
+my $statement= "insert into dbd_mysql_t52comment (id) values (?)";
 
 my $sth;
 ok $sth= $dbh->prepare($statement);
@@ -47,7 +45,7 @@ $sth->finish();
 
 $statement= <<EOSTMT;
 SELECT id 
-FROM $table
+FROM dbd_mysql_t52comment
 -- it's a bug?
 WHERE id = ?
 EOSTMT
@@ -55,17 +53,17 @@ EOSTMT
 my $retrow= $dbh->selectrow_arrayref($statement, {}, 1);
 cmp_ok $retrow->[0], '==', 1;
 
-$statement= "SELECT id FROM $table /* it's a bug? */ WHERE id = ?";
+$statement= "SELECT id FROM dbd_mysql_t52comment /* it's a bug? */ WHERE id = ?";
 
 $retrow= $dbh->selectrow_arrayref($statement, {}, 1);
 cmp_ok $retrow->[0], '==', 1;
 
-$statement= "SELECT id FROM $table WHERE id = ? /* it's a bug? */";
+$statement= "SELECT id FROM dbd_mysql_t52comment WHERE id = ? /* it's a bug? */";
 
 $retrow= $dbh->selectrow_arrayref($statement, {}, 1);
 cmp_ok $retrow->[0], '==', 1;
 
-$statement= "SELECT id FROM $table WHERE id = ? ";
+$statement= "SELECT id FROM dbd_mysql_t52comment WHERE id = ? ";
 my $comment = "/* it's/a_directory/does\ this\ work/bug? */";
 
 for (0 .. 9) {
@@ -80,6 +78,6 @@ for (0 .. 9) {
     cmp_ok $retrow->[0], '==', 1;
 }
 
-ok $dbh->do("DROP TABLE IF EXISTS $table"), "drop table if exists $table";
+ok $dbh->do("DROP TABLE IF EXISTS dbd_mysql_t52comment"), "drop table if exists dbd_mysql_t52comment";
 
 ok $dbh->disconnect;

@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 
@@ -7,16 +5,15 @@ use Test::More;
 use DBI;
 use lib 't', '.';
 require 'lib.pl';
-use vars qw($table $test_dsn $test_user $test_password);
+use vars qw($test_dsn $test_user $test_password);
 
 $|= 1;
 
 my $dbh;
 eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
-                      { RaiseError => 1, PrintError => 1, AutoCommit => 0 });};
-
+                      { RaiseError => 1, PrintError => 0, AutoCommit => 0 });};
 if ($@) {
-    plan skip_all => "ERROR: $@. Can't continue test";
+    plan skip_all => "no database connection";
 }
 plan tests => 11;
 
@@ -25,12 +22,12 @@ ok(defined $dbh, "connecting");
 #
 # Bug #42723: Binding server side integer parameters results in corrupt data
 #
-ok($dbh->do('DROP TABLE IF EXISTS t1'), "making slate clean");
+ok($dbh->do('DROP TABLE IF EXISTS dbd_mysql_t86'), "making slate clean");
 
-ok($dbh->do('CREATE TABLE `t1` (`i` int,`si` smallint,`ti` tinyint,`bi` bigint)'), "creating test table");
+ok($dbh->do('CREATE TABLE dbd_mysql_t86 (`i` int,`si` smallint,`ti` tinyint,`bi` bigint)'), "creating test table");
 
 my $sth2;
-ok($sth2 = $dbh->prepare('INSERT INTO t1 VALUES (?,?,?,?)'));
+ok($sth2 = $dbh->prepare('INSERT INTO dbd_mysql_t86 VALUES (?,?,?,?)'));
 
 #bind test values
 ok($sth2->bind_param(1, 101, DBI::SQL_INTEGER), "binding int");
@@ -40,8 +37,8 @@ ok($sth2->bind_param(4, 104, DBI::SQL_INTEGER), "binding bigint");
 
 ok($sth2->execute(), "inserting data");
 
-is_deeply($dbh->selectall_arrayref('SELECT * FROM t1'), [[101, 102, 103, 104]]);
+is_deeply($dbh->selectall_arrayref('SELECT * FROM dbd_mysql_t86'), [[101, 102, 103, 104]]);
 
-ok ($dbh->do('DROP TABLE t1'), "cleaning up");
+ok ($dbh->do('DROP TABLE dbd_mysql_t86'), "cleaning up");
 
 $dbh->disconnect();

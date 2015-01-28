@@ -1,11 +1,9 @@
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 
 use Test::More;
 use DBI;
-use vars qw($table $test_dsn $test_user $test_password);
+use vars qw($test_dsn $test_user $test_password);
 use lib '.', 't';
 require 'lib.pl';
 
@@ -30,7 +28,7 @@ eval {$dbh = DBI->connect($test_dsn, $test_user, $test_password,
   { RaiseError => 1, AutoCommit => 1}) or ServerError() ;};
 
 if ($@) {
-    plan skip_all => "ERROR: $DBI::errstr. Can't continue test";
+    plan skip_all => "no database connection";
 }
 else {
     plan tests => 14;
@@ -42,10 +40,10 @@ if (!MinimumVersion($dbh, '4.1')) {
 
 my $size= 128;
 
-ok $dbh->do("DROP TABLE IF EXISTS $table"), "Drop table if exists $table";
+ok $dbh->do("DROP TABLE IF EXISTS dbd_mysql_t40blobs"), "Drop table if exists dbd_mysql_t40blobs";
 
 my $create = <<EOT;
-CREATE TABLE $table (
+CREATE TABLE dbd_mysql_t40blobs (
     id INT(3) NOT NULL DEFAULT 0,
     name BLOB ) $charset
 EOT
@@ -64,11 +62,11 @@ ok ($qblob = $dbh->quote($blob));
 
 #   Insert a row into the test table.......
 my ($query);
-$query = "INSERT INTO $table VALUES(1, $qblob)";
+$query = "INSERT INTO dbd_mysql_t40blobs VALUES(1, $qblob)";
 ok ($dbh->do($query));
 
 #   Now, try SELECT'ing the row out.
-ok (my $sth = $dbh->prepare("SELECT * FROM $table WHERE id = 1"));
+ok (my $sth = $dbh->prepare("SELECT * FROM dbd_mysql_t40blobs WHERE id = 1"));
 
 ok ($sth->execute);
 
@@ -76,7 +74,7 @@ ok (my $row = $sth->fetchrow_arrayref);
 
 ok defined($row), "row returned defined";
 
-is @$row, 2, "records from $table returned 2";
+is @$row, 2, "records from dbd_mysql_t40blobs returned 2";
 
 is $$row[0], 1, 'id set to 1';
 
@@ -86,6 +84,6 @@ ShowBlob($blob), ShowBlob(defined($$row[1]) ? $$row[1] : "");
 
 ok ($sth->finish);
 
-ok $dbh->do("DROP TABLE $table"), "Drop table $table";
+ok $dbh->do("DROP TABLE dbd_mysql_t40blobs"), "Drop table dbd_mysql_t40blobs";
 
 ok $dbh->disconnect;

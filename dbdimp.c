@@ -24,6 +24,10 @@
 typedef short WORD;
 #endif
 
+#ifdef WIN32
+#define MIN min
+#endif
+
 #if MYSQL_ASYNC
 #  include <poll.h>
 #  define ASYNC_CHECK_RETURN(h, value)\
@@ -2711,7 +2715,9 @@ dbd_st_prepare(
   SV **svp;
   dTHX;
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
-  char *str_ptr;
+#if MYSQL_VERSION_ID < CALL_PLACEHOLDER_VERSION
+  char *str_ptr, *str_last_ptr;
+#endif
   int col_type, prepare_retval, limit_flag=0;
   MYSQL_BIND *bind, *bind_end;
   imp_sth_phb_t *fbind;
@@ -2768,58 +2774,37 @@ dbd_st_prepare(
   */
   mysql_st_free_result_sets(sth, imp_sth);
 
-#if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
+#if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION && MYSQL_VERSION_ID < CALL_PLACEHOLDER_VERSION
   if (imp_sth->use_server_side_prepare)
   {
     if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
       PerlIO_printf(DBIc_LOGPIO(imp_xxh),
-                    "\t\tuse_server_side_prepare set, check LIMIT\n");
+                    "\t\tuse_server_side_prepare set, check restrictions\n");
     /*
-      This code is here because mysql < 5.1 didn't support placeholders
-      in prepared statements and also we have to disable some statements
-      for PS mode
+      This code is here because placeholder support is not implemented for
+      statements with :-
+      1. LIMIT < 5.0.7
+      2. CALL < 5.5.3 (Added support for out & inout parameters)
+      In these cases we have to disable server side prepared statements
+      NOTE: These checks could cause a false possitive on statements which
+      include columns / table names that match "call " or " limit "
     */ 
     if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
       PerlIO_printf(DBIc_LOGPIO(imp_xxh),
-                    "\t\tneed to test for LIMIT\n");
-    for (str_ptr= statement; *str_ptr; str_ptr++)
+#if MYSQL_VERSION_ID < LIMIT_PLACEHOLDER_VERSION
+                    "\t\tneed to test for LIMIT & CALL\n");
+#else
+                    "\t\tneed to test for restrictions\n");
+#endif
+    str_last_ptr = statement + strlen(statement);
+    for (str_ptr= statement; str_ptr < str_last_ptr; str_ptr++)
     {
-      /* 
-        Processing of multi-result-set is not possible due to lack
-        of some calls in PS API. CALL() statement is disabled for PS
-        mode as it may cause multi-resut-set.
-      */
-
-      if ( (tolower(*(str_ptr + 0)) == 'c') &&
-           (tolower(*(str_ptr + 1)) == 'a') &&
-           (tolower(*(str_ptr + 2)) == 'l') &&
-           (tolower(*(str_ptr + 3)) == 'l') &&
-           (tolower(*(str_ptr + 4)) == ' '))
-      {
-        if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
-          PerlIO_printf(DBIc_LOGPIO(imp_xxh), "Disable PS mode for CALL()\n");
-        imp_sth->use_server_side_prepare= 0;
-      }
-
 #if MYSQL_VERSION_ID < LIMIT_PLACEHOLDER_VERSION
       /*
-        If there is a 'limit' in the statement and placeholders are
-        NOT supported
+        Place holders not supported in LIMIT's
       */
-      if ( (tolower(*(str_ptr + 0)) == 'l') &&
-           (tolower(*(str_ptr + 1)) == 'i') &&
-           (tolower(*(str_ptr + 2)) == 'm') &&
-           (tolower(*(str_ptr + 3)) == 'i') &&
-           (tolower(*(str_ptr + 4)) == 't'))
-      {
-        if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
-          PerlIO_printf(DBIc_LOGPIO(imp_xxh), "LIMIT set limit flag to 1\n");
-        limit_flag= 1;
-      }
-
       if (limit_flag)
       {
-        /* ... and place holders after the limit flag is set... */
         if (*str_ptr == '?')
         {
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
@@ -2830,7 +2815,35 @@ dbd_st_prepare(
           break;
         }
       }
+      else if (str_ptr < str_last_ptr - 6 &&
+          isspace(*(str_ptr + 0)) &&
+          tolower(*(str_ptr + 1)) == 'l' &&
+          tolower(*(str_ptr + 2)) == 'i' &&
+          tolower(*(str_ptr + 3)) == 'm' &&
+          tolower(*(str_ptr + 4)) == 'i' &&
+          tolower(*(str_ptr + 5)) == 't' &&
+          isspace(*(str_ptr + 6)))
+      {
+        if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+          PerlIO_printf(DBIc_LOGPIO(imp_xxh), "LIMIT set limit flag to 1\n");
+        limit_flag= 1;
+      }
 #endif
+      /*
+        Place holders not supported in CALL's
+      */
+      if (str_ptr < str_last_ptr - 4 &&
+           tolower(*(str_ptr + 0)) == 'c' &&
+           tolower(*(str_ptr + 1)) == 'a' &&
+           tolower(*(str_ptr + 2)) == 'l' &&
+           tolower(*(str_ptr + 3)) == 'l' &&
+           isspace(*(str_ptr + 4)))
+      {
+        if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+          PerlIO_printf(DBIc_LOGPIO(imp_xxh), "Disable PS mode for CALL()\n");
+        imp_sth->use_server_side_prepare= 0;
+        break;
+      }
     }
   }
 #endif
@@ -3731,7 +3744,8 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
         PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tmysql_to_perl_type returned %d\n",
                       col_type);
       buffer->length= &(fbh->length);
-      buffer->is_null= (char*) &(fbh->is_null);
+      buffer->is_null= (my_bool*) &(fbh->is_null);
+      buffer->error= (my_bool*) &(fbh->error);
 
       switch (buffer->buffer_type) {
       case MYSQL_TYPE_DOUBLE:
@@ -3869,9 +3883,11 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
                 mysql_stmt_sqlstate(imp_sth->stmt));
 
 #if MYSQL_VERSION_ID >= MYSQL_VERSION_5_0 
-      if (rc == MYSQL_DATA_TRUNCATED)
+      if (rc == MYSQL_DATA_TRUNCATED) {
         if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
           PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tdbd_st_fetch data truncated\n");
+        goto process;
+      }
 #endif
 
       if (rc == MYSQL_NO_DATA)
@@ -3888,6 +3904,7 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
       return Nullav;
     }
 
+process:
     imp_sth->currow++;
 
     av= DBIc_DBISTATE(imp_sth)->get_fbav(imp_sth);
@@ -3921,23 +3938,44 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
            in dbd_describe() for data. Here we know real size of field
            so we should increase buffer size and refetch column value
         */
-        if (fbh->length > buffer->buffer_length)
+        if (fbh->length > buffer->buffer_length || fbh->error)
         {
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
-            PerlIO_printf(DBIc_LOGPIO(imp_xxh),"\t\tRefetch BLOB/TEXT column: %d\n", i);
+            PerlIO_printf(DBIc_LOGPIO(imp_xxh),
+              "\t\tRefetch BLOB/TEXT column: %d, length: %lu, error: %d\n",
+              i, fbh->length, fbh->error);
 
           Renew(fbh->data, fbh->length, char);
           buffer->buffer_length= fbh->length;
           buffer->buffer= (char *) fbh->data;
 
-          if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
-            PerlIO_printf(DBIc_LOGPIO(imp_xxh),"\t\tbuffer->buffer: %s\n", (char *) buffer->buffer);
+          if (DBIc_TRACE_LEVEL(imp_xxh) >= 2) {
+            int j;
+            int m = MIN(*buffer->length, buffer->buffer_length);
+            char *ptr = (char*)buffer->buffer;
+            PerlIO_printf(DBIc_LOGPIO(imp_xxh),"\t\tbefore buffer->buffer: ");
+            for (j = 0; j < m; j++) {
+              PerlIO_printf(DBIc_LOGPIO(imp_xxh), "%c", *ptr++);
+            }
+            PerlIO_printf(DBIc_LOGPIO(imp_xxh),"\n");
+          }
 
           /*TODO: Use offset instead of 0 to fetch only remain part of data*/
           if (mysql_stmt_fetch_column(imp_sth->stmt, buffer , i, 0))
             do_error(sth, mysql_stmt_errno(imp_sth->stmt),
                      mysql_stmt_error(imp_sth->stmt),
                      mysql_stmt_sqlstate(imp_sth->stmt));
+
+          if (DBIc_TRACE_LEVEL(imp_xxh) >= 2) {
+            int j;
+            int m = MIN(*buffer->length, buffer->buffer_length);
+            char *ptr = (char*)buffer->buffer;
+            PerlIO_printf(DBIc_LOGPIO(imp_xxh),"\t\tafter buffer->buffer: ");
+            for (j = 0; j < m; j++) {
+              PerlIO_printf(DBIc_LOGPIO(imp_xxh), "%c", *ptr++);
+            }
+            PerlIO_printf(DBIc_LOGPIO(imp_xxh),"\n");
+          }
         }
 
         /* This does look a lot like Georg's PHP driver doesn't it?  --Brian */
@@ -5277,7 +5315,6 @@ int mysql_db_async_ready(SV* h)
   }
 }
 #endif
-
 
 static int parse_number(char *string, STRLEN len, char **end)
 {

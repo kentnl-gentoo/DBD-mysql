@@ -1,12 +1,10 @@
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 
 use DBI;
 use Test::More;
 use Carp qw(croak);
-use vars qw($table $test_dsn $test_user $test_password);
+use vars qw($test_dsn $test_user $test_password);
 use lib 't', '.';
 require 'lib.pl';
 
@@ -21,7 +19,7 @@ if (!$ENV{EXTENDED_TESTING}) {
 
 eval { require Proc::ProcessTable; };
 if ($@) {
-        plan skip_all => "Skip Proc::ProcessTable not installed \n";
+        plan skip_all => "module Proc::ProcessTable not installed \n";
 }
 
 eval { require Storable };
@@ -32,7 +30,7 @@ eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
                                             { RaiseError => 1, PrintError => 1, AutoCommit => 0 });};
 if ($@) {
         plan skip_all =>
-                "ERROR: $@. Can't continue test";
+                "no database connection";
 }
 plan tests => 21;
 
@@ -48,10 +46,10 @@ sub size {
     exit 0;
 }
 
-ok $dbh->do("DROP TABLE IF EXISTS $table");
+ok $dbh->do("DROP TABLE IF EXISTS dbd_mysql_t60leaks");
 
 my $create= <<EOT;
-CREATE TABLE $table (
+CREATE TABLE dbd_mysql_t60leaks (
     id INT(4) NOT NULL DEFAULT 0,
     name VARCHAR(64) NOT NULL DEFAULT ''
     )
@@ -108,7 +106,7 @@ $not_ok = 0;
 undef $prev_size;
 
 for (my $i = 0; $i < $COUNT_PREPARE; $i++) {
-    my $sth = $dbh->prepare("SELECT * FROM $table");
+    my $sth = $dbh->prepare("SELECT * FROM dbd_mysql_t60leaks");
     $sth->execute();
     $sth->finish();
 
@@ -138,7 +136,7 @@ cmp_ok $ok, '>', $not_ok, "\$ok $ok \$not_ok $not_ok";
 print "Testing memory leaks in fetchrow_arrayref\n";
 $msg= "Possible memory leak in fetchrow_arrayref detected";
 
-$sth= $dbh->prepare("INSERT INTO $table VALUES (?, ?)") ;
+$sth= $dbh->prepare("INSERT INTO dbd_mysql_t60leaks VALUES (?, ?)") ;
 
 my $dataref= [[1, 'Jochen Wiedmann'],
     [2, 'Andreas König'],
@@ -148,7 +146,7 @@ my $dataref= [[1, 'Jochen Wiedmann'],
 
 for (@$dataref) {
     ok $sth->execute($_->[0], $_->[1]),
-        "insert into $table values ($_->[0], '$_->[1]')";
+        "insert into dbd_mysql_t60leaks values ($_->[0], '$_->[1]')";
 }
 
 $ok = 0;
@@ -157,7 +155,7 @@ undef $prev_size;
 
 for (my $i = 0; $i < $COUNT_PREPARE; $i++) {
     {
-        my $sth = $dbh->prepare("SELECT * FROM $table");
+        my $sth = $dbh->prepare("SELECT * FROM dbd_mysql_t60leaks");
         $sth->execute();
         my $row;
         while ($row = $sth->fetchrow_arrayref()) { }
@@ -195,7 +193,7 @@ undef $prev_size;
 
 for (my $i = 0; $i < $COUNT_PREPARE; $i++) {
     {
-        my $sth = $dbh->prepare("SELECT * FROM $table");
+        my $sth = $dbh->prepare("SELECT * FROM dbd_mysql_t60leaks");
         $sth->execute();
         my $row;
         while ($row = $sth->fetchrow_hashref()) { }
@@ -224,5 +222,5 @@ ok $ok;
 ok !$not_ok, "\$ok $ok \$not_ok $not_ok";
 cmp_ok $ok, '>', $not_ok, "\$ok $ok \$not_ok $not_ok";
 
-ok $dbh->do("DROP TABLE $table");
+ok $dbh->do("DROP TABLE dbd_mysql_t60leaks");
 ok $dbh->disconnect;

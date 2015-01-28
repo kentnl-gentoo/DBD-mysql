@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 # Test special characters inside comments
 # http://bugs.debian.org/311040
 # http://bugs.mysql.com/27625
@@ -17,7 +15,7 @@ my $dbh;
 eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
                       { RaiseError => 1, PrintError => 0, AutoCommit => 0 });};
 if ($@) {
-    plan skip_all => "ERROR: $@. Can't continue test";
+    plan skip_all => "no database connection";
 }
 
 my %tests = (

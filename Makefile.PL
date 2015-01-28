@@ -357,9 +357,13 @@ if (eval $ExtUtils::MakeMaker::VERSION >= 5.43) {
     META_MERGE => {
       resources => {
         repository => 'https://github.com/perl5-dbi/DBD-mysql',
+        MailingList => 'mailto:dbi-dev@perl.org',
+        license     => 'http://dev.perl.org/licenses/',
+        homepage    => 'http://dbi.perl.org/',
+        IRC         => 'irc://irc.perl.org/#dbi',
       },
     },
-    BUILD_REQUIRES => { 'Test::More' => 0,
+    BUILD_REQUIRES => { 'Test::Simple' => '0.90',
                         'Test::Deep' => 0,
     },
     CONFIGURE_REQUIRES => { 'DBI' => 1.08,

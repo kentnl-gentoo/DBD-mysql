@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 
@@ -10,7 +8,7 @@ use lib '.', 't';
 require 'lib.pl';
 $|= 1;
 
-use vars qw($table $test_dsn $test_user $test_password);
+use vars qw($test_dsn $test_user $test_password);
 
 my $dbh;
 eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
@@ -20,7 +18,7 @@ eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
                         mysql_server_prepare  => 0 });};
 
 if ($@) {
-    plan skip_all => "ERROR: $DBI::errstr. Can't continue test";
+    plan skip_all => "no database connection";
 }
 plan tests => 78;
 
@@ -35,11 +33,26 @@ my $sth;
 #
 SKIP: {
   skip "Server is too old to support INFORMATION_SCHEMA for foreign keys", 16
-if !MinimumVersion($dbh, '5.0');
+    if !MinimumVersion($dbh, '5.0');
 
-  my ($dummy,$have_innodb)=
-    $dbh->selectrow_array("SHOW VARIABLES LIKE 'have_innodb'")
-    or DbiError($dbh->err, $dbh->errstr);
+  my $have_innodb;
+  if (!MinimumVersion($dbh, '5.6')) {
+    my $dummy;
+    ($dummy,$have_innodb)=
+      $dbh->selectrow_array("SHOW VARIABLES LIKE 'have_innodb'")
+      or DbiError($dbh->err, $dbh->errstr);
+  } else {
+    my $engines = $dbh->selectall_arrayref('SHOW ENGINES');
+    if (!$engines) {
+      DbiError($dbh->err, $dbh->errstr);
+    } else {
+       foreach my $engine (@$engines) {
+         if (lc($engine->[0]) eq 'innodb') {
+           $have_innodb = 'YES';
+         }
+       }
+    }
+  }
   skip "Server doesn't support InnoDB, needed for testing foreign keys", 16
     unless defined $have_innodb && $have_innodb eq "YES";
 

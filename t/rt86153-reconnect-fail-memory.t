@@ -1,12 +1,10 @@
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 
 use DBI;
 use Test::More;
 use Carp qw(croak);
-use vars qw($table $test_dsn $test_user $test_password);
+use vars qw($test_dsn $test_user $test_password);
 use lib 't', '.';
 require 'lib.pl';
 
@@ -15,12 +13,12 @@ my $COUNT_CONNECT = 4000;   # Number of connect/disconnect iterations
 my $have_storable;
 
 if (!$ENV{EXTENDED_TESTING}) {
-    plan skip_all => "Skip \$ENV{EXTENDED_TESTING} is not set\n";
+    plan skip_all => "\$ENV{EXTENDED_TESTING} is not set\n";
 }
 
 eval { require Proc::ProcessTable; };
 if ($@) {
-    plan skip_all => "Skip Proc::ProcessTable not installed \n";
+    plan skip_all => "module Proc::ProcessTable not installed \n";
 }
 
 eval { require Storable };
@@ -41,9 +39,8 @@ sub size {
 }
 
 
-my ($size, $prev_size, $ok, $not_ok, $dbh2, $msg);
-print "Testing memory leaks in connect/disconnect\n";
-$msg = "Possible memory leak in connect/disconnect detected";
+my ($size, $prev_size, $ok, $not_ok, $dbh2);
+note "Testing memory leaks in connect/disconnect\n";
 
 $ok = 0;
 $not_ok = 0;

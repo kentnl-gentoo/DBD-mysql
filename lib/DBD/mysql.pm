@@ -10,7 +10,7 @@ use DBI;
 use DynaLoader();
 use Carp;
 our @ISA = qw(DynaLoader);
-our $VERSION = '4.029';
+our $VERSION = '4.030_01';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -530,7 +530,7 @@ sub column_info {
 	    }
 	    $info->{"mysql_values"} = \@type_params;
     }
-    elsif ($basetype =~ /int/)
+    elsif ($basetype =~ /int/ || $basetype eq 'bit' )
     {
       # big/medium/small/tiny etc + unsigned?
 	    $info->{DATA_TYPE} = SQL_INTEGER();
@@ -738,7 +738,8 @@ EOF
 
     return $sth;
 }
-
+# #86030: PATCH: adding statistics_info support
+# Thank you to David Dick http://search.cpan.org/~ddick/
 sub statistics_info {
     my ($dbh,
         $catalog, $schema, $table,
@@ -926,7 +927,8 @@ DBD::mysql - MySQL driver for the Perl5 Database Interface (DBI)
   #!/usr/bin/perl
 
   use strict;
-  use DBI();
+  use warnings;
+  use DBI;
 
   # Connect to the database.
   my $dbh = DBI->connect("DBI:mysql:database=test;host=localhost",
@@ -1904,9 +1906,6 @@ Here's an example of how to use the asynchronous query interface:
 
 =head1 INSTALLATION
 
-Windows users may skip this section and pass over to L<WIN32
-INSTALLATION> below. Others, go on reading.
-
 =head2 Environment Variables
 
 For ease of use, you can now set environment variables for
@@ -2007,83 +2006,6 @@ it:
   make
   make test
   make install
-
-=head1 WIN32 INSTALLATION
-
-If you are using ActivePerl, you may use ppm to install DBD-mysql.
-
-  ppm install DBI
-  ppm install DBD::mysql
-
-If you need an HTTP proxy, you might need to set the environment
-variable http_proxy, for example like this:
-
-  set http_proxy=http://myproxy.com:8080/
-
-
-I recommend using the win32clients package for installing DBD::mysql
-under Win32, available for download on www.tcx.se. The following steps
-have been required for me:
-
-=over
-
-=item -
-
-Extract sources into F<C:\>. This will create a directory F<C:\mysql>
-with subdirectories include and lib.
-
-IMPORTANT: Make sure this subdirectory is not shared by other TCX
-files! In particular do *not* store the MySQL server in the same
-directory. If the server is already installed in F<C:\mysql>,
-choose a location like F<C:\tmp>, extract the win32clients there.
-Note that you can remove this directory entirely once you have
-installed DBD::mysql.
-
-=item -
-
-Extract the DBD::mysql sources into another directory, for
-example F<C:\src\siteperl>
-
-=item -
-
-Open a CMD.exe shell and change directory to F<C:\src\siteperl>.
-
-=item -
-
-The next step is only required if you repeat building the modules: Make
-sure that you have a clean build tree by running
-
-  nmake realclean
-
-If you don't have VC++, replace nmake with your flavor of make. If
-error messages are reported in this step, you may safely ignore them.
-
-=item -
-
-Run
-
-  perl Makefile.PL
-
-which will prompt you for some settings. The really important ones are:
-
-  Which DBMS do you want to use?
-
-enter a 1 here (MySQL only), and
-
-  Where is your mysql installed? Please tell me the directory that
-  contains the subdir include.
-
-where you have to enter the win32clients directory, for example
-F<C:\mysql> or F<C:\tmp\mysql>.
-
-=item -
-
-Continued in the usual way:
-
-  nmake
-  nmake install
-
-=back
 
 =head1 AUTHORS
 
