@@ -1,15 +1,17 @@
 # -*- cperl -*-
 
-use 5.008_001;
-use Config;
 use strict;
 use warnings;
-use Getopt::Long();
-use ExtUtils::MakeMaker();
-use Data::Dumper ();
+
+use 5.008_001;
+use Config;
+use Getopt::Long;
+use ExtUtils::MakeMaker;
+use Data::Dumper;
 use File::Path;
 use File::Copy;
 use File::Basename;
+use File::Spec;
 require DBI::DBD;
 
 my $TESTDB = "test";
@@ -36,22 +38,26 @@ Getopt::Long::GetOptions(
     "embedded=s",
     "mysql_config=s",
     "force-embedded",
-	"with-mysql=s"
+    "with-mysql=s"
     ) || die Usage();
 
 my $source = {};
 
   #Check for mysql_config first
-  $source->{'mysql_config'}="guessed";
+  $source->{'mysql_config'} = "guessed";
+
+  if ($opt->{'mysql_config'}) {
+    $source->{'mysql_config'} = 'Users choice';
+  }
+  if (!$opt->{'mysql_config'} && $ENV{DBD_MYSQL_CONFIG}) {
+     $opt->{'mysql_config'} = $ENV{DBD_MYSQL_CONFIG};
+     $source->{'mysql_config'} = 'environment';
+  }
   if ($opt->{'mysql_config'})
   {
-	$opt->{'mysql_config'} = Win32::GetShortPathName($opt->{'mysql_config'})
+    $opt->{'mysql_config'} = Win32::GetShortPathName($opt->{'mysql_config'})
         if $^O eq 'MSWin32';
-    if (-f $opt->{'mysql_config'})
-    {
-      $source->{'mysql_config'} = "Users choice";
-    }
-    else
+    if (!-f $opt->{'mysql_config'})
     {
       print <<"MSG";
 
@@ -64,9 +70,6 @@ MSG
   }
   else
   {
-	if ($^O eq 'MSWin32')  {
-		win32_mysql_config($opt->{'with-mysql'});
-	}
     if (! `mysql_config`)
     {
       print <<MSG;
@@ -95,7 +98,6 @@ if ( $opt->{testport} && !$opt->{testhost} ) {
 #since MakeMaker will find it and will try to execute it.
 if (-f "mysqlEmb/Makefile.PL")
 {
-  eval { require File::Copy };
   move ("mysqlEmb/Makefile.PL", "mysqlEmb/Makefile.PL.old");
 }
 
@@ -182,9 +184,8 @@ To change these settings, see 'perl Makefile.PL --help' and
 
 MSG
 
-sleep 5;
+sleep 1;
 
-eval { require File::Spec };
 my $dsn= '';
 if (exists $opt->{'ps-protocol'}) {
   $dsn = "\$::test_dsn .= \";mysql_server_prepare=1\";\n";
@@ -456,7 +457,6 @@ USAGE
 
 sub Configure {
     my($opt, $source, $param) = @_;
-
     if ($param eq 'bind-type-guessing') {
         $source->{$param}= ($opt->{$param}) ? "User's choice" : 'default';
         return;
@@ -470,49 +470,54 @@ sub Configure {
         return;
     }
 
-# First try to get options values from mysql_config
-    my $command = $opt->{'mysql_config'} . " --$param";
-    eval
-    {
-        open(PIPE, "$command |") or die "Can't find mysql_config.";
-    };
+    # First try to get options values from mysql_config
+    my @mysql_config_options = qw(
+      cflags include libs libs_r plugindir socket port version libmysqld-libs
+    );
+    if ( grep {$_ eq $param} @mysql_config_options ) {
+        my $command = $opt->{'mysql_config'} . " --$param";
+        eval
+        {
+            open(PIPE, "$command |") or die "Can't find mysql_config.";
+        };
 
-    if (!$@) {
-        my $str = "";
-        while (defined(my $line = <PIPE>)) { $str .= $line; }
+        if (!$@) {
+            my $str = "";
+            while (defined(my $line = <PIPE>)) { $str .= $line; }
 
-        if ($str ne ""  &&  $str !~ /Options:/) {
-            $str =~ s/\s+$//s;
-            $str =~ s/^\s+//s;
+            if ($str ne ""  &&  $str !~ /Options:/) {
+                $str =~ s/\s+$//s;
+                $str =~ s/^\s+//s;
 
-            # Unfortunately ExtUtils::MakeMaker doesn't deal very well
-            # with -L'...'
-            $str =~ s/\-L\'(.*?)\'/-L$1/sg;
-            $str =~ s/\-L\"(.*?)\"/-L$1/sg;
+                # Unfortunately ExtUtils::MakeMaker doesn't deal very well
+                # with -L'...'
+                $str =~ s/\-L\'(.*?)\'/-L$1/sg;
+                $str =~ s/\-L\"(.*?)\"/-L$1/sg;
 
-            # Separate libs from ldflags
-            if ($param eq 'libs') {
-                my (@libs, @ldflags);
-                for (split ' ', $str) {
-                    if (/^-[Ll]/) { push @libs, $_ }
-                    else          { push @ldflags, $_ }
+                # Separate libs from ldflags
+                if ($param eq 'libs') {
+                    my (@libs, @ldflags);
+                    for (split ' ', $str) {
+                        if (/^-[Ll]/) { push @libs, $_ }
+                        else          { push @ldflags, $_ }
+                    }
+                    $str = "@libs";
+                    $opt->{ldflags} = "@ldflags";
+                    $source->{ldflags} = "mysql_config";
                 }
-                $str = "@libs";
-                $opt->{ldflags} = "@ldflags";
-                $source->{ldflags} = "mysql_config";
-            }
 
-            $opt->{$param} = $str;
-            $source->{$param} = "mysql_config";
-            return;
+                $opt->{$param} = $str;
+                $source->{$param} = "mysql_config";
+                return;
+            }
+        }
+        else {
+            print "Can't find mysql_config. Use --mysql_config option to specify where mysql_config is located\n";
         }
     }
-    else {
-        print "Can't find mysql_config. Use --mysql_config option to specify where mysql_config is located\n";
-    }
 
-# Ok, mysql_config doesn't work. We need to do our best
-# First check environment variables
+    # Ok, mysql_config doesn't work. We need to do our best
+    # First check environment variables
     if (defined($ENV{'DBD_MYSQL_'.uc($param)})) {
         $opt->{$param} = $ENV{'DBD_MYSQL_'.uc($param)};
         $source->{$param} = 'environment';
@@ -625,28 +630,21 @@ MSG
   }
 }
 
-my $haveFileSpec;
 my $fineDir;
 sub SearchFor {
   my($subdir, @files) = @_;
-  $haveFileSpec = eval { require File::Spec } unless defined($haveFileSpec);
 
-  my @dirs = ($^O =~ /mswin32/i) ? qw(C:) : qw(/usr/local /usr /opt);
+  my @dirs = ($^O eq 'MSWin32') ? qw(C:) : qw(/usr/local /usr /opt);
   unshift(@dirs, $fineDir) if defined($fineDir);
 
   for my $f (@files) {
     for my $dir (@dirs) {
-      my $try1 = $haveFileSpec ?
-	File::Spec->catdir($dir, $subdir) : "$dir/$subdir";
-      my $try2 = $haveFileSpec ?
-	File::Spec->catdir($dir, "mysql") : "$dir/mysql";
-      my $try3 = $haveFileSpec ?
-	File::Spec->catdir($try1, "mysql") : "$try1/mysql";
-      my $try4 = $haveFileSpec ?
-	File::Spec->catdir($try2, $subdir) : "$try2/$subdir";
+      my $try1 = File::Spec->catdir($dir, $subdir);
+      my $try2 = File::Spec->catdir($dir, "mysql");
+      my $try3 = File::Spec->catdir($try1, "mysql");
+      my $try4 = File::Spec->catdir($try2, $subdir);
       for my $path ($try3, $try4, $try2, $try1, $dir) {
-	my $file = $haveFileSpec ?
-	  File::Spec->catfile($path, $f) : "$path/$f";
+	my $file = File::Spec->catfile($path, $f);
 	if (-f $file) {
 	  $fineDir = $dir;
 	  return $path;
@@ -663,8 +661,7 @@ sub SearchFor2 {
   {
     for my $dir (@{$dirs})
     {
-      my $file = $haveFileSpec ?  File::Spec->catfile($dir, $f) : "$dir/$f";
-      if (-f $file)
+      if (-f File::Spec->catfile($dir, $f))
       {
         $fineDir = $dir;
         return $dir;
@@ -760,174 +757,6 @@ sub create_makefile
   open(LOG, ">mysqlEmb/Makefile.conf") or die "Can't write to file mysqlEmb/Makefile.conf";
   print LOG $cnf;
   close(LOG);
-}
-
-sub win32_mysql_config {
-	my ($mysql_dir) = @_;
-	my $mysqladmin;
-
-	if ($mysql_dir) {
-	  unless (-d $mysql_dir) {
-		die qq{"$mysql_dir" does not exist};
-	  }
-	  $mysqladmin = File::Spec->catfile($mysql_dir, 'bin', 'mysqladmin.exe');
-	  unless (-f $mysqladmin) {
-		die qq{"bin/mysqladmin.exe" not found under "$mysql_dir"};
-	  }
-	}
-
-	my (@path_ext) = path_ext();
-	unless ($mysqladmin) {
-	  $mysqladmin = which('mysqladmin', @path_ext);
-	  unless ($mysqladmin) {
-		die << 'DEATH';
-mysqladmin.exe was not found in your PATH.
-Please either add the directory containing mysqladmin.exe
-to your PATH environment variable, or rerun this script
-with the --with-mysql=C:\Path\to\Mysql option, giving the
-root directory of your MySQL installation.
-DEATH
-	  }
-	  ($mysql_dir = dirname($mysqladmin)) =~ s{[/\\]bin[/\\]?$}{};
-	}
-
-	my $basedir = Win32::GetShortPathName($mysql_dir);
-	my $ldata = File::Spec->catdir($basedir, 'data');
-	my $execdir = File::Spec->catdir($basedir, 'bin');
-	my $bindir = File::Spec->catdir($basedir, 'bin');
-	my $pkglibdir= File::Spec->catdir($basedir, 'lib', 'opt');
-	my $pkgincludedir = File::Spec->catdir($basedir, 'include');
-	$pkgincludedir = File::Spec->catdir($basedir, 'include', 'mysql')
-	  if -e File::Spec->catfile($basedir, 'include', 'mysql', 'mysql.h');
-	my $ldflags = '';
-	my $client_libs = $Config{'cc'} eq 'gcc' ? '-lmysql -lzlib' : '-lmysqlclient -lzlib';
-
-	if (($Config{'_a'} eq '.a') and (! -e File::Spec->catfile($pkglibdir, 'libmysql.a'))) {
-		# This is done because ExtUtils::Liblist expects .a files, not .lib files.
-		copy(File::Spec->catfile($pkglibdir, 'libmysql.lib'), File::Spec->catfile($pkglibdir, 'libmysql.a'));
-		copy(File::Spec->catfile($pkglibdir, 'zlib.lib'), File::Spec->catfile($pkglibdir, 'libzlib.a'));
-	}
-
-	$mysqladmin = Win32::GetShortPathName($mysqladmin);
-    my $v;
-    if ( defined $opt->{'testuser'} and defined $opt->{'testpassword'}) {
- 	my $custom_mysqladmin = sprintf('%s --user=%s --password=%s version', $mysqladmin , $opt->{'testuser'}, $opt->{'testpassword'});
-        $v = qx($custom_mysqladmin);
-    } else {
-        $v = qx($mysqladmin version);
-    }
-	unless ($v) {
-	  print STDERR "Problem running $mysqladmin - aborting ...\n";
-	  exit(1);
-	}
-
-	my ($version, $port);
-	if ($v =~ /Server version\s+(.*?)\n/m) {
-	  $version = $1;
-	}
-	if ($v =~ /TCP port\s+(.*?)\n/m) {
-	  $port = $1;
-	}
-
-	my $libs = qq{$ldflags -L"$pkglibdir" $client_libs};
-	my $cflags = qq{-I"$pkgincludedir"};
-	my $embedded_libs = qq{$ldflags -L"$pkglibdir"};
-
-	my $license = <<'EOL';
-# Copyright (C) 2005 MySQL AB & MySQL Finland AB & TCX DataKonsult AB
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
-# This script reports various configuration settings that may be needed
-# when using the MySQL client library.
-EOL
-
-	my $mysql_config = File::Spec->catfile($basedir, 'bin', 'mysql_config.pl');
-	open(my $fh, '>', $mysql_config)
-	  or die "Cannot open $mysql_config for writing: $!";
-
-	print $fh <<"EOL";
-#!$^X
-use strict;
-use warnings;
-use Getopt::Long;
-
-$license
-
-my \$basedir = q{$basedir};
-my \$ldata = q{$ldata};
-my \$execdir = q{$execdir};
-my \$bindir = q{$bindir};
-my \$pkglibdir = q{$pkglibdir};
-my \$pkgincludedir = q{$pkgincludedir};
-my \$ldflags = q{$ldflags};
-my \$client_libs = q{$client_libs};
-my \$version = q{$version};
-my \$port = q{$port};
-my \$libs = q{$libs};
-my \$cflags = q{$cflags};
-my \$embedded_libs = q{$embedded_libs};
-EOL
-
-	while (<DATA>) {
-	  print $fh $_;
-	}
-	close $fh;
-	my @args = ('pl2bat', $mysql_config);
-	system(@args) == 0 or die "System @args failed: $?";
-
-	print << "END";
-
-mysql_config.pl, and an associated bat file, has been
-successfully created under
-   $basedir\\bin
-
-END
-
-	return;
-}
-
-sub path_ext {
-  my @path_ext;
-
-  if ($ENV{PATHEXT}) {
-    push @path_ext, split ';', $ENV{PATHEXT};
-    for my $ext (@path_ext) {
-      $ext =~ s/^\.*(.+)$/$1/;
-    }
-  }
-  else {
-    #Win9X: doesn't have PATHEXT
-    push @path_ext, qw(com exe bat);
-  }
-
-  return @path_ext;
-}
-
-sub which {
-  my $program = shift;
-  my @path_ext = @_;
-  return unless $program;
-  my @a = map {File::Spec->catfile($_, $program) } File::Spec->path();
-  for my $base (@a) {
-    return $base if -x $base;
-    for my $ext (@path_ext) {
-      return "$base.$ext" if -x "$base.$ext";
-    }
-  }
-  return;
 }
 
 package MY;
