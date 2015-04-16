@@ -39,7 +39,7 @@
          }
       }
    },
-   "release_status" : "stable",
+   "release_status" : "testing",
    "resources" : {
       "homepage" : "http://dbi.perl.org/",
       "license" : [
@@ -51,5 +51,5 @@
       "x_IRC" : "irc://irc.perl.org/#dbi",
       "x_MailingList" : "mailto:dbi-dev@perl.org"
    },
-   "version" : "4.031"
+   "version" : "4.032_01"
 }

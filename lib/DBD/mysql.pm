@@ -15,7 +15,7 @@ our @ISA = qw(DynaLoader);
 # SQL_DRIVER_VER is formatted as dd.dd.dddd
 # for version 5.x please switch to 5.00(_00) version numbering
 # keep $VERSION in Bundle/DBD/mysql.pm in sync
-our $VERSION = '4.031';
+our $VERSION = '4.032_01';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -981,7 +981,7 @@ them. :-)
 
 In what follows we first discuss the use of DBD::mysql,
 because this is what you will need the most. For installation, see the
-separate document L<DBD::mysql::INSTALLATION>.
+separate document L<DBD::mysql::INSTALL>.
 See L</"EXAMPLE"> for a simple example above.
 
 From perl you activate the interface with the statement
@@ -1914,7 +1914,7 @@ Here's an example of how to use the asynchronous query interface:
 
 =head1 INSTALLATION
 
-See L<DBD::mysql::INSTALLATION>.
+See L<DBD::mysql::INSTALL>.
 
 =head1 AUTHORS
 
