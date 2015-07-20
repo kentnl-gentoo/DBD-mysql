@@ -1765,6 +1765,20 @@ MYSQL *mysql_dr_connect(
 
           mysql_options(sock, MYSQL_READ_DEFAULT_GROUP, gr);
         }
+        #if (MYSQL_VERSION_ID >= 50606)
+          if ((svp = hv_fetch(hv, "mysql_conn_attrs", 16, FALSE)) && *svp) {
+              HV* attrs = (HV*) SvRV(*svp);
+              HE* entry = NULL;
+              I32 num_entries = hv_iterinit(attrs);
+              while (num_entries && (entry = hv_iternext(attrs))) {
+                  I32 retlen = 0;
+                  char *attr_name = hv_iterkey(entry, &retlen);
+                  SV *sv_attr_val = hv_iterval(attrs, entry);
+                  char *attr_val  = SvPV(sv_attr_val, lna);
+                  mysql_options4(sock, MYSQL_OPT_CONNECT_ATTR_ADD, attr_name, attr_val);
+              }
+          }
+        #endif
         if ((svp = hv_fetch(hv, "mysql_client_found_rows", 23, FALSE)) && *svp)
         {
           if (SvTRUE(*svp))
@@ -1851,7 +1865,10 @@ MYSQL *mysql_dr_connect(
 
         /* HELMUT */
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
-        if ((svp = hv_fetch(hv, "mysql_enable_utf8", 17, FALSE)) && *svp) {
+        if ((svp = hv_fetch(hv, "mysql_enable_utf8mb4", 20, FALSE)) && *svp && SvTRUE(*svp)) {
+          mysql_options(sock, MYSQL_SET_CHARSET_NAME, "utf8mb4");
+        }
+        else if ((svp = hv_fetch(hv, "mysql_enable_utf8", 17, FALSE)) && *svp) {
           /* Do not touch imp_dbh->enable_utf8 as we are called earlier
            * than it is set and mysql_options() must be before:
            * mysql_real_connect()
@@ -2119,7 +2136,8 @@ int dbd_db_login(SV* dbh, imp_dbh_t* imp_dbh, char* dbname, char* user,
 
   /* HELMUT */
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
-  imp_dbh->enable_utf8 = FALSE;  /* initialize mysql_enable_utf8 */
+  imp_dbh->enable_utf8 = FALSE;     /* initialize mysql_enable_utf8 */
+  imp_dbh->enable_utf8mb4 = FALSE;  /* initialize mysql_enable_utf8mb4 */
 #endif
 
   if (!my_login(aTHX_ dbh, imp_dbh))
@@ -2441,6 +2459,8 @@ dbd_db_STORE_attrib(
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
   else if (kl == 17 && strEQ(key, "mysql_enable_utf8"))
     imp_dbh->enable_utf8 = bool_value;
+  else if (kl == 20 && strEQ(key, "mysql_enable_utf8mb4"))
+    imp_dbh->enable_utf8mb4 = bool_value;
 #endif
 #if FABRIC_SUPPORT
   else if (kl == 22 && strEQ(key, "mysql_fabric_opt_group"))
@@ -2581,6 +2601,8 @@ SV* dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
     }
     /* HELMUT */
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
+    else if (kl == strlen("enable_utf8mb4") && strEQ(key, "enable_utf8mb4"))
+        result = sv_2mortal(newSViv(imp_dbh->enable_utf8mb4));
     else if (kl == strlen("enable_utf8") && strEQ(key, "enable_utf8"))
         result = sv_2mortal(newSViv(imp_dbh->enable_utf8));
 #endif
@@ -4025,10 +4047,10 @@ process:
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
 
 #if MYSQL_VERSION_ID >= FIELD_CHARSETNR_VERSION 
-  /* see bottom of: http://www.mysql.org/doc/refman/5.0/en/c-api-datatypes.html */
-        if (imp_dbh->enable_utf8 && fbh->charsetnr != 63)
+  /* SHOW COLLATION WHERE Id = 63; -- 63 == charset binary, collation binary */
+        if ((imp_dbh->enable_utf8 || imp_dbh->enable_utf8mb4) && fbh->charsetnr != 63)
 #else
-	if (imp_dbh->enable_utf8 && !(fbh->flags & BINARY_FLAG))
+	if ((imp_dbh->enable_utf8 || imp_dbh->enable_utf8mb4) && !(fbh->flags & BINARY_FLAG))
 #endif
 	  sv_utf8_decode(sv);
 #endif
@@ -4143,7 +4165,7 @@ process:
 #if defined(sv_utf8_decode) && MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
 
   /* see bottom of: http://www.mysql.org/doc/refman/5.0/en/c-api-datatypes.html */
-        if (imp_dbh->enable_utf8 && fields[i].charsetnr != 63)
+        if ((imp_dbh->enable_utf8 || imp_dbh->enable_utf8mb4) && fields[i].charsetnr != 63)
 	  sv_utf8_decode(sv);
 #endif
 	/* END OF UTF8 */

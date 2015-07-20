@@ -15,7 +15,7 @@ our @ISA = qw(DynaLoader);
 # SQL_DRIVER_VER is formatted as dd.dd.dddd
 # for version 5.x please switch to 5.00(_00) version numbering
 # keep $VERSION in Bundle/DBD/mysql.pm in sync
-our $VERSION = '4.032_01';
+our $VERSION = '4.032';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -129,6 +129,8 @@ sub connect {
     $username ||= '';
     $password ||= '';
     $attrhash ||= {};
+    $attrhash->{mysql_conn_attrs} ||= {};
+    $attrhash->{mysql_conn_attrs}->{'program_name'} ||= $0;
 
     # create a 'blank' dbh
     my($this, $privateAttrHash) = (undef, $attrhash);
@@ -1256,6 +1258,79 @@ Example:
 
 $testdsn="DBI:mysqlEmb:database=test;mysql_embedded_groups=embedded_server,common";
 
+=item mysql_conn_attrs
+
+The option <mysql_conn_attrs> is a hash of attribute names and values which can be
+used to send custom connection attributes to the server.
+
+ node1$ cat ./foo.pl
+ #!/usr/bin/perl
+
+ use DBI;
+ use Data::Dumper;
+
+ my ($test_dsn, $test_user, $test_password) = ($ARGV[0], $ARGV[1], $ARGV[2]);
+
+ my $dbh= DBI->connect($test_dsn, $test_user, $test_password,
+     { AutoCommit => 0,
+       mysql_conn_attrs => { foo => 'bar', wiz => 'bang' },
+     });
+
+ my $results = $dbh->selectall_hashref('SELECT * FROM performance_schema.session_connect_attrs', 'ATTR_NAME');
+ print Dumper($results);
+
+ $dbh->disconnect();
+ node1$ perl ./foo.pl 'DBI:mysql:test;hostname=127.0.0.1;port=5624' msandbox msandbox
+ $VAR1 = {
+           'program_name' => {
+                               'ATTR_VALUE' => './foo.pl',
+                               'PROCESSLIST_ID' => '3',
+                               'ATTR_NAME' => 'program_name',
+                               'ORDINAL_POSITION' => '5'
+                             },
+           '_os' => {
+                      'ATTR_VALUE' => 'osx10.8',
+                      'PROCESSLIST_ID' => '3',
+                      'ATTR_NAME' => '_os',
+                      'ORDINAL_POSITION' => '0'
+                    },
+           'wiz' => {
+                      'ATTR_VALUE' => 'bang',
+                      'PROCESSLIST_ID' => '3',
+                      'ATTR_NAME' => 'wiz',
+                      'ORDINAL_POSITION' => '3'
+                    },
+           '_platform' => {
+                            'ATTR_VALUE' => 'x86_64',
+                            'PROCESSLIST_ID' => '3',
+                            'ATTR_NAME' => '_platform',
+                            'ORDINAL_POSITION' => '4'
+                          },
+           '_client_name' => {
+                               'ATTR_VALUE' => 'libmysql',
+                               'PROCESSLIST_ID' => '3',
+                               'ATTR_NAME' => '_client_name',
+                               'ORDINAL_POSITION' => '1'
+                             },
+           '_pid' => {
+                       'ATTR_VALUE' => '59860',
+                       'PROCESSLIST_ID' => '3',
+                       'ATTR_NAME' => '_pid',
+                       'ORDINAL_POSITION' => '2'
+                     },
+           'foo' => {
+                      'ATTR_VALUE' => 'bar',
+                      'PROCESSLIST_ID' => '3',
+                      'ATTR_NAME' => 'foo',
+                      'ORDINAL_POSITION' => '6'
+                    },
+           '_client_version' => {
+                                  'ATTR_VALUE' => '5.6.24',
+                                  'PROCESSLIST_ID' => '3',
+                                  'ATTR_NAME' => '_client_version',
+                                  'ORDINAL_POSITION' => '7'
+                                }
+         };
 
 =back
 
@@ -1481,6 +1556,11 @@ need to issue the command C<SET NAMES utf8> to get the same effect.
 
 This option is experimental and may change in future versions.
 
+=item mysql_enable_utf8mb4
+
+This is similar to mysql_enable_utf8, but is capable of handling 4-byte
+UTF-8 characters.
+
 =item mysql_bind_type_guessing
 
 This attribute causes the driver (emulated prepare statements)
@@ -1498,34 +1578,34 @@ character column, if this column is indexed, if you query that
 column with the integer value not being quoted, it will not
 use the index:
 
-MariaDB [test]> explain select * from test where value0 = '3' \G
-*************************** 1. row ***************************
-           id: 1
-  select_type: SIMPLE
-        table: test
-         type: ref
-possible_keys: value0
-          key: value0
-      key_len: 13
-          ref: const
-         rows: 1
-        Extra: Using index condition
-1 row in set (0.00 sec)
-
-MariaDB [test]> explain select * from test where value0 = 3
-    -> \G
-*************************** 1. row ***************************
-           id: 1
-  select_type: SIMPLE
-        table: test
-         type: ALL
-possible_keys: value0
-          key: NULL
-      key_len: NULL
-          ref: NULL
-         rows: 6
-        Extra: Using where
-1 row in set (0.00 sec)
+    MariaDB [test]> explain select * from test where value0 = '3' \G
+    *************************** 1. row ***************************
+               id: 1
+      select_type: SIMPLE
+            table: test
+             type: ref
+    possible_keys: value0
+              key: value0
+          key_len: 13
+              ref: const
+             rows: 1
+            Extra: Using index condition
+    1 row in set (0.00 sec)
+    
+    MariaDB [test]> explain select * from test where value0 = 3
+        -> \G
+    *************************** 1. row ***************************
+               id: 1
+      select_type: SIMPLE
+            table: test
+             type: ALL
+    possible_keys: value0
+              key: NULL
+          key_len: NULL
+              ref: NULL
+             rows: 6
+            Extra: Using where
+    1 row in set (0.00 sec)
 
 See bug: https://rt.cpan.org/Ticket/Display.html?id=43822
 
@@ -1751,7 +1831,7 @@ The methods
     $dbh->rollback();
     $dbh->commit();
 
-will issue the commands COMMIT and ROLLBACK, respectively. A
+will issue the commands ROLLBACK and COMMIT, respectively. A
 ROLLBACK will also be issued if AutoCommit mode is off and the
 database handles DESTROY method is called. Again, this is following
 the DBI specifications.
