@@ -448,14 +448,14 @@ int free_embedded_options(char ** options_list, int options_count)
  Print out embedded option settings
 
 */
-int print_embedded_options(char ** options_list, int options_count)
+int print_embedded_options(PerlIOl ** Log, char ** options_list, int options_count)
 {
   int i;
 
   for (i=0; i<options_count; i++)
   {
     if (options_list[i])
-        PerlIO_printf(DBILOGFP,
+        PerlIO_printf(Log,
                       "Embedded server, parameter[%d]=%s\n",
                       i, options_list[i]);
   }
