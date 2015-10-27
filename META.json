@@ -4,7 +4,7 @@
       "Patrick Galbraith <patg@patg.net>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 7.1, CPAN::Meta::Converter version 2.150005",
+   "generated_by" : "ExtUtils::MakeMaker version 6.66, CPAN::Meta::Converter version 2.120921",
    "license" : [
       "perl_5"
    ],
@@ -39,7 +39,7 @@
          }
       }
    },
-   "release_status" : "testing",
+   "release_status" : "stable",
    "resources" : {
       "homepage" : "http://dbi.perl.org/",
       "license" : [
@@ -51,6 +51,5 @@
       "x_IRC" : "irc://irc.perl.org/#dbi",
       "x_MailingList" : "mailto:dbi-dev@perl.org"
    },
-   "version" : "4.032_03",
-   "x_serialization_backend" : "JSON::PP version 2.27300"
+   "version" : "4.033"
 }
