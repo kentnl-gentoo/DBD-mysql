@@ -519,6 +519,28 @@ you may also try to link without gzip libraries.
 
 =back
 
+=head1 ENABLE ENCRYPTED CONNECTIONS via SSL
+
+Connecting to your servers over an encrypted connection (SSL) is only possible
+if you enabled this setting at build time. This is easily
+accomplished by providing the C<--ssl> option to Makefile.PL.
+Alternatively, you can also set an environment variable for this:
+
+Create an environment variable, C<DBD_MYSQL_SSL> and give it a true value.
+
+Attempting to connect to a server that requires an encrypted connection without
+first having L<DBD::mysql> installed with the C<--ssl> option will result in
+an error that makes things appear as if your password is incorrect.
+
+  export DBD_MYSQL_SSL=1
+  cpan DBD::mysql
+
+The environment variable is also honored on Windows systems.  Set the proper
+environment variable and then install L<DBD::mysql>.
+
+  SET DBD_MYSQL_SQL=1
+  cpan DBD::mysql
+
 =head1 MARIADB NATIVE CLIENT INSTALLATION
 
 The MariaDB native client is another option for connecting to a MySQL·
@@ -557,7 +579,7 @@ Quite simply, using the binary MySQL installation from Oracle, you will need to 
 
   perl Makefile.PL --mysql_config=/usr/local/mysql-5.6.16-osx10.7-x86_64/bin/mysql_config
 
-There are some runtime issues you may encounter with OS X. Upon 
+There are some runtime issues you may encounter with OS X. Upon
 running make test, you might encounter the error:
 
   Error:  Can't load '/Users/username/DBD-mysql/blib/arch/auto/DBD/mysql/mysql.bundle' for module DBD::mysql: dlopen(/Users/username/DBD-mysql/blib/arch/auto/DBD/mysql/mysql.bundle, 2): Library not loaded: libmysqlclient.18.dylib
@@ -601,7 +623,7 @@ test against a MySQL server on a remote host.
 
 =head3 Build MySQL clients under Cygwin:
 
-download the MySQL LINUX source from 
+download the MySQL LINUX source from
 L<http://www.mysql.com/downloads/index.html>,
 unpack mysql-<version>.tar.gz into some tmp location and from this directory
 run configure:

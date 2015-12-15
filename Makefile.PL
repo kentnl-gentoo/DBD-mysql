@@ -350,8 +350,7 @@ if (eval $ExtUtils::MakeMaker::VERSION >= 5.43) {
   $o{'AUTHOR'} = 'Patrick Galbraith <patg@patg.net>';
   $o{'ABSTRACT'} =
     'A MySQL driver for the Perl5 Database Interface (DBI)';
-  $o{'PREREQ_PM'} = { 'DBI' => 1.08,
-		      'Data::Dumper' => 0 };
+  $o{'PREREQ_PM'} = { 'DBI' => 1.609 };
   %o=(%o,
     LICENSE => 'perl',
     MIN_PERL_VERSION => '5.008001',
@@ -363,12 +362,62 @@ if (eval $ExtUtils::MakeMaker::VERSION >= 5.43) {
         homepage    => 'http://dbi.perl.org/',
         IRC         => 'irc://irc.perl.org/#dbi',
       },
+      x_contributors => [
+        # a list of our awesome contributors generated from git
+        # using the command:
+        # git shortlog -se | cut  -f2- | sed "s/^/        '/;s/$/',/"
+
+        'Alexandr Ciornii <alexchorny@gmail.com>',
+        'Alexey Molchanov <alexey.molchanov@portaone.com>',
+        'Amiri Barksdale at Home <amiri@roosterpirates.com>',
+        'Aran Deltac <bluefeet@gmail.com>',
+        'Bernt M. Johnsen <bernt.johnsen@oracle.com>',
+        'Chase Whitener <chase.whitener@infotechfl.com>',
+        'Chip Salzenberg <chip@topsy.com>',
+        'Chris Hammond <chrishammond@ymail.com>',
+        'Chris Weyl <cweyl@alumni.drew.edu>',
+        'Christian Walde <walde.christian@googlemail.com>',
+        'Dagfinn Ilmari Mannsåker <ilmari@ilmari.org>',
+        'Daisuke Murase <typester@cpan.org>',
+        'Damyan Ivanov <dmn@debian.org>',
+        'Daniël van Eeden <daniel.vaneeden@booking.com>',
+        'David Farrell <davidnmfarrell@gmail.com>',
+        'David Steinbrunner <dsteinbrunner@pobox.com>',
+        'Giovanni Bechis <giovanni@bigio.snb.it>',
+        'Graham Ollis <plicease@cpan.org>',
+        'Hanno <hanno@gentoo.org>',
+        'Jim Winstead <jimw@trainedmonkey.com>',
+        'Juergen Weigert <jw@suse.com>',
+        'Kenny Gryp <kenny.gryp@percona.com>',
+        'Lu Shengliang <lushl9301@gmail.com>',
+        'Masahiro Chiba <chiba@everqueue.com>',
+        'Matthew Horsfall (alh) <WolfSage@gmail.com>',
+        'Michiel Beijen <michiel.beijen@gmail.com>',
+        'Mike Pomraning <mjp@pilcrow.madison.wi.us>',
+        'Patrick Galbraith <patg@patg.net>',
+        'Perlover <perlover@perlover.com>',
+        'Reini Urban <rurban@cpanel.net>',
+        'Rob Hoelz <rhoelz@inoc.com>',
+        'Rob Van Dam <rvandam00@gmail.com>',
+        'Rudy Lippan <rlippan@remotelinux.com>',
+        'Scimon <simon.proctor@gmail.com>',
+        'Sergey Zhuravlev <zhurs@ya.ru>',
+        'Sergiy Borodych <Sergiy.Borodych@gmail.com>',
+        'Sharif Nassar <mrwacky42+github@gmail.com>',
+        'Steffen Mueller <smueller@cpan.org>',
+        'Steven Hartland <steven.hartland@multiplay.co.uk>',
+        'Taro Kobayashi <9re.3000@gmail.com>',
+        'Tim Mullin <tim@cpanel.net>',
+        'katyavoid <katyavoid@gmail.com>',
+        'tokuhirom <tokuhirom@gmail.com>',
+        'zefram <zefram@fysh.org>',
+        'zentooo <ankerasoy@gmail.com>',
+      ],
     },
-    BUILD_REQUIRES => { 'Test::Simple' => '0.90',
-                        'Test::Deep' => 0,
+    TEST_REQUIRES => { 'Test::Simple' => '0.90',
+                       'Test::Deep'   => 0,
     },
-    CONFIGURE_REQUIRES => { 'DBI' => 1.08,
-    },
+    CONFIGURE_REQUIRES => {'Data::Dumper' => 0},
   );
 }
 
@@ -868,7 +917,3 @@ Options:
 EOU
     exit(1);
 }
-
-
-
-
