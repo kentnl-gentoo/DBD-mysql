@@ -15,7 +15,7 @@ our @ISA = qw(DynaLoader);
 # SQL_DRIVER_VER is formatted as dd.dd.dddd
 # for version 5.x please switch to 5.00(_00) version numbering
 # keep $VERSION in Bundle/DBD/mysql.pm in sync
-our $VERSION = '4.033_01';
+our $VERSION = '4.033_02';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -1179,7 +1179,8 @@ database:
 This means that your communication with the server will be encrypted.
 
 Please note that this can only work if you enabled SSL when compiling
-DBD::mysql. See L<DBD::mysql::INSTALL> for more details.
+DBD::mysql; this is the default starting version 4.034.
+See L<DBD::mysql::INSTALL> for more details.
 
 If you turn mysql_ssl on, you might also wish to use the following
 flags:

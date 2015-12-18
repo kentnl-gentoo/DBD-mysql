@@ -28,7 +28,7 @@ resources:
   homepage: http://dbi.perl.org/
   license: http://dev.perl.org/licenses/
   repository: https://github.com/perl5-dbi/DBD-mysql
-version: 4.033_01
+version: 4.033_02
 x_contributors:
   - 'Alexandr Ciornii <alexchorny@gmail.com>'
   - 'Alexey Molchanov <alexey.molchanov@portaone.com>'
@@ -40,10 +40,10 @@ x_contributors:
   - 'Chris Hammond <chrishammond@ymail.com>'
   - 'Chris Weyl <cweyl@alumni.drew.edu>'
   - 'Christian Walde <walde.christian@googlemail.com>'
-  - 'Dagfinn Ilmari MannsÃ¥ker <ilmari@ilmari.org>'
+  - 'Dagfinn Ilmari Mannsåker <ilmari@ilmari.org>'
   - 'Daisuke Murase <typester@cpan.org>'
   - 'Damyan Ivanov <dmn@debian.org>'
-  - 'DaniÃ«l van Eeden <daniel.vaneeden@booking.com>'
+  - 'Daniël van Eeden <daniel.vaneeden@booking.com>'
   - 'David Farrell <davidnmfarrell@gmail.com>'
   - 'David Steinbrunner <dsteinbrunner@pobox.com>'
   - 'Giovanni Bechis <giovanni@bigio.snb.it>'
