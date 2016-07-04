@@ -389,6 +389,7 @@ if (eval $ExtUtils::MakeMaker::VERSION >= 5.43) {
         'Giovanni Bechis <giovanni@bigio.snb.it>',
         'Graham Ollis <plicease@cpan.org>',
         'Hanno <hanno@gentoo.org>',
+        'James McCoy <jamessan@jamessan.com>',
         'Jim Winstead <jimw@trainedmonkey.com>',
         'Juergen Weigert <jw@suse.com>',
         'Kenny Gryp <kenny.gryp@percona.com>',
@@ -397,8 +398,10 @@ if (eval $ExtUtils::MakeMaker::VERSION >= 5.43) {
         'Matthew Horsfall (alh) <WolfSage@gmail.com>',
         'Michiel Beijen <michiel.beijen@gmail.com>',
         'Mike Pomraning <mjp@pilcrow.madison.wi.us>',
+        'Pali <pali@cpan.org>',
         'Patrick Galbraith <patg@patg.net>',
         'Perlover <perlover@perlover.com>',
+        'Petr Písař <ppisar@redhat.com>',
         'Reini Urban <rurban@cpanel.net>',
         'Rob Hoelz <rhoelz@inoc.com>',
         'Rob Van Dam <rvandam00@gmail.com>',
@@ -419,6 +422,7 @@ if (eval $ExtUtils::MakeMaker::VERSION >= 5.43) {
     },
     TEST_REQUIRES => { 'Test::Simple' => '0.90',
                        'Test::Deep'   => 0,
+                       'Time::HiRes'  => 0,
     },
     CONFIGURE_REQUIRES => {'Data::Dumper' => 0},
   );
@@ -461,11 +465,11 @@ Possible options are:
   --testhost=<host>      Use <host> as a database server for running the
                          test suite; defaults to localhost.
   --testport=<port>      Use <port> as the port number of the database;
-                         by default the port number is choosen from the
+                         by default the port number is chosen from the
                          mysqlclient library
   --mysql_config=<path>  Specify <path> for mysql_config script
   --with-mysql=<path>    Specify <path> for the root of the MySQL installation.
-  --nocatchstderr        Supress using the "myld" script that redirects
+  --nocatchstderr        Suppress using the "myld" script that redirects
                          STDERR while running the linker.
   --nofoundrows          Change the behavior of \$sth->rows() so that it
   			 returns the number of rows physically modified
@@ -815,34 +819,9 @@ sub create_makefile
 }
 
 package MY;
-
-sub libscan {
-    my($self, $path) = @_;
-    return '' if $path =~ /\B\.svn\b|~#|\BSCCS\b/;
-    $path;
-}
-
-sub macro {
-  "\n" . DBI::DBD::dbd_postamble(@_) . <<"POSTAMBLE";
-
-installhtml: lib/DBD/mysql/INSTALL.pod
-\tpod2html --infile=lib/DBD/mysql/INSTALL.pod --outfile=INSTALL.html
-
-POSTAMBLE
-};
-
-sub dynamic_lib {
-  my $self = shift;
-  my $result = $self->SUPER::dynamic_lib(@_);
-  if (!$::opt->{nocatchstderr}  &&  $result =~ /\$\(LD\)/) {
-    $result =~ s/(\$\(LD\))/\$\(PERL\) myld \$(LD)/sg;
-  }
-  return $result;
-}
+sub postamble { return DBI::DBD::dbd_postamble(@_); }
 
 package main;
-
-
 
 sub WriteMakefile1 {  #Written by Alexandr Ciornii, version 0.21. Added by eumm-upgrade.
   my %params=@_;
@@ -854,6 +833,11 @@ sub WriteMakefile1 {  #Written by Alexandr Ciornii, version 0.21. Added by eumm-
     #EUMM 6.5502 has problems with BUILD_REQUIRES
     $params{PREREQ_PM}={ %{$params{PREREQ_PM} || {}} , %{$params{BUILD_REQUIRES}} };
     delete $params{BUILD_REQUIRES};
+  }
+  if ($params{TEST_REQUIRES} and $eumm_version < 6.64) {
+    #EUMM 6.64 has problems with TEST_REQUIRES
+    $params{PREREQ_PM}={ %{$params{PREREQ_PM} || {}} , %{$params{TEST_REQUIRES}} };
+    delete $params{TEST_REQUIRES};
   }
   delete $params{CONFIGURE_REQUIRES} if $eumm_version < 6.52;
   delete $params{MIN_PERL_VERSION} if $eumm_version < 6.48;

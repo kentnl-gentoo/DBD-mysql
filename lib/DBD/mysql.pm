@@ -14,8 +14,7 @@ our @ISA = qw(DynaLoader);
 # please make sure the sub-version does not increase above '099'
 # SQL_DRIVER_VER is formatted as dd.dd.dddd
 # for version 5.x please switch to 5.00(_00) version numbering
-# keep $VERSION in Bundle/DBD/mysql.pm in sync
-our $VERSION = '4.033_02';
+our $VERSION = '4.033_03';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -1048,7 +1047,13 @@ But now for a more formal approach:
 
     $dbh = DBI->connect($dsn, $user, $password);
 
-A C<database> must always be specified.
+The C<database> is not a required attribute, but please note that MySQL
+has no such thing as a default database. If you don't specify the database
+at connection time your active database will be null and you'd need to prefix
+your tables with the database name; i.e. 'SELECT * FROM mydb.mytable'.
+
+This is similar to the behavior of the mysql command line client. Also,
+'SELECT DATABASE()' will return the current database active for the handle.
 
 =over
 
@@ -1556,15 +1561,14 @@ stored in the database are utf8.  This feature defaults to off.
 When set, a data retrieved from a textual column type (char, varchar,
 etc) will have the UTF-8 flag turned on if necessary.  This enables
 character semantics on that string.  You will also need to ensure that
-your database / table / column is configured to use UTF8.  See Chapter
-10 of the mysql manual for details.
+your database / table / column is configured to use UTF8. See for more
+information the chapter on character set support in the MySQL manual:
+L<http://dev.mysql.com/doc/refman/5.7/en/charset.html>
 
 Additionally, turning on this flag tells MySQL that incoming data should
 be treated as UTF-8.  This will only take effect if used as part of the
 call to connect().  If you turn the flag on after connecting, you will
 need to issue the command C<SET NAMES utf8> to get the same effect.
-
-This option is experimental and may change in future versions.
 
 =item mysql_enable_utf8mb4
 
@@ -1948,12 +1952,9 @@ An example would be:
     }
   } until (!$sth->more_results)
 
-For more examples, please see the eg/ directory. This is where helpful
-DBD::mysql code snippets will be added in the future.
-
 =head2 Issues with multiple result sets
 
-Please be aware ther could be issues if your result sets are "jagged",
+Please be aware there could be issues if your result sets are "jagged",
 meaning the number of columns of your results vary. Varying numbers of
 columns could result in your script crashing.
 

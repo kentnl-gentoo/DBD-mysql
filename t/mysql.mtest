@@ -1,18 +1,18 @@
 { local $opt = {
-         'mysql_config' => 'mysql_config',
-         'cflags' => '-I/usr/include/mysql -DBIG_JOINS=1  -fno-strict-aliasing   -g -fabi-version=2 -fno-omit-frame-pointer -fno-strict-aliasing',
-         'libs' => '-L/usr/lib/x86_64-linux-gnu -lmysqlclient -lpthread -lz -lm -ldl',
+         'embedded' => '',
          'testhost' => '',
-         'testsocket' => '',
-         'testuser' => 'root',
-         'ldflags' => '',
-         'testport' => '',
-         'nofoundrows' => 0,
-         'testpassword' => 'hot',
-         'testdb' => 'test',
          'nocatchstderr' => 0,
+         'testuser' => 'michiel',
          'nossl' => 0,
-         'embedded' => ''
+         'libs' => '-L/usr/local/Cellar/mysql-connector-c/6.1.6/lib -lmysqlclient',
+         'testport' => '',
+         'cflags' => '-I/usr/local/Cellar/mysql-connector-c/6.1.6/include',
+         'nofoundrows' => 0,
+         'testdb' => 'test',
+         'testpassword' => '',
+         'mysql_config' => 'mysql_config',
+         'ldflags' => '',
+         'testsocket' => ''
        };
 $::test_host = $opt->{'testhost'};
 $::test_port = $opt->{'testport'};

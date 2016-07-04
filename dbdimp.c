@@ -18,6 +18,7 @@
 #endif
 
 #include "dbdimp.h"
+#include <inttypes.h> /* for PRId32 */
 
 #if defined(WIN32)  &&  defined(WORD)
 #undef WORD
@@ -177,7 +178,7 @@ count_params(imp_xxh_t *imp_xxh, pTHX_ char *statement, bool bind_comment_placeh
                   }
                   /*
                     if the end of the comment was never found, we have
-                    to backtrack to whereever we first started skipping
+                    to backtrack to wherever we first started skipping
                     over the possible comment.
                     This means we will pass the statement to the database
                     to see its own fate and issue the error
@@ -427,7 +428,7 @@ int count_embedded_options(char *st)
 }
 
 /*
-  Free embbedded options
+  Free embedded options
 */
 int free_embedded_options(char ** options_list, int options_count)
 {
@@ -444,7 +445,7 @@ int free_embedded_options(char ** options_list, int options_count)
 }
 
 /*
- Print out embbedded option settings
+ Print out embedded option settings
 
 */
 int print_embedded_options(char ** options_list, int options_count)
@@ -757,7 +758,7 @@ static char *parse_params(
             if ( parse_number(valbuf, vallen, &end) != 0 && is_num)
             {
               if (bind_type_guessing) {
-                /* .. not a number, so apparerently we guessed wrong */
+                /* .. not a number, so apparently we guessed wrong */
                 is_num = 0;
                 ph->type = SQL_VARCHAR;
               }
@@ -2100,7 +2101,7 @@ static int my_login(pTHX_ SV* dbh, imp_dbh_t *imp_dbh)
  *           dbname - the database we want to log into; may be like
  *               "dbname:host" or "dbname:host:port"
  *           user - user name to connect as
- *           password - passwort to connect with
+ *           password - password to connect with
  *
  *  Returns: TRUE for success, FALSE otherwise; do_error has already
  *           been called in the latter case
@@ -2166,7 +2167,7 @@ int dbd_db_login(SV* dbh, imp_dbh_t* imp_dbh, char* dbname, char* user,
  *
  *  Purpose: You guess what they should do. 
  *
- *  Input:   dbh - database handle being commited or rolled back
+ *  Input:   dbh - database handle being committed or rolled back
  *           imp_dbh - drivers private database handle data
  *
  *  Returns: TRUE for success, FALSE otherwise; do_error has already
@@ -2510,7 +2511,7 @@ dbd_db_STORE_attrib(
  *           imp_dbh - drivers private database handle data
  *           keysv - the attribute name
  *
- *  Returns: An SV*, if sucessfull; NULL otherwise
+ *  Returns: An SV*, if successful; NULL otherwise
  *
  *  Notes:   Do not forget to call sv_2mortal in the former case!
  *
@@ -2811,7 +2812,7 @@ dbd_st_prepare(
       1. LIMIT < 5.0.7
       2. CALL < 5.5.3 (Added support for out & inout parameters)
       In these cases we have to disable server side prepared statements
-      NOTE: These checks could cause a false possitive on statements which
+      NOTE: These checks could cause a false positive on statements which
       include columns / table names that match "call " or " limit "
     */ 
     if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
@@ -3395,13 +3396,15 @@ my_ulonglong mysql_st_internal_execute(
             mysql_use_result(svsock) : mysql_store_result(svsock);
 
           if (mysql_errno(svsock))
-            do_error(h, mysql_errno(svsock), mysql_error(svsock)
-                     ,mysql_sqlstate(svsock));
-
-          if (!*result)
-            rows= mysql_affected_rows(svsock);
-          else
-            rows= mysql_num_rows(*result);
+            rows = -2;
+          else if (*result)
+            rows = mysql_num_rows(*result);
+          else {
+            rows = mysql_affected_rows(svsock);
+            /* mysql_affected_rows(): -1 indicates that the query returned an error */
+            if (rows == (my_ulonglong)-1)
+              rows = -2;
+          }
       }
 #if MYSQL_ASYNC
   }
@@ -3415,7 +3418,6 @@ my_ulonglong mysql_st_internal_execute(
              mysql_sqlstate(svsock));
     if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
       PerlIO_printf(DBIc_LOGPIO(imp_xxh), "IGNORING ERROR errno %d\n", errno);
-    rows = -2;
   }
   return(rows);
 }
@@ -3503,6 +3505,10 @@ my_ulonglong mysql_st_internal_execute41(
       goto error;
 
     rows= mysql_stmt_affected_rows(stmt);
+
+    /* mysql_stmt_affected_rows(): -1 indicates that the query returned an error */
+    if (rows == (my_ulonglong)-1)
+      goto error;
   }
   /*
     This statement returns a result set (SELECT...)
@@ -3668,7 +3674,7 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
   {
     /* 
       PerlIO_printf doesn't always handle imp_sth->row_num %llu 
-      consistantly!!
+      consistently!!
     */
     sprintf(actual_row_num, "%llu", imp_sth->row_num);
     PerlIO_printf(DBIc_LOGPIO(imp_xxh),
@@ -3752,8 +3758,8 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
 
       if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
       {
-        PerlIO_printf(DBIc_LOGPIO(imp_xxh),"\t\ti %d col_type %d fbh->length %d\n",
-                      i, col_type, (int) fbh->length);
+        PerlIO_printf(DBIc_LOGPIO(imp_xxh),"\t\ti %d col_type %d fbh->length %lu\n",
+                      i, col_type, fbh->length);
         PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                       "\t\tfields[i].length %lu fields[i].max_length %lu fields[i].type %d fields[i].charsetnr %d\n",
                       (long unsigned int) fields[i].length, (long unsigned int) fields[i].max_length, fields[i].type,
@@ -4014,8 +4020,8 @@ process:
 
         case MYSQL_TYPE_LONG:
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
-            PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tst_fetch int data %d, unsigned? %d\n",
-                          (int) fbh->ldata, buffer->is_unsigned);
+            PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tst_fetch int data %"PRId32", unsigned? %d\n",
+                          fbh->ldata, buffer->is_unsigned);
           if (buffer->is_unsigned)
             sv_setuv(sv, fbh->ldata);
           else
@@ -4186,7 +4192,7 @@ process:
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
 /*
   We have to fetch all data from stmt
-  There is may be usefull for 2 cases:
+  There is may be useful for 2 cases:
   1. st_finish when we have undef statement
   2. call st_execute again when we have some unfetched data in stmt
  */
@@ -4371,7 +4377,7 @@ void dbd_st_destroy(SV *sth, imp_sth_t *imp_sth) {
  *           keysv - attribute name
  *           valuesv - attribute value
  *
- *  Returns: TRUE for success, FALSE otrherwise; do_error will
+ *  Returns: TRUE for success, FALSE otherwise; do_error will
  *           be called in the latter case
  *
  **************************************************************************/
@@ -4724,7 +4730,7 @@ dbd_st_FETCH_internal(
  *           destrv - RV* that tells us where to store
  *           destoffset - destination offset
  *
- *  Returns: TRUE for success, FALSE otrherwise; do_error will
+ *  Returns: TRUE for success, FALSE otherwise; do_error will
  *           be called in the latter case
  *
  **************************************************************************/
@@ -4786,6 +4792,7 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
   int buffer_is_null= 0;
   int buffer_length= slen;
   unsigned int buffer_type= 0;
+  IV tmp;
 #endif
 
   D_imp_dbh_from_sth;
@@ -4805,7 +4812,7 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
   }
 
   /*
-     This fixes the bug whereby no warning was issued upone binding a
+     This fixes the bug whereby no warning was issued upon binding a
      defined non-numeric as numeric
    */
   if (SvOK(value) &&
@@ -4873,12 +4880,16 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
           if (!SvIOK(imp_sth->params[idx].value) && DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tTRY TO BIND AN INT NUMBER\n");
           buffer_length = sizeof imp_sth->fbind[idx].numeric_val.lval;
-          imp_sth->fbind[idx].numeric_val.lval= SvIV(imp_sth->params[idx].value);
+
+          tmp = SvIV(imp_sth->params[idx].value);
+          if (tmp > INT32_MAX)
+	        croak("Could not bind %ld: Integer too large for MYSQL_TYPE_LONG", tmp);
+          imp_sth->fbind[idx].numeric_val.lval= tmp;
           buffer=(void*)&(imp_sth->fbind[idx].numeric_val.lval);
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh),
-                          "   SCALAR type %d ->%ld<- IS A INT NUMBER\n",
-                          (int) sql_type, (long) (*buffer));
+                          "   SCALAR type %d ->%"PRId32"<- IS A INT NUMBER\n",
+                          (int) sql_type, *(int32_t *)buffer);
           break;
 
         case MYSQL_TYPE_DOUBLE:
