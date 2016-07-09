@@ -1,18 +1,18 @@
 { local $opt = {
-         'nocatchstderr' => 0,
-         'mysql_config' => 'mysql_config',
+         'nossl' => 0,
          'nofoundrows' => 0,
          'testport' => '',
-         'embedded' => '',
-         'testuser' => 'root',
-         'ldflags' => '',
-         'cflags' => '-I/usr/include/mysql',
-         'testpassword' => 'hot',
-         'libs' => '-L/usr/lib/x86_64-linux-gnu -lmariadbclient',
          'testhost' => '',
          'testsocket' => '',
+         'testpassword' => '',
+         'testuser' => 'vagrant',
+         'libs' => '-L/usr/lib/x86_64-linux-gnu -lmariadbclient',
          'testdb' => 'test',
-         'nossl' => 0
+         'embedded' => '',
+         'cflags' => '-I/usr/include/mysql',
+         'nocatchstderr' => 0,
+         'ldflags' => '',
+         'mysql_config' => 'mysql_config'
        };
 $::test_host = $opt->{'testhost'};
 $::test_port = $opt->{'testport'};
