@@ -1,3 +1,26 @@
+2016-08-11 Patrick Galbraith, Michiel Beijen, DBI/DBD community (4.035_02)
+* Test 56connattr.t failed when run when performance schema is enabled, but
+  tests were run as a user with limited permissions.
+  Reported by Jérôme Étévé.
+  (https://rt.cpan.org/Public/Bug/Display.html?id=115980)
+* In 4.033_03 we added a patch from Petr Písař @ Red Hat for a problem on
+  64-bit big-endian systems. The patch was applied but the unit test was not,
+  also, there was no entry in the change log.
+  Unit test provided by Vladimir Marek.
+  t/40server_prepare.t test failed on s390x platform. Server-prepared
+  values of types int, smallint, and tinyint are passed to application
+  as 32-bit integer. The same buffer was interpreted as long integer
+  by DBD::MySQL. This caused misaligned read/write and bogus
+  interpretation of the values.
+   (https://rt.cpan.org/Public/Bug/Display.html?id=57266)
+* Remove dropdb, createdb, reload and shutdown admin functions from perldoc.
+  These are deprecated by the C API.
+  Use 'CREATE DATABASE..', 'DROP DATABASE...' and other SQL commands instead.
+* Test rt75353-innodb-lock-timeout.t fails on MySQL Server 5.1 and earlier
+  because innodb_lock_wait_timeout is not modifyable per session.
+* Test rt25389-bin-case.t does not work on MySQL Server < 5.1, reported by
+  GAAS.
+
 2016-08-01 Patrick Galbraith, Michiel Beijen, DBI/DBD community (4.035_01)
 * Apparently, on t/31insertid.t, there is one test that fails when compiled
   against libmysqlclient 5.7 or up; issuing a SELECT statement on the same
