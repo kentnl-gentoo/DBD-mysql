@@ -1,3 +1,14 @@
+2016-08-19 Patrick Galbraith, Michiel Beijen, DBI/DBD community (4.035_03)
+* By mistake, when DBD::mysql was compiled against libmariadb, it
+  did not compile in SSL support.
+  Reported by Jitka Plesnikova @ Red Hat
+   (https://rt.cpan.org/Public/Bug/Display.html?id=116959)
+   (https://bugzilla.redhat.com/show_bug.cgi?id=1366773)
+* If the database test server was not on localhost and the test database was
+  not yet created, we would not correctly create the test database.
+  Reported by Vladimir Marek.
+   (https://rt.cpan.org/Ticket/Display.html?id=112072)
+
 2016-08-11 Patrick Galbraith, Michiel Beijen, DBI/DBD community (4.035_02)
 * Test 56connattr.t failed when run when performance schema is enabled, but
   tests were run as a user with limited permissions.
