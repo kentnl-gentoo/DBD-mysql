@@ -27,7 +27,7 @@
 /* For now, we hardcode this, but in the future,
  * we can detect capabilities of the MySQL libraries
  * we're talking to */
-#if defined(__WIN__)
+#if defined(_WIN32)
 #define MYSQL_ASYNC 0
 #else
 #define MYSQL_ASYNC 1
@@ -49,6 +49,7 @@
 #define GEO_DATATYPE_VERSION 50007
 #define NEW_DATATYPE_VERSION 50003
 #define SSL_VERIFY_VERSION 50023
+#define SSL_LAST_VERIFY_VERSION 50799
 #define MYSQL_VERSION_5_0 50001
 /* This is to avoid the ugly #ifdef mess in dbdimp.c */
 #if MYSQL_VERSION_ID < SQL_STATE_VERSION
@@ -56,12 +57,12 @@
 #endif
 
 /*
- * This is the version of libmysql that starts to support
- * MySQL Fabric.
+ * This is the versions of libmysql that supports MySQL Fabric.
 */
 #define LIBMYSQL_FABRIC_VERSION 60200
+#define LIBMYSQL_LAST_FABRIC_VERSION 69999
 
-#if LIBMYSQL_VERSION_ID >= LIBMYSQL_FABRIC_VERSION
+#if LIBMYSQL_VERSION_ID >= LIBMYSQL_FABRIC_VERSION && LIBMYSQL_VERSION_ID <= LIBMYSQL_LAST_FABRIC_VERSION
 #define FABRIC_SUPPORT 1
 #else
 #define FABRIC_SUPPORT 0
@@ -235,7 +236,7 @@ typedef struct imp_sth_fbh_st {
     int            charsetnr;
     double         ddata;
     int32_t        ldata;
-#if MYSQL_VERSION_ID < FIELD_CHARSETNR_VERSION 
+#if MYSQL_VERSION_ID < FIELD_CHARSETNR_VERSION
     unsigned int   flags;
 #endif
 } imp_sth_fbh_t;

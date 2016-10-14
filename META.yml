@@ -11,7 +11,7 @@ configure_requires:
   DBI: '1.609'
   Data::Dumper: '0'
 dynamic_config: 1
-generated_by: 'ExtUtils::MakeMaker version 7.1001, CPAN::Meta::Converter version 2.150005'
+generated_by: 'ExtUtils::MakeMaker version 7.0401, CPAN::Meta::Converter version 2.150001'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -30,7 +30,7 @@ resources:
   homepage: http://dbi.perl.org/
   license: http://dev.perl.org/licenses/
   repository: https://github.com/perl5-dbi/DBD-mysql
-version: '4.037'
+version: 4.037_01
 x_contributors:
   - 'Alexandr Ciornii <alexchorny@gmail.com>'
   - 'Alexey Molchanov <alexey.molchanov@portaone.com>'
@@ -42,10 +42,10 @@ x_contributors:
   - 'Chris Hammond <chrishammond@ymail.com>'
   - 'Chris Weyl <cweyl@alumni.drew.edu>'
   - 'Christian Walde <walde.christian@googlemail.com>'
-  - 'Dagfinn Ilmari Mannsåker <ilmari@ilmari.org>'
+  - 'Dagfinn Ilmari Manns\x{00e5}ker <ilmari@ilmari.org>'
   - 'Daisuke Murase <typester@cpan.org>'
   - 'Damyan Ivanov <dmn@debian.org>'
-  - 'Daniël van Eeden <daniel.vaneeden@booking.com>'
+  - 'Dani\x{00eb}l van Eeden <daniel.vaneeden@booking.com>'
   - 'David Farrell <davidnmfarrell@gmail.com>'
   - 'David Steinbrunner <dsteinbrunner@pobox.com>'
   - 'Giovanni Bechis <giovanni@bigio.snb.it>'
@@ -63,7 +63,7 @@ x_contributors:
   - 'Pali <pali@cpan.org>'
   - 'Patrick Galbraith <patg@patg.net>'
   - 'Perlover <perlover@perlover.com>'
-  - 'Petr Písař <ppisar@redhat.com>'
+  - 'Petr P\x{00ed}sa\x{0159} <ppisar@redhat.com>'
   - 'Reini Urban <rurban@cpanel.net>'
   - 'Rob Hoelz <rhoelz@inoc.com>'
   - 'Rob Van Dam <rvandam00@gmail.com>'
@@ -77,8 +77,8 @@ x_contributors:
   - 'Taro Kobayashi <9re.3000@gmail.com>'
   - 'Tatsuhiko Miyagawa <miyagawa@bulknews.net>'
   - 'Tim Mullin <tim@cpanel.net>'
+  - 'Vladimir Marek <vlmarek@volny.cz>'
   - 'katyavoid <katyavoid@gmail.com>'
   - 'tokuhirom <tokuhirom@gmail.com>'
   - 'zefram <zefram@fysh.org>'
   - 'zentooo <ankerasoy@gmail.com>'
-x_serialization_backend: 'CPAN::Meta::YAML version 0.018'

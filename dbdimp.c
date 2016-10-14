@@ -1895,7 +1895,7 @@ MYSQL *mysql_dr_connect(
 	    char *ca_path = NULL;
 	    char *cipher = NULL;
 	    STRLEN lna;
-#if MYSQL_VERSION_ID >= SSL_VERIFY_VERSION
+#if MYSQL_VERSION_ID >= SSL_VERIFY_VERSION && MYSQL_VERSION_ID <= SSL_LAST_VERIFY_VERSION
             /*
               New code to utilise MySQLs new feature that verifies that the
               server's hostname that the client connects to matches that of
@@ -1926,7 +1926,7 @@ MYSQL *mysql_dr_connect(
 
 	    mysql_ssl_set(sock, client_key, client_cert, ca_file,
 			  ca_path, cipher);
-#if MYSQL_VERSION_ID >= SSL_VERIFY_VERSION
+#if MYSQL_VERSION_ID >= SSL_VERIFY_VERSION && MYSQL_VERSION_ID <= SSL_LAST_VERIFY_VERSION
 	    mysql_options(sock, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &ssl_verify_true);
 #endif
 	    client_flag |= CLIENT_SSL;
@@ -4941,10 +4941,6 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
 
     /* Type of column was changed. Force to rebind */
     if (imp_sth->bind[idx].buffer_type != buffer_type) {
-      /* Note: this looks like being another bug:
-       * if type of parameter N changes, then a bind is triggered
-       * with an only partially filled bind structure ??
-       */
       if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
           PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                         "   FORCE REBIND: buffer type changed from %d to %d, sql-type=%d\n",
@@ -4952,18 +4948,17 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
       imp_sth->has_been_bound = 0;
     }
 
-    /* prepare has not been called */
-    if (imp_sth->has_been_bound == 0)
-    {
-      imp_sth->bind[idx].buffer_type= buffer_type;
-      imp_sth->bind[idx].buffer= buffer;
-      imp_sth->bind[idx].buffer_length= buffer_length;
-    }
-    else /* prepare has been called */
+    /* prepare has been called */
+    if (imp_sth->has_been_bound)
     {
       imp_sth->stmt->params[idx].buffer= buffer;
       imp_sth->stmt->params[idx].buffer_length= buffer_length;
     }
+
+    imp_sth->bind[idx].buffer_type= buffer_type;
+    imp_sth->bind[idx].buffer= buffer;
+    imp_sth->bind[idx].buffer_length= buffer_length;
+
     imp_sth->fbind[idx].length= buffer_length;
     imp_sth->fbind[idx].is_null= buffer_is_null;
   }
