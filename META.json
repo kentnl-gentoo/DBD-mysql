@@ -4,7 +4,7 @@
       "Patrick Galbraith <patg@patg.net>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 7.0401, CPAN::Meta::Converter version 2.150001",
+   "generated_by" : "ExtUtils::MakeMaker version 7.24, CPAN::Meta::Converter version 2.150005",
    "license" : [
       "perl_5"
    ],
@@ -22,10 +22,7 @@
    "prereqs" : {
       "build" : {
          "requires" : {
-            "ExtUtils::MakeMaker" : "0",
-            "Test::Deep" : "0",
-            "Test::Simple" : "0.90",
-            "Time::HiRes" : "0"
+            "ExtUtils::MakeMaker" : "0"
          }
       },
       "configure" : {
@@ -39,9 +36,16 @@
             "DBI" : "1.609",
             "perl" : "5.008001"
          }
+      },
+      "test" : {
+         "requires" : {
+            "Test::Deep" : "0",
+            "Test::Simple" : "0.90",
+            "Time::HiRes" : "0"
+         }
       }
    },
-   "release_status" : "testing",
+   "release_status" : "unstable",
    "resources" : {
       "homepage" : "http://dbi.perl.org/",
       "license" : [
@@ -53,7 +57,7 @@
       "x_IRC" : "irc://irc.perl.org/#dbi",
       "x_MailingList" : "mailto:dbi-dev@perl.org"
    },
-   "version" : "4.037_01",
+   "version" : "4.037_02",
    "x_contributors" : [
       "Alexandr Ciornii <alexchorny@gmail.com>",
       "Alexey Molchanov <alexey.molchanov@portaone.com>",
@@ -65,10 +69,10 @@
       "Chris Hammond <chrishammond@ymail.com>",
       "Chris Weyl <cweyl@alumni.drew.edu>",
       "Christian Walde <walde.christian@googlemail.com>",
-      "Dagfinn Ilmari Manns\x{00e5}ker <ilmari@ilmari.org>",
+      "Dagfinn Ilmari Mannsåker <ilmari@ilmari.org>",
       "Daisuke Murase <typester@cpan.org>",
       "Damyan Ivanov <dmn@debian.org>",
-      "Dani\x{00eb}l van Eeden <daniel.vaneeden@booking.com>",
+      "Daniël van Eeden <daniel.vaneeden@booking.com>",
       "David Farrell <davidnmfarrell@gmail.com>",
       "David Steinbrunner <dsteinbrunner@pobox.com>",
       "Giovanni Bechis <giovanni@bigio.snb.it>",
@@ -86,7 +90,7 @@
       "Pali <pali@cpan.org>",
       "Patrick Galbraith <patg@patg.net>",
       "Perlover <perlover@perlover.com>",
-      "Petr P\x{00ed}sa\x{0159} <ppisar@redhat.com>",
+      "Petr Písař <ppisar@redhat.com>",
       "Reini Urban <rurban@cpanel.net>",
       "Rob Hoelz <rhoelz@inoc.com>",
       "Rob Van Dam <rvandam00@gmail.com>",
@@ -105,5 +109,6 @@
       "tokuhirom <tokuhirom@gmail.com>",
       "zefram <zefram@fysh.org>",
       "zentooo <ankerasoy@gmail.com>"
-   ]
+   ],
+   "x_serialization_backend" : "JSON::PP version 2.27203"
 }
