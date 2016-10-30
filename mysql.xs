@@ -72,7 +72,7 @@ _ListDBs(drh, host=NULL, port=NULL, user=NULL, password=NULL)
 	EXTEND(sp, mysql_num_rows(res));
 	while ((cur = mysql_fetch_row(res)))
         {
-	  PUSHs(sv_2mortal((SV*)newSVpv(cur[0], strlen(cur[0]))));
+	  PUSHs(sv_2mortal((SV*)newSVpvn(cur[0], strlen(cur[0]))));
 	}
 	mysql_free_result(res);
       }
@@ -96,7 +96,9 @@ _admin_internal(drh,dbh,command,dbname=NULL,host=NULL,port=NULL,user=NULL,passwo
   MYSQL mysql;
   int retval;
   MYSQL* sock;
+#if MYSQL_VERSION_ID >= 50709
   const char *shutdown = "SHUTDOWN";
+#endif
 
   /*
    *  Connect to the database, if required.
@@ -237,7 +239,7 @@ else
   EXTEND(sp, mysql_num_rows(res));
   while ((cur = mysql_fetch_row(res)))
   {
-    PUSHs(sv_2mortal((SV*)newSVpv(cur[0], strlen(cur[0]))));
+    PUSHs(sv_2mortal((SV*)newSVpvn(cur[0], strlen(cur[0]))));
   }
   mysql_free_result(res);
 }
@@ -262,7 +264,7 @@ do(dbh, statement, attr=Nullsv, ...)
 #endif
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
   STRLEN slen;
-  char            *str_ptr, *statement_ptr, *buffer;
+  char            *str_ptr, *buffer;
   int             has_binded;
   int             col_type= MYSQL_TYPE_STRING;
   int             buffer_is_null= 0;
@@ -311,7 +313,7 @@ do(dbh, statement, attr=Nullsv, ...)
                   "mysql.xs do() use_server_side_prepare %d, async %d\n",
                   use_server_side_prepare, SvTRUE(async));
 
-  hv_store((HV*)SvRV(dbh), "Statement", 9, SvREFCNT_inc(statement), 0);
+  (void)hv_store((HV*)SvRV(dbh), "Statement", 9, SvREFCNT_inc(statement), 0);
 
   if(SvTRUE(async)) {
 #if MYSQL_ASYNC
@@ -698,7 +700,6 @@ more_results(sth)
 {
 #if (MYSQL_VERSION_ID >= MULTIPLE_RESULT_SET_VERSION)
   D_imp_sth(sth);
-  int retval;
   if (dbd_st_more_results(sth, imp_sth))
   {
     RETVAL=1;
@@ -881,8 +882,8 @@ dbd_mysql_get_info(dbh, sql_info_type)
     D_imp_dbh(dbh);
     IV type = 0;
     SV* retsv=NULL;
-    bool using_322=0;
-#if MYSQL_VERSION_ID >= 50709
+#if !defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50709
+/* MariaDB 10 is not MySQL source level compatible so this only applies to MySQL*/
     IV buffer_len;
 #endif 
 
@@ -897,23 +898,25 @@ dbd_mysql_get_info(dbh, sql_info_type)
     switch(type) {
     	case SQL_CATALOG_NAME_SEPARATOR:
 	    /* (dbc->flag & FLAG_NO_CATALOG) ? WTF is in flag ? */
-	    retsv = newSVpv(".",1);
+	    retsv = newSVpvn(".",1);
 	    break;
 	case SQL_CATALOG_TERM:
 	    /* (dbc->flag & FLAG_NO_CATALOG) ? WTF is in flag ? */
-	    retsv = newSVpv("database",8);
+	    retsv = newSVpvn("database",8);
 	    break;
 	case SQL_DBMS_VER:
-	    retsv = newSVpv(
+	    retsv = newSVpvn(
 	        imp_dbh->pmysql->server_version,
 		strlen(imp_dbh->pmysql->server_version)
 	    );
 	    break;
 	case SQL_IDENTIFIER_QUOTE_CHAR:
-	    retsv = newSVpv("`", 1);
+	    retsv = newSVpvn("`", 1);
 	    break;
 	case SQL_MAXIMUM_STATEMENT_LENGTH:
-#if MYSQL_VERSION_ID >= 50709
+#if !defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50709
+        /* MariaDB 10 is not MySQL source level compatible so this
+           only applies to MySQL*/
 	    /* mysql_get_option() was added in mysql 5.7.3 */
 	    /* MYSQL_OPT_NET_BUFFER_LENGTH was added in mysql 5.7.9 */
 	    mysql_get_option(NULL, MYSQL_OPT_NET_BUFFER_LENGTH, &buffer_len);
@@ -931,7 +934,7 @@ dbd_mysql_get_info(dbh, sql_info_type)
 	    retsv= newSViv(NAME_LEN);
 	    break;
 	case SQL_SERVER_NAME:
-	    retsv= newSVpv(imp_dbh->pmysql->host_info,strlen(imp_dbh->pmysql->host_info));
+	    retsv= newSVpvn(imp_dbh->pmysql->host_info,strlen(imp_dbh->pmysql->host_info));
 	    break;
         case SQL_ASYNC_MODE:
 #if MYSQL_ASYNC

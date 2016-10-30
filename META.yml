@@ -11,7 +11,7 @@ configure_requires:
   DBI: '1.609'
   Data::Dumper: '0'
 dynamic_config: 1
-generated_by: 'ExtUtils::MakeMaker version 7.24, CPAN::Meta::Converter version 2.150010'
+generated_by: 'ExtUtils::MakeMaker version 7.18, CPAN::Meta::Converter version 2.150005'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -30,7 +30,7 @@ resources:
   homepage: http://dbi.perl.org/
   license: http://dev.perl.org/licenses/
   repository: https://github.com/perl5-dbi/DBD-mysql
-version: '4.038'
+version: 4.038_01
 x_contributors:
   - 'Alexandr Ciornii <alexchorny@gmail.com>'
   - 'Alexey Molchanov <alexey.molchanov@portaone.com>'
@@ -50,6 +50,7 @@ x_contributors:
   - 'David Steinbrunner <dsteinbrunner@pobox.com>'
   - 'Giovanni Bechis <giovanni@bigio.snb.it>'
   - 'Graham Ollis <plicease@cpan.org>'
+  - 'H.Merijn Brand <h.m.brand@xs4all.nl>'
   - 'Hanno <hanno@gentoo.org>'
   - 'James McCoy <jamessan@jamessan.com>'
   - 'Jim Winstead <jimw@trainedmonkey.com>'
@@ -79,7 +80,8 @@ x_contributors:
   - 'Tim Mullin <tim@cpanel.net>'
   - 'Vladimir Marek <vlmarek@volny.cz>'
   - 'katyavoid <katyavoid@gmail.com>'
+  - 'kmx <kmx@cpan.org>'
   - 'tokuhirom <tokuhirom@gmail.com>'
   - 'zefram <zefram@fysh.org>'
   - 'zentooo <ankerasoy@gmail.com>'
-x_serialization_backend: 'CPAN::Meta::YAML version 0.012'
+x_serialization_backend: 'CPAN::Meta::YAML version 0.018'

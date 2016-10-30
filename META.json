@@ -4,7 +4,7 @@
       "Patrick Galbraith <patg@patg.net>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 7.24, CPAN::Meta::Converter version 2.150010",
+   "generated_by" : "ExtUtils::MakeMaker version 7.18, CPAN::Meta::Converter version 2.150005",
    "license" : [
       "perl_5"
    ],
@@ -45,7 +45,7 @@
          }
       }
    },
-   "release_status" : "stable",
+   "release_status" : "unstable",
    "resources" : {
       "homepage" : "http://dbi.perl.org/",
       "license" : [
@@ -57,7 +57,7 @@
       "x_IRC" : "irc://irc.perl.org/#dbi",
       "x_MailingList" : "mailto:dbi-dev@perl.org"
    },
-   "version" : "4.038",
+   "version" : "4.038_01",
    "x_contributors" : [
       "Alexandr Ciornii <alexchorny@gmail.com>",
       "Alexey Molchanov <alexey.molchanov@portaone.com>",
@@ -77,6 +77,7 @@
       "David Steinbrunner <dsteinbrunner@pobox.com>",
       "Giovanni Bechis <giovanni@bigio.snb.it>",
       "Graham Ollis <plicease@cpan.org>",
+      "H.Merijn Brand <h.m.brand@xs4all.nl>",
       "Hanno <hanno@gentoo.org>",
       "James McCoy <jamessan@jamessan.com>",
       "Jim Winstead <jimw@trainedmonkey.com>",
@@ -106,6 +107,7 @@
       "Tim Mullin <tim@cpanel.net>",
       "Vladimir Marek <vlmarek@volny.cz>",
       "katyavoid <katyavoid@gmail.com>",
+      "kmx <kmx@cpan.org>",
       "tokuhirom <tokuhirom@gmail.com>",
       "zefram <zefram@fysh.org>",
       "zentooo <ankerasoy@gmail.com>"

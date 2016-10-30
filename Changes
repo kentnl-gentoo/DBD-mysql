@@ -1,3 +1,18 @@
+2016-10-30 Patrick Galbraith, Michiel Beijen, DBI/DBD community (4.038_01)
+* Fix compilation of embedded server (pali)
+  (https://github.com/perl5-dbi/DBD-mysql/pull/68)
+* Fix compilation against libmariadbclient. First version by
+  H.Merijn Brandt, improved by Bernt Johnsen @ Oracle.
+* For efficiency use newSVpvn() instead newSVpv() where possible (pali)
+* Correctly coerce fetched scalar values when mysql_server_prepare is
+  not used (pali)
+* Add support for fetching columns of BIT type with
+  mysql_server_prepare = 1 (pali)
+  Fixes https://rt.cpan.org/Public/Bug/Display.html?id=88006
+* Use correct format in printf instead of casting variable types (pali)
+* Include errno.h for MYSQL_ASYNC because it uses errno variable (pali)
+* Travis: also test on perl 5.22 and 5.24.
+
 2016-10-19 Patrick Galbraith, Michiel Beijen, DBI/DBD community (4.038)
 * Version 4.037_1 had fixes for MySQL 8.0 provided
   Bernt Johnsen @ Oracle that were not in the Changelogs
@@ -14,12 +29,12 @@
   export the __WIN__ macro. If this macro is not present we would not
   compile in the poll.h-based async-support. Changed to use the _WIN32
   macro instead. Thanks to Sergei Golubchik for suggesting the fix.
-* Fix from Pali Rohár to not use unsafe sprintf with variable lengt,
-  changes to bind logic, and added test 40server_prepare_crash. 
+* Fix from Pali Rohár for use-after-free in prepared statements,
+  changes to bind logic, and added test 40server_prepare_crash.
 
 2016-10-03 Patrick Galbraith, Michiel Beijen, DBI/DBD community (4.037)
-* Security release to patch possible buffer overflow in prepared
-  statements. Reported and fixed by Pali Rohár. This vulnerability
+* Security release to patch possible buffer overflow in unsafe sprintf with
+  variable length. Reported and fixed by Pali Rohár. This vulnerability
   is present in all releases at least back to versions 3.0 of the
   driver, which were released in 2005.
   The CVE identifier for this vulnerability is CVE-2016-1246.
