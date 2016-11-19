@@ -9,7 +9,7 @@ use vars qw($test_dsn $test_user $test_password);
 
 $|= 1;
 
-$test_dsn.= ";mysql_server_prepare=1";
+$test_dsn.= ";mysql_server_prepare=1;mysql_server_prepare_disable_fallback=1";
 
 my $dbh;
 eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
@@ -18,7 +18,7 @@ eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
 if ($@) {
     plan skip_all => "no database connection";
 }
-plan tests => 27;
+plan tests => 31;
 
 ok(defined $dbh, "connecting");
 
@@ -59,11 +59,11 @@ ok($sth2 = $dbh->prepare('INSERT INTO dbd_mysql_t40serverprepare2 VALUES (?,?,?,
 ok($sth2->bind_param(1, 101, DBI::SQL_INTEGER), "binding int");
 ok($sth2->bind_param(2, 102, DBI::SQL_SMALLINT), "binding smallint");
 ok($sth2->bind_param(3, 103, DBI::SQL_TINYINT), "binding tinyint");
-ok($sth2->bind_param(4, 104, DBI::SQL_INTEGER), "binding bigint");
+ok($sth2->bind_param(4, '8589934697', DBI::SQL_BIGINT), "binding bigint");
 
 ok($sth2->execute(), "inserting data");
 
-is_deeply($dbh->selectall_arrayref('SELECT * FROM dbd_mysql_t40serverprepare2'), [[101, 102, 103, 104]]);
+is_deeply($dbh->selectall_arrayref('SELECT * FROM dbd_mysql_t40serverprepare2'), [[101, 102, 103, '8589934697']]);
 
 ok ($dbh->do(qq{DROP TABLE dbd_mysql_t40serverprepare2}), "cleaning up");
 
@@ -77,6 +77,21 @@ ok($sth3 = $dbh->prepare(q{INSERT INTO t3 VALUES (?,?)}));
 ok($sth3->execute(1, 2), "insert t3");
 
 is_deeply($dbh->selectall_arrayref('SELECT id, mydata FROM t3'), [[1, 2]]);
+
+my $dbname = $dbh->selectrow_arrayref("SELECT DATABASE()")->[0];
+
+$dbh->{mysql_server_prepare_disable_fallback} = 1;
+my $error_handler_called = 0;
+$dbh->{HandleError} = sub { $error_handler_called = 1; die $_[0]; };
+eval { $dbh->prepare("USE $dbname") };
+$dbh->{HandleError} = undef;
+ok($error_handler_called, 'USE is not supported with mysql_server_prepare_disable_fallback=1');
+
+$dbh->{mysql_server_prepare_disable_fallback} = 0;
+my $sth4;
+ok($sth4 = $dbh->prepare("USE $dbname"), 'USE is supported with mysql_server_prepare_disable_fallback=0');
+ok($sth4->execute());
+ok($sth4->finish());
 
 ok ($dbh->do(qq{DROP TABLE t3}), "cleaning up");
 

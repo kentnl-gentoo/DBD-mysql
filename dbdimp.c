@@ -360,8 +360,10 @@ static enum enum_field_types mysql_to_perl_type(enum enum_field_types type)
   case MYSQL_TYPE_YEAR:
 #if IVSIZE >= 8
   case MYSQL_TYPE_LONGLONG:
-#endif
+    enum_type= MYSQL_TYPE_LONGLONG;
+#else
     enum_type= MYSQL_TYPE_LONG;
+#endif
     break;
 
 #if MYSQL_VERSION_ID > NEW_DATATYPE_VERSION
@@ -1869,6 +1871,13 @@ MYSQL *mysql_dr_connect(
           PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                         "imp_dbh->use_server_side_prepare: %d\n",
                         imp_dbh->use_server_side_prepare);
+
+        if ((svp = hv_fetch(hv, "mysql_server_prepare_disable_fallback", 37, FALSE)) && *svp)
+          imp_dbh->disable_fallback_for_server_prepare = SvTRUE(*svp);
+        if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+          PerlIO_printf(DBIc_LOGPIO(imp_xxh),
+                        "imp_dbh->disable_fallback_for_server_prepare: %d\n",
+                        imp_dbh->disable_fallback_for_server_prepare);
 #endif
 
         /* HELMUT */
@@ -2455,6 +2464,8 @@ dbd_db_STORE_attrib(
     imp_dbh->auto_reconnect = bool_value;
   else if (kl == 20 && strEQ(key, "mysql_server_prepare"))
     imp_dbh->use_server_side_prepare = bool_value;
+  else if (kl == 37 && strEQ(key, "mysql_server_prepare_disable_fallback"))
+    imp_dbh->disable_fallback_for_server_prepare = bool_value;
   else if (kl == 23 && strEQ(key,"mysql_no_autocommit_cmd"))
     imp_dbh->no_autocommit_cmd = bool_value;
   else if (kl == 24 && strEQ(key,"mysql_bind_type_guessing"))
@@ -2690,6 +2701,8 @@ SV* dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
     }
     else if (kl == 14 && strEQ(key,"server_prepare"))
         result= sv_2mortal(newSViv((IV) imp_dbh->use_server_side_prepare));
+    else if (kl == 31 && strEQ(key, "server_prepare_disable_fallback"))
+        result= sv_2mortal(newSViv((IV) imp_dbh->disable_fallback_for_server_prepare));
     break;
 
   case 't':
@@ -2765,17 +2778,28 @@ dbd_st_prepare(
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
  /* Set default value of 'mysql_server_prepare' attribute for sth from dbh */
   imp_sth->use_server_side_prepare= imp_dbh->use_server_side_prepare;
+  imp_sth->disable_fallback_for_server_prepare= imp_dbh->disable_fallback_for_server_prepare;
   if (attribs)
   {
     svp= DBD_ATTRIB_GET_SVP(attribs, "mysql_server_prepare", 20);
     imp_sth->use_server_side_prepare = (svp) ?
       SvTRUE(*svp) : imp_dbh->use_server_side_prepare;
 
+    svp= DBD_ATTRIB_GET_SVP(attribs, "mysql_server_prepare_disable_fallback", 37);
+    imp_sth->disable_fallback_for_server_prepare = (svp) ?
+      SvTRUE(*svp) : imp_dbh->disable_fallback_for_server_prepare;
+
     svp = DBD_ATTRIB_GET_SVP(attribs, "async", 5);
 
     if(svp && SvTRUE(*svp)) {
 #if MYSQL_ASYNC
         imp_sth->is_async = TRUE;
+        if (imp_sth->disable_fallback_for_server_prepare)
+        {
+          do_error(sth, ER_UNSUPPORTED_PS,
+                   "Async option not supported with server side prepare", "HY000");
+          return 0;
+        }
         imp_sth->use_server_side_prepare = FALSE;
 #else
         do_error(sth, 2000,
@@ -2842,6 +2866,15 @@ dbd_st_prepare(
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                     "\t\tLIMIT and ? found, set to use_server_side_prepare=0\n");
+          if (imp_sth->disable_fallback_for_server_prepare)
+          {
+            do_error(sth, ER_UNSUPPORTED_PS,
+                     "\"LIMIT ?\" not supported with server side prepare",
+                     "HY000");
+            mysql_stmt_close(imp_sth->stmt);
+            imp_sth->stmt= NULL;
+            return FALSE;
+          }
           /* ... then we do not want to try server side prepare (use emulation) */
           imp_sth->use_server_side_prepare= 0;
           break;
@@ -2873,6 +2906,15 @@ dbd_st_prepare(
       {
         if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
           PerlIO_printf(DBIc_LOGPIO(imp_xxh), "Disable PS mode for CALL()\n");
+          if (imp_sth->disable_fallback_for_server_prepare)
+          {
+            do_error(sth, ER_UNSUPPORTED_PS,
+                     "\"CALL()\" not supported with server side prepare",
+                     "HY000");
+            mysql_stmt_close(imp_sth->stmt);
+            imp_sth->stmt= NULL;
+            return FALSE;
+          }
         imp_sth->use_server_side_prepare= 0;
         break;
       }
@@ -2922,7 +2964,7 @@ dbd_st_prepare(
 
       /* For commands that are not supported by server side prepared statement
          mechanism lets try to pass them through regular API */
-      if (mysql_stmt_errno(imp_sth->stmt) == ER_UNSUPPORTED_PS)
+      if (!imp_sth->disable_fallback_for_server_prepare && mysql_stmt_errno(imp_sth->stmt) == ER_UNSUPPORTED_PS)
       {
         if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
           PerlIO_printf(DBIc_LOGPIO(imp_xxh),
@@ -3508,7 +3550,7 @@ my_ulonglong mysql_st_internal_execute41(
   {
     for (i = mysql_stmt_field_count(stmt) - 1; i >=0; --i) {
         enum_type = mysql_to_perl_type(stmt->fields[i].type);
-        if (enum_type != MYSQL_TYPE_DOUBLE && enum_type != MYSQL_TYPE_LONG && enum_type != MYSQL_TYPE_BIT)
+        if (enum_type != MYSQL_TYPE_DOUBLE && enum_type != MYSQL_TYPE_LONG && enum_type != MYSQL_TYPE_LONGLONG && enum_type != MYSQL_TYPE_BIT)
         {
             /* mysql_stmt_store_result to update MYSQL_FIELD->max_length */
             my_bool on = 1;
@@ -3578,6 +3620,10 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
 #if defined (dTHR)
   dTHR;
 #endif
+#if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
+  int use_server_side_prepare = imp_sth->use_server_side_prepare;
+  int disable_fallback_for_server_prepare = imp_sth->disable_fallback_for_server_prepare;
+#endif
 
   ASYNC_CHECK_RETURN(sth, -2);
 
@@ -3606,20 +3652,44 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
   mysql_st_free_result_sets (sth, imp_sth);
 
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
-
-  if (imp_sth->use_server_side_prepare && ! imp_sth->use_mysql_use_result)
+  if (use_server_side_prepare)
   {
-    imp_sth->row_num= mysql_st_internal_execute41(
-                                                  sth,
-                                                  DBIc_NUM_PARAMS(imp_sth),
-                                                  &imp_sth->result,
-                                                  imp_sth->stmt,
-                                                  imp_sth->bind,
-                                                  &imp_sth->has_been_bound
-                                                 );
+    if (imp_sth->use_mysql_use_result)
+    {
+      if (disable_fallback_for_server_prepare)
+      {
+        do_error(sth, ER_UNSUPPORTED_PS,
+                 "\"mysql_use_result\" not supported with server side prepare",
+                 "HY000");
+        return 0;
+      }
+      use_server_side_prepare = 0;
+    }
+
+    if (use_server_side_prepare)
+    {
+      imp_sth->row_num= mysql_st_internal_execute41(
+                                                    sth,
+                                                    DBIc_NUM_PARAMS(imp_sth),
+                                                    &imp_sth->result,
+                                                    imp_sth->stmt,
+                                                    imp_sth->bind,
+                                                    &imp_sth->has_been_bound
+                                                   );
+      if (imp_sth->row_num == (my_ulonglong)-2) /* -2 means error */
+      {
+        SV *err = DBIc_ERR(imp_xxh);
+        if (!disable_fallback_for_server_prepare && SvIV(err) == ER_UNSUPPORTED_PS)
+        {
+          use_server_side_prepare = 0;
+        }
+      }
+    }
   }
-  else {
+
+  if (!use_server_side_prepare)
 #endif
+  {
     imp_sth->row_num= mysql_st_internal_execute(
                                                 sth,
                                                 *statement,
@@ -3653,7 +3723,7 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
       /** Store the result in the current statement handle */
       DBIc_NUM_FIELDS(imp_sth)= mysql_num_fields(imp_sth->result);
       DBIc_ACTIVE_on(imp_sth);
-      if (!imp_sth->use_server_side_prepare)
+      if (!use_server_side_prepare)
         imp_sth->done_desc= 0;
       imp_sth->fetch_done= 0;
     }
@@ -3776,6 +3846,7 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
         break;
 
       case MYSQL_TYPE_LONG:
+      case MYSQL_TYPE_LONGLONG:
         buffer->buffer_length= sizeof(fbh->ldata);
         buffer->buffer= (char*) &fbh->ldata;
         buffer->is_unsigned= (fields[i].flags & UNSIGNED_FLAG) ? 1 : 0;
@@ -4016,6 +4087,7 @@ process:
           break;
 
         case MYSQL_TYPE_LONG:
+        case MYSQL_TYPE_LONGLONG:
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tst_fetch int data %"IVdf", unsigned? %d\n",
                           fbh->ldata, buffer->is_unsigned);
@@ -4178,6 +4250,7 @@ process:
           break;
 
         case MYSQL_TYPE_LONG:
+        case MYSQL_TYPE_LONGLONG:
           /* Coerce to integer and set scalar as UV resp. IV */
           if (fields[i].flags & UNSIGNED_FLAG)
           {
@@ -4742,6 +4815,14 @@ dbd_st_FETCH_internal(
       if (strEQ(key, "mysql_is_auto_increment"))
         retsv = ST_FETCH_AV(AV_ATTRIB_IS_AUTO_INCREMENT);
       break;
+    case 37:
+      if (strEQ(key, "mysql_server_prepare_disable_fallback"))
+#if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
+        retsv= sv_2mortal(newSViv((IV) imp_sth->disable_fallback_for_server_prepare));
+#else
+        retsv= boolSV(0);
+#endif
+      break;
     }
     break;
   }
@@ -4825,6 +4906,7 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
   STRLEN slen;
   char *buffer= NULL;
   int buffer_is_null= 0;
+  int buffer_is_unsigned= 0;
   int buffer_length= slen;
   unsigned int buffer_type= 0;
 #endif
@@ -4882,9 +4964,13 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
       case SQL_NUMERIC:
       case SQL_INTEGER:
       case SQL_SMALLINT:
-      case SQL_BIGINT:
       case SQL_TINYINT:
+#if IVSIZE >= 8
+      case SQL_BIGINT:
+          buffer_type= MYSQL_TYPE_LONGLONG;
+#else
           buffer_type= MYSQL_TYPE_LONG;
+#endif
           break;
       case SQL_DOUBLE:
       case SQL_DECIMAL: 
@@ -4910,12 +4996,24 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
     if (! buffer_is_null) {
       switch(buffer_type) {
         case MYSQL_TYPE_LONG:
+        case MYSQL_TYPE_LONGLONG:
           /* INT */
           if (!SvIOK(imp_sth->params[idx].value) && DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tTRY TO BIND AN INT NUMBER\n");
           buffer_length = sizeof imp_sth->fbind[idx].numeric_val.lval;
           imp_sth->fbind[idx].numeric_val.lval= SvIV(imp_sth->params[idx].value);
           buffer=(void*)&(imp_sth->fbind[idx].numeric_val.lval);
+          if (!SvIOK(imp_sth->params[idx].value))
+          {
+            if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
+              PerlIO_printf(DBIc_LOGPIO(imp_xxh),
+                            "   Conversion to INT NUMBER was not successful -> '%s' --> (unsigned) '%"UVuf"' / (signed) '%"IVdf"' <- fallback to STRING\n",
+                            SvPV_nolen(imp_sth->params[idx].value), imp_sth->fbind[idx].numeric_val.lval, imp_sth->fbind[idx].numeric_val.lval);
+            buffer_type = MYSQL_TYPE_STRING;
+            break;
+          }
+          if (SvIsUV(imp_sth->params[idx].value))
+            buffer_is_unsigned= 1;
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                           "   SCALAR type %"IVdf" ->%"IVdf"<- IS A INT NUMBER\n",
@@ -4970,7 +5068,7 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
     }
 
     /* Type of column was changed. Force to rebind */
-    if (imp_sth->bind[idx].buffer_type != buffer_type) {
+    if (imp_sth->bind[idx].buffer_type != buffer_type || imp_sth->bind[idx].is_unsigned != buffer_is_unsigned) {
       if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
           PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                         "   FORCE REBIND: buffer type changed from %d to %d, sql-type=%"IVdf"\n",
@@ -4988,6 +5086,7 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
     imp_sth->bind[idx].buffer_type= buffer_type;
     imp_sth->bind[idx].buffer= buffer;
     imp_sth->bind[idx].buffer_length= buffer_length;
+    imp_sth->bind[idx].is_unsigned= buffer_is_unsigned;
 
     imp_sth->fbind[idx].length= buffer_length;
     imp_sth->fbind[idx].is_null= buffer_is_null;
