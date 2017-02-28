@@ -15,7 +15,7 @@ our @ISA = qw(DynaLoader);
 # SQL_DRIVER_VER is formatted as dd.dd.dddd
 # for version 5.x please switch to 5.00(_00) version numbering
 # keep $VERSION in Bundle/DBD/mysql.pm in sync
-our $VERSION = '4.041_01';
+our $VERSION = '4.041_02';
 
 bootstrap DBD::mysql $VERSION;
 
@@ -169,17 +169,19 @@ sub connect {
 sub data_sources {
     my($self) = shift;
     my($attributes) = shift;
-    my($host, $port, $user, $password) = ('', '', '', '');
+    my($host, $port, $user, $password, $utf8) = ('', '', '', '');
     if ($attributes) {
       $host = $attributes->{host} || '';
       $port = $attributes->{port} || '';
       $user = $attributes->{user} || '';
       $password = $attributes->{password} || '';
+      $utf8 = $attributes->{utf8} || $attributes->{mysql_enable_utf8};
     }
-    my(@dsn) = $self->func($host, $port, $user, $password, '_ListDBs');
+    my(@dsn) = $self->func($host, $port, $user, $password, $utf8, '_ListDBs');
+    $utf8 = $utf8 ? ";mysql_enable_utf8=1" : "";
     my($i);
     for ($i = 0;  $i < @dsn;  $i++) {
-	$dsn[$i] = "DBI:mysql:$dsn[$i]";
+	$dsn[$i] = "DBI:mysql:$dsn[$i]$utf8";
     }
     @dsn;
 }
@@ -927,8 +929,12 @@ DBD::mysql - MySQL driver for the Perl5 Database Interface (DBI)
 
   # Drop table 'foo'. This may fail, if 'foo' doesn't exist
   # Thus we put an eval around it.
-  eval { $dbh->do("DROP TABLE foo") };
-  print "Dropping foo failed: $@\n" if $@;
+  eval {
+      $dbh->do("DROP TABLE foo");
+      1;
+  } or do {
+      print "Dropping foo failed: $@\n";
+  };
 
   # Create a new table 'foo'. This must not fail, thus we don't
   # catch errors.
@@ -1374,6 +1380,10 @@ method.  Instead, you should use the portable method
 
     @dbs = DBI->data_sources("mysql");
 
+or with connection arguments
+
+    @dbs = DBI->data_sources("mysql", {"host" => $host, "port" => $port, "user" => $user, "password" => $pass, "utf8" => 1});
+
 =back
 
 
@@ -1497,7 +1507,8 @@ See L</"STATEMENT HANDLES">.
 =item mysql_enable_utf8
 
 This attribute affects input data from DBI (statement and bind parameters) and
-output data from the mysql server.
+output data from the MySQL server.  Applies also for database, table and column
+names and also for warning and error messages from MySQL server.
 
 If used as a part of the call to C<connect()> then it issues the command
 C<SET NAMES utf8>.

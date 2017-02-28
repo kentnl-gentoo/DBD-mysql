@@ -15,10 +15,9 @@ use vars qw($COL_NULLABLE $COL_KEY);
 use lib 't', '.';
 require 'lib.pl';
 
-my $dbh = eval { DBI->connect($test_dsn, $test_user, $test_password, { RaiseError => 1 }) } or
-    plan skip_all => "no database connection";
+my $dbh = DbiTestConnect($test_dsn, $test_user, $test_password, { RaiseError => 1 });
 
-if ($dbh->get_info($GetInfoType{SQL_DBMS_VER}) lt "5.0") {
+if ($dbh->{mysql_serverversion} < 50000) {
     plan skip_all => "You must have MySQL version 5.0 and greater for this test to run";
 }
 

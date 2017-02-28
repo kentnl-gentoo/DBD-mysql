@@ -11,20 +11,9 @@
  *  License or the Artistic License, as specified in the Perl README file.
  */
 
-
-#ifdef WIN32
-#include "windows.h"
-#include "winsock.h"
-#endif
-
 #include "dbdimp.h"
 
-#if defined(WIN32)  &&  defined(WORD)
-#undef WORD
-typedef short WORD;
-#endif
-
-#ifdef WIN32
+#ifdef _WIN32
 #define MIN min
 #else
 #ifndef MIN
@@ -32,31 +21,11 @@ typedef short WORD;
 #endif
 #endif
 
-#if MYSQL_ASYNC
-#  include <poll.h>
-#  include <errno.h>
-#  define ASYNC_CHECK_RETURN(h, value)\
-    if(imp_dbh->async_query_in_flight) {\
-        do_error(h, 2000, "Calling a synchronous function on an asynchronous handle", "HY000");\
-        return (value);\
-    }
-#else
-#  define ASYNC_CHECK_RETURN(h, value)
-#endif
-
-#ifndef PERL_STATIC_INLINE
-#define PERL_STATIC_INLINE static
-#endif
-
-#if MYSQL_VERSION_ID >= FIELD_CHARSETNR_VERSION
-PERL_STATIC_INLINE bool charsetnr_is_utf8(unsigned int id)
-{
-  /* See mysql source code for all utf8 ids: grep -E '^(CHARSET_INFO|struct charset_info_st).*utf8' -A 2 -r strings | grep number | sed -E 's/^.*-  *([^,]+),.*$/\1/' | sort -n */
-  /* Some utf8 ids (selected at mysql compile time) can be retrieved by: SELECT ID FROM INFORMATION_SCHEMA.COLLATIONS WHERE CHARACTER_SET_NAME LIKE 'utf8%' ORDER BY ID */
-  return (id == 33 || id == 45 || id == 46 || id == 83 || (id >= 192 && id <= 215) || (id >= 223 && id <= 247) || (id >= 254 && id <= 277) || (id >= 576 && id <= 578)
-      || (id >= 608 && id <= 610) || id == 1057 || (id >= 1069 && id <= 1070) || id == 1107 || id == 1216 || id == 1283 || id == 1248 || id == 1270);
-}
-#endif
+#define ASYNC_CHECK_RETURN(h, value)\
+  if(imp_dbh->async_query_in_flight) {\
+      do_error(h, 2000, "Calling a synchronous function on an asynchronous handle", "HY000");\
+      return (value);\
+  }
 
 PERL_STATIC_INLINE bool str_is_nonascii(const char *str, STRLEN len)
 {
@@ -73,7 +42,7 @@ void get_param(pTHX_ SV *param, int field, bool enable_utf8, bool is_binary, cha
   STRLEN len;
   int is_utf8;
 
-  buf = SvPV(param, len);
+  buf = SvPV_nomg(param, len);
   is_utf8 = SvUTF8(param);
   if (enable_utf8 && !is_binary && !is_utf8 && str_is_nonascii(buf, len))
   {
@@ -107,7 +76,7 @@ void get_statement(pTHX_ SV *statement, bool enable_utf8, char **out_buf, STRLEN
   STRLEN len;
   int is_utf8;
 
-  buf = SvPV(statement, len);
+  buf = SvPV_nomg(statement, len);
   is_utf8 = SvUTF8(statement);
   if (enable_utf8 && !is_utf8 && str_is_nonascii(buf, len))
   {
@@ -1611,14 +1580,30 @@ void do_error(SV* h, int rc, const char* what, const char* sqlstate)
 {
   dTHX;
   D_imp_xxh(h);
+  imp_dbh_t* dbh;
   SV *errstr;
   SV *errstate;
+  bool enable_utf8;
+
+  if (DBIc_TYPE(imp_xxh) == DBIt_DB) {
+      D_imp_dbh(h);
+      dbh = imp_dbh;
+  } else {
+      D_imp_sth(h);
+      D_imp_dbh_from_sth;
+      dbh = imp_dbh;
+  }
+
+  enable_utf8 = (dbh->enable_utf8 || dbh->enable_utf8mb4);
 
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
     PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\t--> do_error\n");
   errstr= DBIc_ERRSTR(imp_xxh);
   sv_setiv(DBIc_ERR(imp_xxh), (IV)rc);	/* set err early	*/
+  SvUTF8_off(errstr);
   sv_setpv(errstr, what);
+  if (enable_utf8)
+    sv_utf8_decode(errstr);
 
 #if MYSQL_VERSION_ID >= SQL_STATE_VERSION
   if (sqlstate)
@@ -1643,10 +1628,26 @@ void do_warn(SV* h, int rc, char* what)
 {
   dTHX;
   D_imp_xxh(h);
+  imp_dbh_t* dbh;
+  bool enable_utf8;
+
+  if (DBIc_TYPE(imp_xxh) == DBIt_DB) {
+      D_imp_dbh(h);
+      dbh = imp_dbh;
+  } else {
+      D_imp_sth(h);
+      D_imp_dbh_from_sth;
+      dbh = imp_dbh;
+  }
+
+  enable_utf8 = (dbh->enable_utf8 || dbh->enable_utf8mb4);
 
   SV *errstr = DBIc_ERRSTR(imp_xxh);
   sv_setiv(DBIc_ERR(imp_xxh), (IV)rc);	/* set err early	*/
+  SvUTF8_off(errstr);
   sv_setpv(errstr, what);
+  if (enable_utf8)
+    sv_utf8_decode(errstr);
   /* NO EFFECT DBIh_EVENT2(h, WARN_event, DBIc_ERR(imp_xxh), errstr);*/
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
     PerlIO_printf(DBIc_LOGPIO(imp_xxh), "%s warning %d recorded: %s\n",
@@ -1760,7 +1761,7 @@ MYSQL *mysql_dr_connect(
           if ((svp = hv_fetch(hv, "mysql_embedded_groups", 21, FALSE))  &&
               *svp  &&  SvTRUE(*svp))
           {
-            options = SvPV(*svp, lna);
+            options = SvPV_nomg(*svp, lna);
             imp_drh->embedded.groups=newSVsv(*svp);
 
             if ((server_groups_cnt=count_embedded_options(options)))
@@ -1780,7 +1781,7 @@ MYSQL *mysql_dr_connect(
           if ((svp = hv_fetch(hv, "mysql_embedded_options", 22, FALSE))  &&
               *svp  &&  SvTRUE(*svp))
           {
-            options = SvPV(*svp, lna);
+            options = SvPV_nomg(*svp, lna);
             imp_drh->embedded.args=newSVsv(*svp);
 
             if ((server_args_cnt=count_embedded_options(options)))
@@ -1816,11 +1817,11 @@ MYSQL *mysql_dr_connect(
 
           if ( ((svp = hv_fetch(hv, "mysql_embedded_groups", 21, FALSE)) &&
             *svp  &&  SvTRUE(*svp)))
-            rc =+ abs(sv_cmp(*svp, imp_drh->embedded.groups));
+            rc =+ abs(sv_cmp_flags(*svp, imp_drh->embedded.groups, 0));
 
           if ( ((svp = hv_fetch(hv, "mysql_embedded_options", 22, FALSE)) &&
             *svp  &&  SvTRUE(*svp)) )
-            rc =+ abs(sv_cmp(*svp, imp_drh->embedded.args));
+            rc =+ abs(sv_cmp_flags(*svp, imp_drh->embedded.args, 0));
 
           if (rc)
           {
@@ -1856,7 +1857,7 @@ MYSQL *mysql_dr_connect(
         if ((svp = hv_fetch(hv, "mysql_init_command", 18, FALSE)) &&
             *svp && SvTRUE(*svp))
         {
-          char* df = SvPV(*svp, lna);
+          char* df = SvPV_nomg(*svp, lna);
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                            "imp_dbh->mysql_dr_connect: Setting" \
@@ -1875,7 +1876,7 @@ MYSQL *mysql_dr_connect(
         if ((svp = hv_fetch(hv, "mysql_connect_timeout", 21, FALSE))
             &&  *svp  &&  SvTRUE(*svp))
         {
-          int to = SvIV(*svp);
+          int to = SvIV_nomg(*svp);
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                           "imp_dbh->mysql_dr_connect: Setting" \
@@ -1886,7 +1887,7 @@ MYSQL *mysql_dr_connect(
         if ((svp = hv_fetch(hv, "mysql_write_timeout", 19, FALSE))
             &&  *svp  &&  SvTRUE(*svp))
         {
-          int to = SvIV(*svp);
+          int to = SvIV_nomg(*svp);
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                           "imp_dbh->mysql_dr_connect: Setting" \
@@ -1897,7 +1898,7 @@ MYSQL *mysql_dr_connect(
         if ((svp = hv_fetch(hv, "mysql_read_timeout", 18, FALSE))
             &&  *svp  &&  SvTRUE(*svp))
         {
-          int to = SvIV(*svp);
+          int to = SvIV_nomg(*svp);
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                           "imp_dbh->mysql_dr_connect: Setting" \
@@ -1918,7 +1919,7 @@ MYSQL *mysql_dr_connect(
         if ((svp = hv_fetch(hv, "mysql_read_default_file", 23, FALSE)) &&
             *svp  &&  SvTRUE(*svp))
         {
-          char* df = SvPV(*svp, lna);
+          char* df = SvPV_nomg(*svp, lna);
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                           "imp_dbh->mysql_dr_connect: Reading" \
@@ -1928,7 +1929,7 @@ MYSQL *mysql_dr_connect(
         if ((svp = hv_fetch(hv, "mysql_read_default_group", 24,
                             FALSE))  &&
             *svp  &&  SvTRUE(*svp)) {
-          char* gr = SvPV(*svp, lna);
+          char* gr = SvPV_nomg(*svp, lna);
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                     "imp_dbh->mysql_dr_connect: Using" \
@@ -2146,11 +2147,9 @@ MYSQL *mysql_dr_connect(
         imp_dbh->use_server_side_prepare = FALSE;
 #endif
 
-#if MYSQL_ASYNC
       if(imp_dbh) {
           imp_dbh->async_query_in_flight = NULL;
       }
-#endif
 
       /*
         we turn off Mysql's auto reconnect and handle re-connecting ourselves
@@ -2255,6 +2254,7 @@ static int my_login(pTHX_ SV* dbh, imp_dbh_t *imp_dbh)
 
   if (!imp_dbh->pmysql) {
      Newz(908, imp_dbh->pmysql, 1, MYSQL);
+     imp_dbh->pmysql->net.fd = -1;
   }
   result = mysql_dr_connect(dbh, imp_dbh->pmysql, mysql_socket, host, port, user,
 			  password, dbname, imp_dbh) ? TRUE : FALSE;
@@ -2431,6 +2431,7 @@ int dbd_db_disconnect(SV* dbh, imp_dbh_t* imp_dbh)
     PerlIO_printf(DBIc_LOGPIO(imp_xxh), "imp_dbh->pmysql: %p\n",
 		              imp_dbh->pmysql);
   mysql_close(imp_dbh->pmysql );
+  imp_dbh->pmysql->net.fd = -1;
 
   /* We don't free imp_dbh since a reference still exists    */
   /* The DESTROY method is the only one to 'free' memory.    */
@@ -2566,10 +2567,10 @@ dbd_db_STORE_attrib(
 {
   dTHX;
   STRLEN kl;
-  char *key = SvPV(keysv, kl);
+  char *key = SvPV(keysv, kl); /* needs to process get magic */
   SV *cachesv = Nullsv;
   int cacheit = FALSE;
-  const bool bool_value = SvTRUE(valuesv);
+  const bool bool_value = SvTRUE_nomg(valuesv);
 
   if (kl==10 && strEQ(key, "AutoCommit"))
   {
@@ -2637,12 +2638,12 @@ dbd_db_STORE_attrib(
     imp_dbh->enable_utf8mb4 = bool_value;
 #if FABRIC_SUPPORT
   else if (kl == 22 && strEQ(key, "mysql_fabric_opt_group"))
-    mysql_options(imp_dbh->pmysql, FABRIC_OPT_GROUP, (void *)SvPVbyte_nolen(valuesv));
+    mysql_options(imp_dbh->pmysql, FABRIC_OPT_GROUP, (void *)SvPV_nomg_nolen(valuesv));
   else if (kl == 29 && strEQ(key, "mysql_fabric_opt_default_mode"))
   {
     if (SvOK(valuesv)) {
       STRLEN len;
-      const char *str = SvPVbyte(valuesv, len);
+      const char *str = SvPV_nomg(valuesv, len);
       if ( len == 0 || ( len == 2 && (strnEQ(str, "ro", 3) || strnEQ(str, "rw", 3)) ) )
         mysql_options(imp_dbh->pmysql, FABRIC_OPT_DEFAULT_MODE, len == 0 ? NULL : str);
       else
@@ -2655,7 +2656,7 @@ dbd_db_STORE_attrib(
   else if (kl == 21 && strEQ(key, "mysql_fabric_opt_mode"))
   {
     STRLEN len;
-    const char *str = SvPVbyte(valuesv, len);
+    const char *str = SvPV_nomg(valuesv, len);
     if (len != 2 || (strnNE(str, "ro", 3) && strnNE(str, "rw", 3)))
       croak("Valid settings for FABRIC_OPT_MODE are 'ro' or 'rw'");
 
@@ -2763,9 +2764,10 @@ SV* dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
 {
   dTHX;
   STRLEN kl;
-  char *key = SvPV(keysv, kl);
+  char *key = SvPV(keysv, kl); /* needs to process get magic */
   SV* result = NULL;
-  dbh= dbh;
+  bool enable_utf8 = (imp_dbh->enable_utf8 || imp_dbh->enable_utf8mb4);
+  PERL_UNUSED_ARG(dbh);
 
   switch (*key) {
     case 'A':
@@ -2821,6 +2823,8 @@ SV* dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
     /* Note that errmsg is obsolete, as of 2.09! */
       const char* msg = mysql_error(imp_dbh->pmysql);
       result= sv_2mortal(newSVpvn(msg, strlen(msg)));
+      if (enable_utf8)
+        sv_utf8_decode(result);
     }
     else if (kl == strlen("enable_utf8mb4") && strEQ(key, "enable_utf8mb4"))
         result = sv_2mortal(newSViv(imp_dbh->enable_utf8mb4));
@@ -2891,7 +2895,8 @@ SV* dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
     else if (strEQ(key, "sock"))
       result= sv_2mortal(newSViv(PTR2IV(imp_dbh->pmysql)));
     else if (strEQ(key, "sockfd"))
-      result= sv_2mortal(newSViv((IV) imp_dbh->pmysql->net.fd));
+      result= (imp_dbh->pmysql->net.fd != -1) ?
+        sv_2mortal(newSViv((IV) imp_dbh->pmysql->net.fd)) : &PL_sv_undef;
     else if (strEQ(key, "stat"))
     {
       const char* stats = mysql_stat(imp_dbh->pmysql);
@@ -3001,12 +3006,17 @@ dbd_st_prepare_sv(
     svp= DBD_ATTRIB_GET_SVP(attribs, "mysql_server_prepare_disable_fallback", 37);
     imp_sth->disable_fallback_for_server_prepare = (svp) ?
       SvTRUE(*svp) : imp_dbh->disable_fallback_for_server_prepare;
+  }
+  imp_sth->fetch_done= 0;
+#endif
 
+  if (attribs)
+  {
     svp = DBD_ATTRIB_GET_SVP(attribs, "async", 5);
 
     if(svp && SvTRUE(*svp)) {
-#if MYSQL_ASYNC
         imp_sth->is_async = TRUE;
+#if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
         if (imp_sth->disable_fallback_for_server_prepare)
         {
           do_error(sth, ER_UNSUPPORTED_PS,
@@ -3014,16 +3024,9 @@ dbd_st_prepare_sv(
           return 0;
         }
         imp_sth->use_server_side_prepare = FALSE;
-#else
-        do_error(sth, 2000,
-                 "Async support was not built into this version of DBD::mysql", "HY000");
-        return 0;
 #endif
     }
   }
-
-  imp_sth->fetch_done= 0;
-#endif
 
   imp_sth->done_desc= 0;
   imp_sth->result= NULL;
@@ -3162,6 +3165,12 @@ dbd_st_prepare_sv(
     prepare_retval= mysql_stmt_prepare(imp_sth->stmt,
                                        statement,
                                        statement_len);
+
+    if (prepare_retval && mysql_db_reconnect(sth))
+        prepare_retval= mysql_stmt_prepare(imp_sth->stmt,
+                                           statement,
+                                           statement_len);
+
     if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
         PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                       "\t\tmysql_stmt_prepare returned %d\n",
@@ -3357,12 +3366,14 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
     return 0;
   }
 
+#if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
   if (imp_sth->use_server_side_prepare)
   {
     do_warn(sth, JW_ERR_NOT_IMPLEMENTED,
             "Processing of multiple result set is not possible with server side prepare");
     return 0;
   }
+#endif
 
   /*
    *  Free cached array attributes
@@ -3377,7 +3388,10 @@ int dbd_st_more_results(SV* sth, imp_sth_t* imp_sth)
 
   /* Release previous MySQL result*/
   if (imp_sth->result)
+  {
     mysql_free_result(imp_sth->result);
+    imp_sth->result= NULL;
+  }
 
   if (DBIc_ACTIVE(imp_sth))
     DBIc_ACTIVE_off(imp_sth);
@@ -3504,9 +3518,7 @@ my_ulonglong mysql_st_internal_execute(
   char *table;
   char *salloc;
   int htype;
-#if MYSQL_ASYNC
   bool async = FALSE;
-#endif
   my_ulonglong rows= 0;
   /* thank you DBI.c for this info! */
   D_imp_xxh(h);
@@ -3525,14 +3537,12 @@ my_ulonglong mysql_st_internal_execute(
   {
     D_imp_dbh(h);
     /* if imp_dbh is not available, it causes segfault (proper) on OpenBSD */
-    if (imp_dbh && imp_dbh->bind_type_guessing)
+    if (imp_dbh)
     {
       bind_type_guessing= imp_dbh->bind_type_guessing;
-      bind_comment_placeholders= bind_comment_placeholders;
+      bind_comment_placeholders= imp_dbh->bind_comment_placeholders;
     }
-#if MYSQL_ASYNC
     async = (bool) (imp_dbh->async_query_in_flight != NULL);
-#endif
   }
   /* h is a sth */
   else
@@ -3545,14 +3555,12 @@ my_ulonglong mysql_st_internal_execute(
       bind_type_guessing= imp_dbh->bind_type_guessing;
       bind_comment_placeholders= imp_dbh->bind_comment_placeholders;
     }
-#if MYSQL_ASYNC
     async = imp_sth->is_async;
     if(async) {
         imp_dbh->async_query_in_flight = imp_sth;
     } else {
         imp_dbh->async_query_in_flight = NULL;
     }
-#endif
   }
 
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
@@ -3618,7 +3626,6 @@ my_ulonglong mysql_st_internal_execute(
     return 0;
   }
 
-#if MYSQL_ASYNC
   if(async) {
     if((mysql_send_query(svsock, sbuf, slen)) &&
        (!mysql_db_reconnect(h) ||
@@ -3629,7 +3636,6 @@ my_ulonglong mysql_st_internal_execute(
         rows = 0;
     }
   } else {
-#endif
       if ((mysql_real_query(svsock, sbuf, slen))  &&
           (!mysql_db_reconnect(h)  ||
            (mysql_real_query(svsock, sbuf, slen))))
@@ -3651,9 +3657,7 @@ my_ulonglong mysql_st_internal_execute(
               rows = -2;
           }
       }
-#if MYSQL_ASYNC
   }
-#endif
 
   if (salloc)
     Safefree(salloc);
@@ -3733,6 +3737,8 @@ my_ulonglong mysql_st_internal_execute41(
                   num_params);
 
   execute_retval= mysql_stmt_execute(stmt);
+  if (execute_retval && mysql_db_reconnect(sth))
+    execute_retval= mysql_stmt_execute(stmt);
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
     PerlIO_printf(DBIc_LOGPIO(imp_xxh),
                   "\t\tmysql_stmt_execute returned %d\n",
@@ -3908,12 +3914,10 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
                                                 imp_dbh->pmysql,
                                                 imp_sth->use_mysql_use_result
                                                );
-#if MYSQL_ASYNC
     if(imp_dbh->async_query_in_flight) {
         DBIc_ACTIVE_on(imp_sth);
         return 0;
     }
-#endif
   }
 
   if (imp_sth->row_num+1 != (my_ulonglong)-1)
@@ -3931,7 +3935,9 @@ int dbd_st_execute(SV* sth, imp_sth_t* imp_sth)
       /** Store the result in the current statement handle */
       DBIc_NUM_FIELDS(imp_sth)= mysql_num_fields(imp_sth->result);
       DBIc_ACTIVE_on(imp_sth);
+#if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
       if (!use_server_side_prepare)
+#endif
         imp_sth->done_desc= 0;
       imp_sth->fetch_done= 0;
     }
@@ -4046,7 +4052,9 @@ int dbd_describe(SV* sth, imp_sth_t* imp_sth)
       buffer->is_unsigned= (fields[i].flags & UNSIGNED_FLAG) ? 1 : 0;
       buffer->length= &(fbh->length);
       buffer->is_null= (my_bool*) &(fbh->is_null);
+#if MYSQL_VERSION_ID >= NEW_DATATYPE_VERSION
       buffer->error= (my_bool*) &(fbh->error);
+#endif
 
       if (fields[i].flags & ZEROFILL_FLAG)
         buffer->buffer_type = MYSQL_TYPE_STRING;
@@ -4161,13 +4169,11 @@ dbd_st_fetch(SV *sth, imp_sth_t* imp_sth)
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
     PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t-> dbd_st_fetch\n");
 
-#if MYSQL_ASYNC
   if(imp_dbh->async_query_in_flight) {
       if(mysql_db_async_result(sth, &imp_sth->result) <= 0) {
         return Nullav;
       }
   }
-#endif
 
 #if MYSQL_VERSION_ID >=SERVER_PREPARE_VERSION
   if (imp_sth->use_server_side_prepare)
@@ -4562,8 +4568,7 @@ process:
           if (!(fields[i].flags & ZEROFILL_FLAG))
           {
             /* Coerce to dobule and set scalar as NV */
-            (void) SvNV(sv);
-            SvNOK_only(sv);
+            sv_setnv(sv, SvNV(sv));
           }
           break;
 
@@ -4572,15 +4577,9 @@ process:
           {
             /* Coerce to integer and set scalar as UV resp. IV */
             if (fields[i].flags & UNSIGNED_FLAG)
-            {
-              (void) SvUV(sv);
-              SvIOK_only_UV(sv);
-            }
+              sv_setuv(sv, SvUV(sv));
             else
-            {
-              (void) SvIV(sv);
-              SvIOK_only(sv);
-            }
+              sv_setiv(sv, SvIV(sv));
           }
           break;
 
@@ -4648,17 +4647,15 @@ int mysql_st_clean_cursor(SV* sth, imp_sth_t* imp_sth) {
 int dbd_st_finish(SV* sth, imp_sth_t* imp_sth) {
   dTHX;
   D_imp_xxh(sth);
+  D_imp_dbh_from_sth;
 
 #if defined (dTHR)
   dTHR;
 #endif
 
-#if MYSQL_ASYNC
-  D_imp_dbh_from_sth;
   if(imp_dbh->async_query_in_flight) {
     mysql_db_async_result(sth, &imp_sth->result);
   }
-#endif
 
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
@@ -4819,7 +4816,7 @@ dbd_st_STORE_attrib(
 {
   dTHX;
   STRLEN(kl);
-  char *key= SvPV(keysv, kl);
+  char *key= SvPV(keysv, kl); /* needs to process get magic */
   int retval= FALSE;
   D_imp_xxh(sth);
 
@@ -4830,7 +4827,7 @@ dbd_st_STORE_attrib(
 
   if (strEQ(key, "mysql_use_result"))
   {
-    imp_sth->use_mysql_use_result= SvTRUE(valuesv);
+    imp_sth->use_mysql_use_result= SvTRUE_nomg(valuesv);
   }
 
   if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
@@ -4884,8 +4881,10 @@ dbd_st_FETCH_internal(
 {
   dTHX;
   D_imp_sth(sth);
+  D_imp_dbh_from_sth;
   AV *av= Nullav;
   MYSQL_FIELD *curField;
+  bool enable_utf8 = (imp_dbh->enable_utf8 || imp_dbh->enable_utf8mb4);
 
   /* Are we asking for a legal value? */
   if (what < 0 ||  what >= AV_ATTRIB_LAST)
@@ -4911,10 +4910,22 @@ dbd_st_FETCH_internal(
       switch(what) {
       case AV_ATTRIB_NAME:
         sv= newSVpvn(curField->name, strlen(curField->name));
+#if MYSQL_VERSION_ID >= FIELD_CHARSETNR_VERSION
+        if (enable_utf8 && charsetnr_is_utf8(curField->charsetnr))
+#else
+        if (enable_utf8 && !(curField->flags & BINARY_FLAG))
+#endif
+          sv_utf8_decode(sv);
         break;
 
       case AV_ATTRIB_TABLE:
         sv= newSVpvn(curField->table, strlen(curField->table));
+#if MYSQL_VERSION_ID >= FIELD_CHARSETNR_VERSION
+        if (enable_utf8 && charsetnr_is_utf8(curField->charsetnr))
+#else
+        if (enable_utf8 && !(curField->flags & BINARY_FLAG))
+#endif
+          sv_utf8_decode(sv);
         break;
 
       case AV_ATTRIB_TYPE:
@@ -5025,7 +5036,7 @@ dbd_st_FETCH_internal(
 {
   dTHX;
   STRLEN(kl);
-  char *key= SvPV(keysv, kl);
+  char *key= SvPV(keysv, kl); /* needs to process get magic */
   SV *retsv= Nullsv;
   D_imp_xxh(sth);
 
@@ -5080,6 +5091,12 @@ dbd_st_FETCH_internal(
     case 10:
       if (strEQ(key, "mysql_type"))
         retsv= ST_FETCH_AV(AV_ATTRIB_TYPE);
+      else if (strEQ(key, "mysql_sock"))
+#if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
+        retsv= (imp_sth->stmt) ? sv_2mortal(newSViv(PTR2IV(imp_sth->stmt->mysql))) : boolSV(0);
+#else
+        retsv= boolSV(0);
+#endif
       break;
     case 11:
       if (strEQ(key, "mysql_table"))
@@ -5218,11 +5235,12 @@ int dbd_st_blob_read (
 int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
 		 IV sql_type, SV *attribs, int is_inout, IV maxlen) {
   dTHX;
-  int param_num= SvIV(param);
+  int param_num= SvIV(param); /* needs to process get magic */
   int idx= param_num - 1;
   char *err_msg;
   bool enable_utf8;
   D_imp_xxh(sth);
+  D_imp_dbh_from_sth;
 
 #if MYSQL_VERSION_ID >= SERVER_PREPARE_VERSION
   char *buffer= NULL;
@@ -5234,7 +5252,6 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
   const char *int_type = "";
 #endif
 
-  D_imp_dbh_from_sth;
   ASYNC_CHECK_RETURN(sth, FALSE);
 
   enable_utf8 = (imp_dbh->enable_utf8 || imp_dbh->enable_utf8mb4);
@@ -5258,6 +5275,7 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
    */
   if (SvOK(value) && sql_type_is_numeric(sql_type))
   {
+    /* FIXME: looks_like_number() process get magic prior to perl 5.15.4 */
     if (! looks_like_number(value))
     {
       err_msg = SvPVX(sv_2mortal(newSVpvf(
@@ -5290,7 +5308,7 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
 #endif
         if (!SvIOK(value) && DBIc_TRACE_LEVEL(imp_xxh) >= 2)
           PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tTRY TO BIND AN INT NUMBER\n");
-        int_val= SvIV(value);
+        int_val= SvIV_nomg(value);
         if (SvIsUV(value))
           buffer_is_unsigned= 1;
 
@@ -5374,7 +5392,7 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
           if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
             PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tTRY TO BIND AN LONGLONG INT NUMBER FROM STRING\n");
 
-          buf= SvPV_nolen(value);
+          buf= SvPV_nomg_nolen(value);
           val= strtoll(buf, NULL, 10);
           if (val == LLONG_MAX)
           {
@@ -5404,7 +5422,7 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
         if (!SvNOK(value) && DBIc_TRACE_LEVEL(imp_xxh) >= 2)
           PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tTRY TO BIND A FLOAT NUMBER\n");
         buffer_length = sizeof(imp_sth->fbind[idx].numeric_val.fval);
-        imp_sth->fbind[idx].numeric_val.fval= SvNV(value);
+        imp_sth->fbind[idx].numeric_val.fval= SvNV_nomg(value);
         buffer=(char*)&(imp_sth->fbind[idx].numeric_val.fval);
         if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
           PerlIO_printf(DBIc_LOGPIO(imp_xxh),
@@ -5417,9 +5435,9 @@ int dbd_bind_ph(SV *sth, imp_sth_t *imp_sth, SV *param, SV *value,
           PerlIO_printf(DBIc_LOGPIO(imp_xxh), "\t\tTRY TO BIND A DOUBLE NUMBER\n");
         buffer_length = sizeof(imp_sth->fbind[idx].numeric_val.dval);
 #if NVSIZE >= 8
-        imp_sth->fbind[idx].numeric_val.dval= SvNV(value);
+        imp_sth->fbind[idx].numeric_val.dval= SvNV_nomg(value);
 #else
-        imp_sth->fbind[idx].numeric_val.dval= atof(SvPV_nolen(value));
+        imp_sth->fbind[idx].numeric_val.dval= atof(SvPV_nomg_nolen(value));
 #endif
         buffer=(char*)&(imp_sth->fbind[idx].numeric_val.dval);
         if (DBIc_TRACE_LEVEL(imp_xxh) >= 2)
@@ -5697,13 +5715,13 @@ SV* dbd_db_quote(SV *dbh, SV *str, SV *type)
 
     D_imp_dbh(dbh);
 
-    if (type && SvMAGICAL(type))
+    if (type && SvGMAGICAL(type))
       mg_get(type);
 
     if (type  &&  SvOK(type))
     {
       int i;
-      int tp= SvIV(type);
+      int tp= SvIV_nomg(type);
       for (i= 0;  i < (int)SQL_GET_TYPE_INFO_num;  i++)
       {
         const sql_type_info_t *t= &SQL_GET_TYPE_INFO_values[i];
@@ -5716,7 +5734,7 @@ SV* dbd_db_quote(SV *dbh, SV *str, SV *type)
       }
     }
 
-    ptr= SvPV(str, len);
+    ptr= SvPV_nomg(str, len);
     result= newSV(len*2+3);
     if (SvUTF8(str)) SvUTF8_on(result);
     sptr= SvPVX(result);
@@ -5752,7 +5770,6 @@ SV *mysql_db_last_insert_id(SV *dbh, imp_dbh_t *imp_dbh,
 }
 #endif
 
-#if MYSQL_ASYNC
 int mysql_db_async_result(SV* h, MYSQL_RES** resp)
 {
   dTHX;
@@ -5801,6 +5818,7 @@ int mysql_db_async_result(SV* h, MYSQL_RES** resp)
       retval= mysql_num_rows(*resp);
       if(resp == &_res) {
         mysql_free_result(*resp);
+        *resp= NULL;
       }
     }
     if(htype == DBIt_ST) {
@@ -5849,17 +5867,10 @@ int mysql_db_async_ready(SV* h)
   }
 
   if(dbh->async_query_in_flight) {
-      if(dbh->async_query_in_flight == imp_xxh) {
-          struct pollfd fds;
-          int retval;
-
-          fds.fd = dbh->pmysql->net.fd;
-          fds.events = POLLIN;
-
-          retval = poll(&fds, 1, 0);
-
+      if(dbh->async_query_in_flight == imp_xxh && dbh->pmysql->net.fd != -1) {
+          int retval = mysql_socket_ready(dbh->pmysql->net.fd);
           if(retval < 0) {
-              do_error(h, errno, strerror(errno), "HY000");
+              do_error(h, -retval, strerror(-retval), "HY000");
           }
           return retval;
       } else {
@@ -5871,7 +5882,6 @@ int mysql_db_async_ready(SV* h)
       return -1;
   }
 }
-#endif
 
 static int parse_number(char *string, STRLEN len, char **end)
 {

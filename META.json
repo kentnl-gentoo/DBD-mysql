@@ -4,7 +4,7 @@
       "Patrick Galbraith <patg@patg.net>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 7.1001, CPAN::Meta::Converter version 2.150005",
+   "generated_by" : "ExtUtils::MakeMaker version 7.1, CPAN::Meta::Converter version 2.120351",
    "license" : [
       "perl_5"
    ],
@@ -31,7 +31,8 @@
       "configure" : {
          "requires" : {
             "DBI" : "1.609",
-            "Data::Dumper" : "0"
+            "Data::Dumper" : "0",
+            "Devel::CheckLib" : "0"
          }
       },
       "runtime" : {
@@ -53,7 +54,7 @@
       "x_IRC" : "irc://irc.perl.org/#dbi",
       "x_MailingList" : "mailto:dbi-dev@perl.org"
    },
-   "version" : "4.041_01",
+   "version" : "4.041_02",
    "x_contributors" : [
       "Alexandr Ciornii <alexchorny@gmail.com>",
       "Alexey Molchanov <alexey.molchanov@portaone.com>",
@@ -69,11 +70,12 @@
       "Daisuke Murase <typester@cpan.org>",
       "Damyan Ivanov <dmn@debian.org>",
       "Daniël van Eeden <daniel.vaneeden@booking.com>",
+      "Dave Lambley <davel@isosceles.(none)>",
       "David Farrell <davidnmfarrell@gmail.com>",
       "David Steinbrunner <dsteinbrunner@pobox.com>",
       "Giovanni Bechis <giovanni@bigio.snb.it>",
       "Graham Ollis <plicease@cpan.org>",
-      "H.Merijn Brand <h.m.brand@xs4all.nl>",
+      "H.Merijn Brand - Tux <h.m.brand@xs4all.nl>",
       "Hanno <hanno@gentoo.org>",
       "James McCoy <jamessan@jamessan.com>",
       "Jim Winstead <jimw@trainedmonkey.com>",
@@ -107,6 +109,5 @@
       "tokuhirom <tokuhirom@gmail.com>",
       "zefram <zefram@fysh.org>",
       "zentooo <ankerasoy@gmail.com>"
-   ],
-   "x_serialization_backend" : "JSON::PP version 2.27300"
+   ]
 }

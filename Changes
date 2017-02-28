@@ -1,3 +1,39 @@
+2017-02-28 Patrick Galbraith, Michiel Beijen, DBI/DBD community (4.041_2)
+* Statement handle now also has mysql_sock attribute, just as database handle.
+  (by Pali)
+* Fix type conversions for magic types. Issue reported by Dmitriy Yatsenko and
+  Giovanni Bechis, fix by Pali.
+    https://lists.amavis.org/pipermail/amavis-users/2016-December/004674.html
+    https://github.com/perl5-dbi/DBD-mysql/issues/78
+* Fix UTF8-encoding of table names, field names, warnings and error messages.
+  Reported by Tanabe Yoshinori, fix by Pali.
+    https://rt.cpan.org/Public/Bug/Display.html?id=120141
+* Fix mysql_auto_reconnect when using mysql_server_prepare (pali). Reported by
+  Vladimir Marek.
+    https://github.com/perl5-dbi/DBD-mysql/pull/95
+* Improve regex for removing database from dsn (pali)
+    https://rt.cpan.org/Public/Bug/Display.html?id=118837
+* Locate MySQL libs using Devel::CheckLib (pali)
+* Support async on Windows (pali)
+
+* Fix test suite on range of older and newer MySQL and MariaDB versions
+   (https://github.com/perl5-dbi/DBD-mysql/pull/87)
+* Fix compilation on MySQL 4.1 (pali)
+* Do not leak dangling pointer to mysql result (pali)
+* Fix logic when assigning to variable bind_comment_placeholders (pali)
+* mysql_fd() still returned file descriptor after closing connection.
+  Reported by Larry Leszczynski, fixed by Pali Rohár.
+   (https://rt.cpan.org/Public/Bug/Display.html?id=110983)
+* Fix parsing configure libs from mysql_config --libs output in Makefile.PL
+  Libraries in mysql_config --libs output can be specified by library name
+  with the -l prefix or by absolute path to library name without any prefix.
+  Parameters must start with a hyphen, so treat all options without leading
+  hyphen in mysql_config --libs output as libraries with full path.
+  Partially fixes bug https://rt.cpan.org/Public/Bug/Display.html?id=100898
+  Fix by Pali Rohár.
+* Fix support for magic scalars (pali)
+   (https://github.com/perl5-dbi/DBD-mysql/pull/76)
+
 2016-12-12 Patrick Galbraith, Michiel Beijen, DBI/DBD community (4.041_1)
 * Unicode fixes: when using mysql_enable_utf8 or mysql_enable_utf8mb4,
   previous versions of DBD::mysql did not properly encode input statements

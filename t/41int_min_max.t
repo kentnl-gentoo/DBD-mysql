@@ -9,17 +9,12 @@ use Data::Dumper;
 require 'lib.pl';
 use vars qw($test_dsn $test_user $test_password);
 
-my $dbh;
-eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
-                      { RaiseError => 1, PrintError => 1, AutoCommit => 1 });};
-if ($@) {
-    plan skip_all => "no database connection";
-}
+my $dbh = DbiTestConnect($test_dsn, $test_user, $test_password,
+                      { RaiseError => 1, PrintError => 1, AutoCommit => 1 });
 
-if (!MinimumVersion($dbh, '4.1')) {
-    plan skip_all => "ERROR: $DBI::errstr. Can't continue test";
+if ($dbh->{mysql_serverversion} < 50002) {
     plan skip_all =>
-        "SKIP TEST: You must have MySQL version 4.1 and greater for this test to run";
+        "SKIP TEST: You must have MySQL version 5.0.2 and greater for this test to run";
 }
 # nostrict tests + strict tests + init/tear down commands
 plan tests => (19*8 + 17*8 + 4) * 2;

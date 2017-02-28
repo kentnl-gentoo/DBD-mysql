@@ -7,17 +7,16 @@ use vars qw($test_dsn $test_user $test_password);
 use lib 't', '.';
 require 'lib.pl';
 
-my $dbh;
-eval {$dbh = DBI->connect($test_dsn, $test_user, $test_password,
-  { RaiseError => 1, AutoCommit => 1}) or ServerError();};
+my $dbh = DbiTestConnect($test_dsn, $test_user, $test_password,
+  { RaiseError => 1, AutoCommit => 1});
 
-if ($@) {
-    plan skip_all => "no database connection";
-}
 plan tests => 13;
 
-ok $dbh->do('SET @@auto_increment_offset = 1');
-ok $dbh->do('SET @@auto_increment_increment = 1');
+SKIP: {
+    skip 'SET @@auto_increment_offset needs MySQL >= 5.0.2', 2 unless $dbh->{mysql_serverversion} >= 50002;
+    ok $dbh->do('SET @@auto_increment_offset = 1');
+    ok $dbh->do('SET @@auto_increment_increment = 1');
+}
 
 my $create= <<EOT;
 CREATE TEMPORARY TABLE dbd_mysql_t40bindparam2 (

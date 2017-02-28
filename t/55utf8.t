@@ -8,17 +8,13 @@ use vars qw($COL_NULLABLE $COL_KEY);
 use lib 't', '.';
 require 'lib.pl';
 
-my $dbh;
-eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
-                      { RaiseError => 1, PrintError => 1, AutoCommit => 0 });};
-if ($@) {
-    plan skip_all => "no database connection";
-}
+my $dbh = DbiTestConnect($test_dsn, $test_user, $test_password,
+                      { RaiseError => 1, PrintError => 1, AutoCommit => 0 });
 
 #
 # DROP/CREATE PROCEDURE will give syntax error for these versions
 #
-if (!MinimumVersion($dbh, '5.0')) {
+if ($dbh->{mysql_serverversion} < 50000) {
     plan skip_all =>
         "SKIP TEST: You must have MySQL version 5.0 and greater for this test to run";
 }
@@ -87,9 +83,12 @@ ok $sth->execute() or die("Execute failed: ".$DBI::errstr);
 ok $sth->finish;
 
 cmp_ok($dbh->{mysql_warning_count}, '==', 1, 'got warning for INSERT') or do { diag("SHOW WARNINGS:"); diag($_->[2]) foreach @{$dbh->selectall_arrayref("SHOW WARNINGS", { mysql_server_prepare => 0 })}; };
-cmp_ok($dbh->selectrow_arrayref("SHOW WARNINGS", { mysql_server_prepare => 0 })->[2], 'eq', 'Incorrect string value: \'\xC4\x80dam\' for column \'ascii\' at row 1');
+like($dbh->selectrow_arrayref("SHOW WARNINGS", { mysql_server_prepare => 0 })->[2], qr/^(?:Incorrect string value: '\\xC4\\x80dam'|Data truncated) for column 'ascii' at row 1$/);
 
-$query = "SELECT name,bincol,asbinary(shape), binutf, profile, str2, ascii, latin FROM dbd_mysql_t55utf8 LIMIT 1";
+# AsBinary() is deprecated as of MySQL 5.7.6, use ST_AsBinary() instead
+my $asbinary = $dbh->{mysql_serverversion} >= 50706 ? 'ST_AsBinary' : 'AsBinary';
+
+$query = "SELECT name,bincol,$asbinary(shape), binutf, profile, str2, ascii, latin FROM dbd_mysql_t55utf8 LIMIT 1";
 $sth = $dbh->prepare($query) or die "$DBI::errstr";
 
 ok $sth->execute;
