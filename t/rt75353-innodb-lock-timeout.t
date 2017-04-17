@@ -5,7 +5,8 @@ use Test::More;
 use DBI;
 
 use vars qw($test_dsn $test_user $test_password);
-require "t/lib.pl";
+use lib 't', '.';
+require "lib.pl";
 
 my $dbh1 = eval { DBI->connect($test_dsn, $test_user, $test_password, { RaiseError => 1, AutoCommit => 0 }) };
 plan skip_all => "no database connection" if $@ or not $dbh1;

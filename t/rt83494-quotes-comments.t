@@ -9,7 +9,8 @@ use DBI;
 use Test::More;
 
 use vars qw($test_dsn $test_user $test_password $state);
-require "t/lib.pl";
+use lib 't', '.';
+require "lib.pl";
 
 my $dbh;
 eval {$dbh= DBI->connect($test_dsn, $test_user, $test_password,
