@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 use Test::More;
+use File::Spec ();
 use DBI::Const::GetInfoType;
 use vars qw($mdriver $dbdriver $childPid $test_dsn $test_user $test_password);
 
@@ -31,7 +32,7 @@ if (-f ($file = "t/$dbdriver.dbtest")  ||
     -f ($file = "$dbdriver.dbtest")    ||
     -f ($file = "../tests/$dbdriver.dbtest")  ||
     -f ($file = "tests/$dbdriver.dbtest")) {
-    eval { require $file; };
+    eval { require File::Spec->rel2abs($file); };
     if ($@) {
 	print STDERR "Cannot execute $file: $@.\n";
 	print "1..0\n";
@@ -45,7 +46,7 @@ if (-f ($file = "t/$mdriver.mtest")  ||
     -f ($file = "$mdriver.mtest")    ||
     -f ($file = "../tests/$mdriver.mtest")  ||
     -f ($file = "tests/$mdriver.mtest")) {
-    eval { require $file; };
+    eval { require File::Spec->rel2abs($file); };
     if ($@) {
 	print STDERR "Cannot execute $file: $@.\n";
 	print "1..0\n";
