@@ -3,8 +3,8 @@
    "author" : [
       "Patrick Galbraith <patg@patg.net>"
    ],
-   "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 7.18, CPAN::Meta::Converter version 2.150010",
+   "dynamic_config" : 0,
+   "generated_by" : "ExtUtils::MakeMaker version 7.1002, CPAN::Meta::Converter version 2.150005",
    "license" : [
       "perl_5"
    ],
@@ -45,19 +45,24 @@
          }
       }
    },
-   "release_status" : "stable",
+   "release_status" : "testing",
    "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/perl5-dbi/DBD-mysql/issues"
+      },
       "homepage" : "http://dbi.perl.org/",
       "license" : [
          "http://dev.perl.org/licenses/"
       ],
       "repository" : {
-         "url" : "https://github.com/perl5-dbi/DBD-mysql"
+         "type" : "git",
+         "url" : "https://github.com/perl5-dbi/DBD-mysql.git",
+         "web" : "https://github.com/perl5-dbi/DBD-mysql"
       },
       "x_IRC" : "irc://irc.perl.org/#dbi",
       "x_MailingList" : "mailto:dbi-dev@perl.org"
    },
-   "version" : "4.043",
+   "version" : "4.044",
    "x_contributors" : [
       "Alexandr Ciornii <alexchorny@gmail.com>",
       "Alexey Molchanov <alexey.molchanov@portaone.com>",
@@ -112,5 +117,5 @@
       "zefram <zefram@fysh.org>",
       "zentooo <ankerasoy@gmail.com>"
    ],
-   "x_serialization_backend" : "JSON::PP version 2.27300"
+   "x_serialization_backend" : "JSON::PP version 2.27300_01"
 }

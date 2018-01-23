@@ -10,8 +10,8 @@ build_requires:
 configure_requires:
   DBI: '1.609'
   Data::Dumper: '0'
-dynamic_config: 1
-generated_by: 'ExtUtils::MakeMaker version 7.18, CPAN::Meta::Converter version 2.150010'
+dynamic_config: 0
+generated_by: 'ExtUtils::MakeMaker version 7.1002, CPAN::Meta::Converter version 2.150005'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -27,10 +27,11 @@ requires:
 resources:
   IRC: irc://irc.perl.org/#dbi
   MailingList: mailto:dbi-dev@perl.org
+  bugtracker: https://github.com/perl5-dbi/DBD-mysql/issues
   homepage: http://dbi.perl.org/
   license: http://dev.perl.org/licenses/
-  repository: https://github.com/perl5-dbi/DBD-mysql
-version: '4.043'
+  repository: https://github.com/perl5-dbi/DBD-mysql.git
+version: 4.044
 x_contributors:
   - 'Alexandr Ciornii <alexchorny@gmail.com>'
   - 'Alexey Molchanov <alexey.molchanov@portaone.com>'
